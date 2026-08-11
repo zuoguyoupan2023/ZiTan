@@ -582,7 +582,6 @@
   };
   let roleTab = 'deaf';
   let quickMore = false;  /* 快捷用语是否展开（默认最多显示 4 条） */
-  let voiceRetryT = 0;    /* 语音列表重试计数（移动端 getVoices 延迟加载） */
   let voices = [];
 
   const $ = id => document.getElementById(id);
@@ -619,9 +618,7 @@
   function voicesFor(lang) { return voices.filter(v => langGroupFor(v) === lang); }
 
   function refreshVoices() {
-    if ('speechSynthesis' in window) {
-      try { voices = speechSynthesis.getVoices() || []; } catch (e) {}
-    }
+    if (!voices.length && 'speechSynthesis' in window) voices = speechSynthesis.getVoices() || [];
     return voices;
   }
   function autoPick(lang) {
@@ -763,14 +760,7 @@
 
     const list = $('voiceList');
     list.innerHTML = '';
-    if (!voices.length) {
-      list.innerHTML = '<div class="empty-voices">' + t('noVoice') + '</div>';
-      /* 移动端语音延迟加载：打开面板后自动重试几秒 */
-      if (voiceRetryT < 10) { voiceRetryT++; setTimeout(() => { if (!$('voicePane').hidden) renderVoicePane(); }, 300); }
-      else voiceRetryT = 0;
-      return;
-    }
-    voiceRetryT = 0;
+    if (!voices.length) { list.innerHTML = '<div class="empty-voices">' + t('noVoice') + '</div>'; return; }
     const langVoices = voicesFor(state.voiceLang);
     if (!langVoices.length) { list.innerHTML = '<div class="empty-voices">' + t('noVoiceLang') + '</div>'; return; }
     const auto = autoPick(state.voiceLang);
@@ -996,11 +986,7 @@
     });
 
     if ('speechSynthesis' in window) {
-      speechSynthesis.onvoiceschanged = () => { refreshVoices(); if (!$('voicePane').hidden) renderVoicePane(); };
-      /* 移动端 getVoices() 首次常为空，主动触发一次让语音列表加载出来 */
-      if (!speechSynthesis.getVoices().length) {
-        try { speechSynthesis.speak(new SpeechSynthesisUtterance(' ')); } catch (e) {}
-      }
+      speechSynthesis.onvoiceschanged = () => { if (!$('voicePane').hidden) renderVoicePane(); };
     }
 
     /* 开发阶段：先不启用离线缓存，并清掉旧的缓存，保证改动刷新即可见。
