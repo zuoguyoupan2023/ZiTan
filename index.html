@@ -52,16 +52,16 @@
   }
 
   /* ===== 顶部 ===== */
-  header { background: var(--panel); border-bottom: 1px solid var(--line); padding: 10px 12px 8px; z-index: 5; }
+  header { background: var(--panel); border-bottom: 1px solid var(--line); padding: 6px 12px 4px; z-index: 5; }
   .hrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .hrow.tools { margin-top: 8px; }
+  .hrow.tools { margin-top: 4px; }
   .brand { margin-right: auto; }
-  .brand h1 { font-size: 22px; margin: 0; letter-spacing: 1px; }
+  .brand h1 { font-size: 20px; margin: 0; letter-spacing: 1px; }
 
   .toolbtn {
     border: none; background: var(--bg); color: var(--ink);
     font-size: 13px; font-weight: 600;
-    padding: 8px 10px; border-radius: 10px;
+    padding: 6px 9px; border-radius: 10px;
     cursor: pointer; line-height: 1;
     display: inline-flex; align-items: center; gap: 5px;
   }
@@ -70,18 +70,18 @@
   .toolbtn .st { font-size: 11px; opacity: .9; }
 
   .fontctl { display: inline-flex; align-items: center; gap: 2px; background: var(--bg); border-radius: 10px; padding: 3px; }
-  .fontctl button { border: none; background: transparent; color: var(--ink); font-size: 14px; font-weight: 700; padding: 6px 9px; border-radius: 8px; cursor: pointer; }
+  .fontctl button { border: none; background: transparent; color: var(--ink); font-size: 14px; font-weight: 700; padding: 5px 8px; border-radius: 8px; cursor: pointer; }
   .fontval { font-size: 11px; color: var(--muted); min-width: 40px; text-align: center; }
   .toolbtn.on { background: var(--accent); color: #fff; }
   .toolbtn.langbtn { min-width: 44px; justify-content: center; }
 
   /* ===== 身份（谁在用） ===== */
-  .identity-bar { background: var(--panel); padding: 8px 12px; border-bottom: 1px solid var(--line); }
+  .identity-bar { background: var(--panel); padding: 5px 12px; border-bottom: 1px solid var(--line); }
   .seg { display: flex; gap: 8px; }
   .seg button {
     flex: 1; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink);
     font-size: 16px; font-weight: 700;
-    padding: 12px 8px; border-radius: 12px; cursor: pointer;
+    padding: 7px 8px; border-radius: 12px; cursor: pointer;
     display: flex; align-items: center; justify-content: center; gap: 8px;
   }
   #whoDeaf, #tabDeaf { border-color: var(--deaf); color: var(--deaf); background: var(--panel); background: color-mix(in srgb, var(--deaf) 12%, var(--panel)); }
@@ -132,11 +132,11 @@
 
   /* ===== 底部 ===== */
   footer { background: var(--panel); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
-  .quick { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 12px 6px; align-items: center; }
+  .quick { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 12px 4px; align-items: center; }
   .chip {
     border: 1.5px solid var(--line); background: var(--bg); color: var(--ink);
     border-radius: 999px; font-size: 18px;
-    padding: 6px 12px; cursor: pointer;
+    padding: 4px 10px; cursor: pointer;
   }
   .chip:active { background: var(--accent); color: #fff; border-color: var(--accent); }
   .chip.fill { border: 2px solid var(--fill); background: var(--fill-bg); }
@@ -500,8 +500,8 @@
     zh: {
       deaf: [
         { t: '你好，我想去', k: 'fill' },
-        { t: '你好，厕所在哪边？', k: 'send' },
         { t: '你好，请问', k: 'fill' },
+        { t: '你好，厕所在哪边？', k: 'send' },
         { t: '你好，怎么去公交站台？', k: 'send' },
         { t: '你好，可以帮帮我吗？', k: 'send' },
         { t: '我听不到，请你打字告诉我', k: 'send' },
@@ -519,8 +519,8 @@
     en: {
       deaf: [
         { t: "I want to go to", k: 'fill' },
-        { t: "Where is the restroom?", k: 'send' },
         { t: "Excuse me,", k: 'fill' },
+        { t: "Where is the restroom?", k: 'send' },
         { t: "How do I get to the bus stop?", k: 'send' },
         { t: "Can you help me?", k: 'send' },
         { t: "I can't hear. Please type.", k: 'send' },
@@ -638,11 +638,7 @@
   }
 
   function seed() {
-    if (state.messages.length) return;
-    state.messages.push(
-      { by: 'deaf', text: state.uiLang === 'en' ? 'Hello, where is the restroom?' : '你好，请问厕所在哪边？' },
-      { by: 'vol',  text: state.uiLang === 'en' ? 'Go straight and turn right at the corner.' : '你好，往前走，路口右转就到了。' }
-    );
+    /* 首次打开不预填示例消息，聊天区保持空白 */
   }
 
   /* ============ 渲染 ============ */

@@ -1,0 +1,3 @@
+# Cloudflare Pages 缓存控制：index.html 每次重新校验，避免旧版本缓存坑人
+/index.html
+  Cache-Control: no-cache
