@@ -143,7 +143,7 @@
 
   .who-line { font-size: 12px; color: var(--muted); padding: 0 12px 4px; }
   .who-line b { font-weight: 700; }
-  .inputrow { display: flex; align-items: center; gap: 8px; padding: 8px 12px 12px; }
+  .inputrow { display: flex; align-items: center; gap: 8px; padding: 1px 12px 1px; }
   #text {
     flex: 1; min-width: 0;
     border: 1.5px solid var(--line);
@@ -289,7 +289,7 @@
     main { padding: 10px 10px 6px; }
     .msg { margin-bottom: 4px; }
     .msg .who { margin: 0 4px 2px; }
-    .msg .bubble { padding: 6px 12px; }
+    .msg .bubble { padding: 6px 12px; font-size: calc(23px * var(--fs)); }
     .identity-bar { padding: 3px 10px; }
     .seg button { padding: 3px 8px; }
     .quick { padding: 4px 10px 2px; }
@@ -302,6 +302,9 @@
   <header>
     <div class="hrow">
       <div class="brand"><h1>字谈</h1></div>
+      <button class="toolbtn" id="btnClear" title="清空聊天记录" data-i18n-title="clearChat">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5L11 13"/><path d="M11 13l-7 7"/><path d="M13 13l-8 8"/></svg>
+      </button>
       <button class="toolbtn" id="btnSettings" title="设置" data-i18n-title="settings">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
       </button>
@@ -416,7 +419,6 @@
 
       <div class="sec-title" data-i18n="others">其他</div>
       <div class="minirow" id="openHelpRow" data-i18n="howTo">使用说明</div>
-      <div class="minirow danger" id="clearChatRow" data-i18n="clearChat">清空聊天记录</div>
 
       <button class="done" id="settingsClose" data-i18n="done">完成</button>
     </div>
@@ -977,7 +979,7 @@
 
     /* 设置里：使用说明 / 清空 */
     $('openHelpRow').onclick = () => { $('settingsOverlay').classList.remove('show'); $('helpOverlay').classList.add('show'); };
-    $('clearChatRow').onclick = () => { if (confirm(t('confirmClear'))) { state.messages = []; render(); } };
+    $('btnClear').onclick = () => { if (confirm(t('confirmClear'))) { state.messages = []; render(); } };
 
     /* 帮助 */
     $('helpClose').onclick = () => $('helpOverlay').classList.remove('show');
