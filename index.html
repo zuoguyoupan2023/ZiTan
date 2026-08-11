@@ -249,6 +249,9 @@
   #addType { flex: none; width: auto; border-radius: 10px; padding: 0 8px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); font-size: 13px; }
   #addBtn { width: 40px; border: none; border-radius: 10px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
   .card .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .credit { text-align: center; font-size: 12px; color: var(--muted); margin: 14px 0 0; }
+  .credit a { color: inherit; text-decoration: none; }
+  .credit a:hover { color: var(--accent); }
 
   /* 语音 */
   .sec-title { font-size: 13px; font-weight: 700; color: var(--muted); margin: 16px 0 8px; }
@@ -421,6 +424,7 @@
       <div class="minirow" id="openHelpRow" data-i18n="howTo">使用说明</div>
 
       <button class="done" id="settingsClose" data-i18n="done">完成</button>
+      <p class="credit"><a href="https://wewalk.world/" target="_blank" rel="noopener" data-i18n="creditFrom">来自 wewalk.world</a><span data-i18n="creditTag"> · 公益项目</span></p>
     </div>
   </div>
 
@@ -464,6 +468,7 @@
       presetHint: '黄边 = 填入输入框继续写；无黄边 = 点一下直接发。点标签可切换，× 删除。',
       language: '语言', preview: '试听', others: '其他',
       howTo: '使用说明', clearChat: '清空聊天记录', done: '完成',
+      creditFrom: '来自 wewalk.world', creditTag: ' · 公益项目',
       howTitle: '字谈怎么用？',
       help1: '顶部选「听障朋友」或「志愿者」，决定快捷用语和气泡颜色。',
       help2: '快捷用语：黄边 = 填入输入框继续写；无黄边 = 直接发。',
@@ -490,6 +495,7 @@
       presetHint: 'Yellow = fill in box; plain = send now. Tap the label to switch, × to delete.',
       language: 'Language', preview: 'Preview', others: 'More',
       howTo: 'How to use', clearChat: 'Clear chat', done: 'Done',
+      creditFrom: 'From wewalk.world', creditTag: ' · a non-profit project',
       howTitle: 'How to use 字谈?',
       help1: 'Choose "Deaf friend" or "Volunteer" at top to set presets and bubble colors.',
       help2: 'Presets: yellow = fill in the box; plain = send now.',
