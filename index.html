@@ -94,6 +94,8 @@
   body.hc #whoDeaf.on, body.hc #tabDeaf.on { background: var(--deaf); color: var(--deaf-ink); border-color: var(--deaf); }
   body.hc #whoVol.on, body.hc #tabVol.on { background: var(--vol); color: var(--vol-ink); border-color: var(--vol); }
   .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; flex: none; background: currentColor; opacity: .9; }
+  .seg button .dot { display: none; }
+  .seg button.on .dot { display: inline-block; }
 
   /* ===== 聊天区 ===== */
   main { flex: 1; overflow-y: auto; padding: 14px 12px 8px; -webkit-overflow-scrolling: touch; }
@@ -478,7 +480,7 @@
       help5: '点任意消息 → 全屏超大字；左右滑看上一条 / 下一条。',
       helpNote: '本地运行，内容不离开设备。对话和设置存在本机浏览器，刷新不丢。',
       gotIt: '开始使用',
-      whoLineA: '当前是 ', whoLineB: '',
+      whoLineA: '当前是', whoLineB: '',
       ttsOn: '发送后朗读已开启', ttsOff: '发送后朗读已关闭',
       ttsOnShort: '开', ttsOffShort: '关',
       noTts: '此浏览器不支持朗读', noMessages: '还没有消息', confirmClear: '清空全部聊天记录？',
@@ -505,7 +507,7 @@
       help5: 'Tap any message for fullscreen big text; swipe for the previous / next message.',
       helpNote: 'Runs locally; nothing leaves your device. Chat and settings are stored in this browser.',
       gotIt: 'Got it',
-      whoLineA: 'Currently ', whoLineB: '',
+      whoLineA: 'Currently', whoLineB: '',
       ttsOn: 'Read after send: on', ttsOff: 'Read after send: off',
       ttsOnShort: 'On', ttsOffShort: 'Off',
       noTts: 'TTS not supported in this browser', noMessages: 'No messages', confirmClear: 'Clear all messages?',
@@ -690,9 +692,7 @@
     $('ttsState').textContent = state.tts ? t('ttsOnShort') : t('ttsOffShort');
     $('fontVal').textContent = Math.round(state.fs * 100) + '%';
 
-    const roleName = t(state.identity === 'deaf' ? 'roleDeaf' : 'roleVol');
-    const roleColor = getComputedStyle(document.body).getPropertyValue(state.identity === 'deaf' ? '--deaf' : '--vol').trim();
-    $('whoLine').innerHTML = t('whoLineA') + '<b style="color:' + roleColor + '">' + escapeHtml(roleName) + '</b>' + t('whoLineB');
+    $('whoLine').textContent = t('whoLineA') + t('whoLineB');
 
     chatEl.innerHTML = state.messages.length
       ? state.messages.map((m, i) => `
