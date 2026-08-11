@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="字谈">
+<title>字谈</title>
+<style>
+  :root {
+    --bg: #eef1f6;
+    --panel: #ffffff;
+    --ink: #1f2937;
+    --muted: #6b7280;
+    --line: rgba(0,0,0,.15);
+    --deaf: #10b981;
+    --deaf-ink: #062e1c;
+    --vol: #4f8cff;
+    --vol-ink: #ffffff;
+    --accent: #2563eb;
+    --danger: #ef4444;
+    --fill: #f59e0b;
+    --fill-bg: #fffbeb;
+  }
+  body.hc {
+    --bg: #000000;
+    --panel: #0a0a0a;
+    --ink: #ffffff;
+    --muted: #c9c9c9;
+    --line: rgba(255,255,255,.3);
+    --deaf: #0e5a3c; --deaf-ink: #ffffff;
+    --vol: #1a3d7a; --vol-ink: #ffffff;
+    --accent: #7cc0ff;
+    --fill: #ffd166; --fill-bg: #3a2f00;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    display: flex; flex-direction: column;
+    height: 100dvh;
+    overscroll-behavior: none;
+    user-select: none;
+  }
+
+  /* ===== 顶部 ===== */
+  header { background: var(--panel); border-bottom: 1px solid var(--line); padding: 10px 12px 8px; z-index: 5; }
+  .hrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .hrow.tools { margin-top: 8px; }
+  .brand { margin-right: auto; }
+  .brand h1 { font-size: 22px; margin: 0; letter-spacing: 1px; }
+
+  .toolbtn {
+    border: none; background: var(--bg); color: var(--ink);
+    font-size: 13px; font-weight: 600;
+    padding: 8px 10px; border-radius: 10px;
+    cursor: pointer; line-height: 1;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .toolbtn.primary { background: var(--accent); color: #fff; }
+  .toolbtn:active { opacity: .7; }
+  .toolbtn .st { font-size: 11px; opacity: .9; }
+
+  .fontctl { display: inline-flex; align-items: center; gap: 2px; background: var(--bg); border-radius: 10px; padding: 3px; }
+  .fontctl button { border: none; background: transparent; color: var(--ink); font-size: 14px; font-weight: 700; padding: 6px 9px; border-radius: 8px; cursor: pointer; }
+  .fontval { font-size: 11px; color: var(--muted); min-width: 40px; text-align: center; }
+  .toolbtn.on { background: var(--accent); color: #fff; }
+  .toolbtn.langbtn { min-width: 44px; justify-content: center; }
+
+  /* ===== 身份（谁在用） ===== */
+  .identity-bar { background: var(--panel); padding: 8px 12px; border-bottom: 1px solid var(--line); }
+  .seg { display: flex; gap: 8px; }
+  .seg button {
+    flex: 1; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink);
+    font-size: 16px; font-weight: 700;
+    padding: 12px 8px; border-radius: 12px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  #whoDeaf, #tabDeaf { border-color: var(--deaf); color: var(--deaf); background: var(--panel); background: color-mix(in srgb, var(--deaf) 12%, var(--panel)); }
+  #whoDeaf.on, #tabDeaf.on { background: var(--deaf); color: var(--deaf-ink); border-color: var(--deaf); }
+  #whoVol, #tabVol { border-color: var(--vol); color: var(--vol); background: var(--panel); background: color-mix(in srgb, var(--vol) 12%, var(--panel)); }
+  #whoVol.on, #tabVol.on { background: var(--vol); color: var(--vol-ink); border-color: var(--vol); }
+  body.hc #whoDeaf, body.hc #tabDeaf, body.hc #whoVol, body.hc #tabVol { color: var(--accent); border-color: var(--accent); background: var(--panel); }
+  body.hc #whoDeaf.on, body.hc #tabDeaf.on { background: var(--deaf); color: var(--deaf-ink); border-color: var(--deaf); }
+  body.hc #whoVol.on, body.hc #tabVol.on { background: var(--vol); color: var(--vol-ink); border-color: var(--vol); }
+  .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; flex: none; background: currentColor; opacity: .9; }
+
+  /* ===== 聊天区 ===== */
+  main { flex: 1; overflow-y: auto; padding: 14px 12px 8px; -webkit-overflow-scrolling: touch; }
+  .msg { display: flex; margin-bottom: 12px; animation: pop .18s ease-out; }
+  @keyframes pop { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: none; } }
+  .msg .row { display: flex; flex-direction: column; max-width: 88%; }
+  .msg .who { font-size: calc(12px * var(--fs)); color: var(--muted); margin: 0 4px 4px; display: block; }
+  .msg.deaf { justify-content: flex-end; }
+  .msg.deaf .row { align-items: flex-end; }
+  .msg.vol { justify-content: flex-start; }
+  .msg.vol .row { align-items: flex-start; }
+
+  .bubrow { display: flex; align-items: center; gap: 8px; }
+  .msg.deaf .bubrow { flex-direction: row-reverse; }
+
+  .msg .bubble {
+    max-width: 100%;
+    padding: 12px 16px;
+    border-radius: 18px;
+    font-size: calc(20px * var(--fs));
+    line-height: 1.5;
+    word-break: break-word;
+    box-shadow: 0 1px 2px rgba(0,0,0,.08);
+  }
+  .msg.deaf .bubble { background: var(--deaf); color: var(--deaf-ink); border-bottom-right-radius: 6px; }
+  .msg.vol .bubble { background: var(--vol); color: var(--vol-ink); border-bottom-left-radius: 6px; }
+
+  .play {
+    flex: none; width: 36px; height: 36px; border-radius: 50%;
+    border: none; background: rgba(0,0,0,.07); color: var(--ink);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .play.playing { background: var(--accent); color: #fff; }
+  .play.playing svg { animation: zoom .6s ease-in-out infinite; }
+  @keyframes zoom { 0%,100% { transform: scale(1); } 50% { transform: scale(1.4); } }
+
+  .empty { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 15px; line-height: 1.8; }
+
+  /* ===== 底部 ===== */
+  footer { background: var(--panel); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
+  .quick { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 12px 6px; align-items: center; }
+  .chip {
+    border: 1.5px solid var(--line); background: var(--bg); color: var(--ink);
+    border-radius: 999px; font-size: 18px;
+    padding: 6px 12px; cursor: pointer;
+  }
+  .chip:active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .chip.fill { border: 2px solid var(--fill); background: var(--fill-bg); }
+
+  .who-line { font-size: 12px; color: var(--muted); padding: 0 12px 4px; }
+  .who-line b { font-weight: 700; }
+  .inputrow { display: flex; align-items: center; gap: 8px; padding: 8px 12px 12px; }
+  #text {
+    flex: 1; min-width: 0;
+    border: 1.5px solid var(--line);
+    border-radius: 14px; padding: 12px 14px;
+    font-size: 18px; color: var(--ink); background: var(--bg);
+    outline: none; user-select: text;
+  }
+  #text:focus { border-color: var(--accent); background: var(--panel); }
+  #send {
+    flex: none; height: 48px; padding: 0 20px;
+    border: none; border-radius: 14px;
+    background: var(--accent); color: #fff;
+    font-size: 17px; font-weight: 700; cursor: pointer;
+  }
+
+  /* ===== 大字展示 ===== */
+  #presenter {
+    position: fixed; inset: 0; z-index: 99;
+    background: var(--panel); color: var(--ink);
+    display: none; flex-direction: column;
+  }
+  #presenter.show { display: flex; }
+  .ptop { display: flex; align-items: center; justify-content: flex-end; padding: 14px 14px 0; }
+  #presenter .close {
+    border: none; background: var(--bg); color: var(--ink);
+    font-size: 14px; padding: 10px 12px; border-radius: 10px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .pnav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px 0;
+  }
+  #presenter .prevnext {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: none; background: var(--bg); color: var(--ink);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  #presenter .count { color: var(--muted); font-size: 13px; }
+  .pcenter {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    padding: 0 6vw; text-align: center;
+  }
+  #presenter .big { font-size: calc(6.5vh * var(--fs)); line-height: 1.35; word-break: break-word; max-width: 100%; font-weight: 600; }
+  .pfoot {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 0 14px calc(18px + env(safe-area-inset-bottom));
+  }
+  #presenter .pplay {
+    flex: none; width: 40px; height: 40px; border-radius: 50%;
+    border: none; background: var(--accent); color: #fff;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  #presenter .pplay.playing svg { animation: zoom .6s ease-in-out infinite; }
+  #presenter .hint { color: var(--muted); font-size: 15px; }
+
+  /* ===== 浮层 / 卡片 ===== */
+  .overlay {
+    position: fixed; inset: 0; z-index: 90;
+    background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center;
+  }
+  .overlay.show { display: flex; }
+  .card {
+    position: relative;
+    background: var(--panel); color: var(--ink);
+    width: 90%; max-width: 440px; max-height: 84vh; overflow-y: auto;
+    border-radius: 20px; padding: 22px 22px 18px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    user-select: text;
+  }
+  .card .x {
+    position: absolute; top: 14px; right: 14px;
+    width: 32px; height: 32px; border: none; border-radius: 50%;
+    background: var(--bg); color: var(--ink);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .card h2 { margin: 2px 0 6px; font-size: 20px; }
+  .card p, .card li { font-size: 15px; line-height: 1.75; }
+  .card ol { padding-left: 20px; margin: 8px 0; }
+  .card .done { width: 100%; margin-top: 16px; padding: 12px; border: none; border-radius: 12px; background: var(--accent); color: #fff; font-size: 16px; cursor: pointer; }
+
+  .tabs2 { display: flex; gap: 8px; margin: 8px 0 14px; }
+  .tabs2 button {
+    flex: 1; padding: 10px; border: 1.5px solid var(--line); border-radius: 10px;
+    background: var(--panel); color: var(--ink); font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  .tabs2 button.on { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+
+  /* 预设 */
+  .tabs3 { display: flex; gap: 8px; margin-bottom: 10px; }
+  .tabs3 button {
+    flex: 1; padding: 9px; border: 1.5px solid var(--line); border-radius: 10px;
+    background: var(--panel); color: var(--ink); font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .proll { display: flex; align-items: center; gap: 8px; background: var(--bg); border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; }
+  .proll .ptext { flex: 1; font-size: 15px; word-break: break-word; }
+  .proll .ptype {
+    flex: none; font-size: 12px; padding: 5px 9px; border-radius: 8px;
+    border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer;
+  }
+  .proll .pdel { flex: none; width: 28px; height: 28px; border: none; border-radius: 8px; background: transparent; color: var(--muted); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .addrow { display: flex; gap: 6px; margin-top: 4px; }
+  #addText { flex: 1; min-width: 0; padding: 9px 10px; border: 1.5px solid var(--line); border-radius: 10px; font-size: 14px; background: var(--bg); color: var(--ink); outline: none; user-select: text; }
+  #addType { flex: none; width: auto; border-radius: 10px; padding: 0 8px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); font-size: 13px; }
+  #addBtn { width: 40px; border: none; border-radius: 10px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .card .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+  /* 语音 */
+  .sec-title { font-size: 13px; font-weight: 700; color: var(--muted); margin: 16px 0 8px; }
+  .sec-title:first-child { margin-top: 4px; }
+  select#langSel {
+    width: 100%; padding: 11px 10px; border-radius: 10px;
+    border: 1.5px solid var(--line); background: var(--bg); color: var(--ink);
+    font-size: 16px; outline: none;
+  }
+  .vrow { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: var(--bg); margin-bottom: 6px; cursor: pointer; }
+  .vrow.on { box-shadow: inset 0 0 0 2px var(--accent); }
+  .vrow .vname { flex: 1; font-size: 16px; }
+  .vrow .vcheck { flex: none; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--line); display: flex; align-items: center; justify-content: center; color: transparent; }
+  .vrow.on .vcheck { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .empty-voices { text-align: center; color: var(--muted); font-size: 13px; padding: 14px 6px; }
+  .pvbtn {
+    width: 100%; margin-top: 12px; padding: 12px;
+    border: none; border-radius: 12px; background: var(--bg); color: var(--ink);
+    font-size: 15px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .pvbtn.playing svg { animation: zoom .6s ease-in-out infinite; }
+
+  .minirow {
+    display: flex; align-items: center; padding: 12px; background: var(--bg);
+    border-radius: 10px; margin-bottom: 6px; font-size: 15px; cursor: pointer;
+  }
+  .minirow.danger { color: var(--danger); }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 110px; transform: translateX(-50%);
+    background: rgba(0,0,0,.82); color: #fff; padding: 10px 18px; border-radius: 999px;
+    font-size: 14px; z-index: 120; display: none; max-width: 90%;
+  }
+</style>
+</head>
+<body>
+
+  <header>
+    <div class="hrow">
+      <div class="brand"><h1>字谈</h1></div>
+      <button class="toolbtn" id="btnSettings" title="设置" data-i18n-title="settings">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+      <button class="toolbtn langbtn" id="langToggle" title="语言">EN</button>
+      <button class="toolbtn" id="btnHc" data-i18n-title="darkMode" title="明暗切换">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>
+      </button>
+    </div>
+    <div class="hrow tools">
+      <div class="fontctl">
+        <button id="btnMinus" data-i18n-title="fontDown" title="减小字号">A−</button>
+        <span class="fontval" id="fontVal">100%</span>
+        <button id="btnPlus" data-i18n-title="fontUp" title="增大字号">A+</button>
+      </div>
+      <button class="toolbtn primary" id="btnPresent" title="大字展示">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4"/></svg>
+        <span>大字展示</span>
+      </button>
+      <button class="toolbtn" id="btnTts" data-i18n-title="autoRead" title="发送后朗读">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+        <span class="st" id="ttsState">关</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="identity-bar">
+    <div class="seg">
+      <button id="whoDeaf"><span class="dot"></span><span data-i18n="roleDeaf">听障朋友</span></button>
+      <button id="whoVol"><span class="dot"></span><span data-i18n="roleVol">志愿者 / 路人</span></button>
+    </div>
+  </div>
+
+  <main id="chat"></main>
+
+  <footer>
+    <div class="quick" id="quick"></div>
+    <div class="who-line" id="whoLine"></div>
+    <div class="inputrow">
+      <input id="text" type="text" autocomplete="off" placeholder="输入要说的话" data-i18n-ph="typeHere">
+      <button id="send" data-i18n="send">发送</button>
+    </div>
+  </footer>
+
+  <!-- 大字展示 -->
+  <div id="presenter">
+    <div class="ptop">
+      <button class="close" id="pClose">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        <span data-i18n="exit">退出</span>
+      </button>
+    </div>
+    <div class="pcenter">
+      <div class="big" id="pBig"></div>
+    </div>
+    <div class="pnav">
+      <button class="prevnext prev" id="pPrev" data-i18n-title="prev" title="上一条">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <span class="count" id="pCount"></span>
+      <button class="prevnext next" id="pNext" data-i18n-title="next" title="下一条">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+    <div class="pfoot">
+      <button class="pplay" id="pPlay" data-i18n-title="autoRead" title="朗读">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+      <span class="hint">右上角退出</span>
+    </div>
+  </div>
+
+  <!-- 设置 -->
+  <div class="overlay" id="settingsOverlay">
+    <div class="card">
+      <button class="x" id="settingsX" title="关闭">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <h2 data-i18n="settings">设置</h2>
+      <div class="tabs2">
+        <button id="sTabPreset" class="on" data-i18n="presets">预设</button>
+        <button id="sTabVoice" data-i18n="voice">语音</button>
+      </div>
+
+      <!-- 预设 -->
+      <div id="presetPane">
+        <div class="tabs3">
+          <button id="tabDeaf" class="on" data-i18n="roleDeaf">听障朋友</button>
+          <button id="tabVol" data-i18n="roleVol">志愿者 / 路人</button>
+        </div>
+        <div id="presetList"></div>
+        <div class="addrow">
+          <input id="addText" type="text" placeholder="输入新用语" data-i18n-ph="newPhrase">
+          <select id="addType"><option value="fill" data-i18n="fill">填入</option><option value="send" data-i18n="sendDirect">直接发</option></select>
+          <button id="addBtn" data-i18n-title="add" title="添加">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+        </div>
+        <p class="hint" data-i18n="presetHint">黄边 = 填入输入框继续写；无黄边 = 点一下直接发。点标签可切换，× 删除。</p>
+      </div>
+
+      <!-- 语音 -->
+      <div id="voicePane" hidden>
+        <div class="sec-title" data-i18n="language">语言</div>
+        <select id="langSel"></select>
+        <div class="sec-title" data-i18n="voice">语音</div>
+        <div id="voiceList"></div>
+        <button class="pvbtn" id="previewBtn">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+          <span data-i18n="preview">试听</span>
+        </button>
+      </div>
+
+      <div class="sec-title" data-i18n="others">其他</div>
+      <div class="minirow" id="openHelpRow" data-i18n="howTo">使用说明</div>
+      <div class="minirow danger" id="clearChatRow" data-i18n="clearChat">清空聊天记录</div>
+
+      <button class="done" id="settingsClose" data-i18n="done">完成</button>
+    </div>
+  </div>
+
+  <!-- 帮助 -->
+  <div class="overlay" id="helpOverlay">
+    <div class="card">
+      <button class="x" id="helpX" title="关闭">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <h2 data-i18n="howTitle">字谈怎么用？</h2>
+      <ol>
+        <li data-i18n="help1">顶部选「听障朋友」或「志愿者」，决定快捷用语和气泡颜色。</li>
+        <li data-i18n="help2">快捷用语：黄边 = 填入输入框继续写；无黄边 = 直接发。</li>
+        <li data-i18n="help3">打字字号已放大，A+ / A− 可调。说话用键盘自带的语音键。</li>
+        <li data-i18n="help4">气泡外侧播放键可朗读这段话；顶部「喇叭」开时发送自动朗读。语音在「设置 → 语音」里选和试听。</li>
+        <li data-i18n="help5">点任意消息 → 全屏超大字；左右滑看上一条 / 下一条。</li>
+      </ol>
+      <p data-i18n="helpNote">本地运行，内容不离开设备。对话和设置存在本机浏览器，刷新不丢。</p>
+      <button class="done" id="helpClose" data-i18n="gotIt">开始使用</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  const LS_KEY = 'zitan-demo-v5';
+
+  /* ============ 界面文案（中 / 英） ============ */
+  const I18N = {
+    zh: {
+      settings: '设置', fontDown: '减小字号', fontUp: '增大字号',
+      autoRead: '发送后朗读', darkMode: '明暗切换',
+      roleDeaf: '听障朋友', roleVol: '志愿者 / 路人',
+      typeHere: '输入要说的话', send: '发送',
+      exit: '退出', prev: '上一条', next: '下一条',
+      presets: '预设', voice: '语音', fill: '填入', sendDirect: '直接发',
+      add: '添加', newPhrase: '输入新用语',
+      presetHint: '黄边 = 填入输入框继续写；无黄边 = 点一下直接发。点标签可切换，× 删除。',
+      language: '语言', preview: '试听', others: '其他',
+      howTo: '使用说明', clearChat: '清空聊天记录', done: '完成',
+      howTitle: '字谈怎么用？',
+      help1: '顶部选「听障朋友」或「志愿者」，决定快捷用语和气泡颜色。',
+      help2: '快捷用语：黄边 = 填入输入框继续写；无黄边 = 直接发。',
+      help3: '打字字号已放大，A+ / A− 可调。说话用键盘自带的语音键。',
+      help4: '气泡外侧播放键可朗读这段话；顶部「喇叭」开时发送自动朗读。语音在「设置 → 语音」里选和试听。',
+      help5: '点任意消息 → 全屏超大字；左右滑看上一条 / 下一条。',
+      helpNote: '本地运行，内容不离开设备。对话和设置存在本机浏览器，刷新不丢。',
+      gotIt: '开始使用',
+      whoLineA: '以「', whoLineB: '」身份书写 · 换人点上方',
+      ttsOn: '发送后朗读已开启', ttsOff: '发送后朗读已关闭',
+      ttsOnShort: '开', ttsOffShort: '关',
+      noTts: '此浏览器不支持朗读', noMessages: '还没有消息', confirmClear: '清空全部聊天记录？',
+      empty: '还没有消息', autoVoice: '自动',
+      noVoice: '此浏览器暂无可用语音，或试试点「试听」刷新', noVoiceLang: '该语言下暂无可用语音'
+    },
+    en: {
+      settings: 'Settings', fontDown: 'Smaller font', fontUp: 'Larger font',
+      autoRead: 'Read after send', darkMode: 'Light / Dark',
+      roleDeaf: 'Deaf person', roleVol: 'Volunteer',
+      typeHere: 'Type here', send: 'Send',
+      exit: 'Exit', prev: 'Previous', next: 'Next',
+      presets: 'Presets', voice: 'Voice', fill: 'Fill', sendDirect: 'Send',
+      add: 'Add', newPhrase: 'New phrase',
+      presetHint: 'Yellow = fill in box; plain = send now. Tap the label to switch, × to delete.',
+      language: 'Language', preview: 'Preview', others: 'More',
+      howTo: 'How to use', clearChat: 'Clear chat', done: 'Done',
+      howTitle: 'How to use 字谈?',
+      help1: 'Choose "Deaf friend" or "Volunteer" at top to set presets and bubble colors.',
+      help2: 'Presets: yellow = fill in the box; plain = send now.',
+      help3: 'Font is large already; A+ / A− adjust it. To speak, use the voice key on your keyboard.',
+      help4: 'Tap the play button beside a bubble to read it aloud. When the speaker is on, sending reads automatically. Pick and preview voices in Settings → Voice.',
+      help5: 'Tap any message for fullscreen big text; swipe for the previous / next message.',
+      helpNote: 'Runs locally; nothing leaves your device. Chat and settings are stored in this browser.',
+      gotIt: 'Got it',
+      whoLineA: 'Typing as ', whoLineB: ' · tap above to switch',
+      ttsOn: 'Read after send: on', ttsOff: 'Read after send: off',
+      ttsOnShort: 'On', ttsOffShort: 'Off',
+      noTts: 'TTS not supported in this browser', noMessages: 'No messages', confirmClear: 'Clear all messages?',
+      empty: 'No messages', autoVoice: 'Auto',
+      noVoice: 'No voices available in this browser yet', noVoiceLang: 'No voices for this language'
+    }
+  };
+  let L = I18N.zh;
+  function t(k) { return (L[k] !== undefined) ? L[k] : (I18N.zh[k] !== undefined ? I18N.zh[k] : k); }
+
+  /* ============ 默认预设（按界面语言各一套） ============ */
+  const DEFAULT_PRESETS = {
+    zh: {
+      deaf: [
+        { t: '你好，我想去', k: 'fill' },
+        { t: '你好，请问', k: 'fill' },
+        { t: '你好，厕所在哪边？', k: 'send' },
+        { t: '你好，怎么去公交站台？', k: 'send' },
+        { t: '你好，可以帮帮我吗？', k: 'send' },
+        { t: '我听不到，请你打字告诉我', k: 'send' },
+        { t: '谢谢', k: 'send' }
+      ],
+      vol: [
+        { t: '你好，是需要帮忙吗？', k: 'send' },
+        { t: '好的，我明白了', k: 'send' },
+        { t: '我帮你去问一下，请稍等', k: 'send' },
+        { t: '好的，这边走', k: 'send' },
+        { t: '你好，请告诉我你需要什么', k: 'fill' },
+        { t: '不客气', k: 'send' }
+      ]
+    },
+    en: {
+      deaf: [
+        { t: "I want to go to", k: 'fill' },
+        { t: "Excuse me,", k: 'fill' },
+        { t: "Where is the restroom?", k: 'send' },
+        { t: "How do I get to the bus stop?", k: 'send' },
+        { t: "Can you help me?", k: 'send' },
+        { t: "I can't hear. Please type.", k: 'send' },
+        { t: "Thank you", k: 'send' }
+      ],
+      vol: [
+        { t: "Hi, do you need help?", k: 'send' },
+        { t: "OK, got it.", k: 'send' },
+        { t: "Let me ask for you, one moment.", k: 'send' },
+        { t: "This way please.", k: 'send' },
+        { t: "Tell me what you need", k: 'fill' },
+        { t: "You're welcome", k: 'send' }
+      ]
+    }
+  };
+  function cloneDefaults(lang) { return JSON.parse(JSON.stringify(DEFAULT_PRESETS[lang])); }
+
+  /* ============ 语音语言列表（列出尽可能多，不再用「其他」） ============ */
+  const LANGS = [
+    { id: 'zh-CN', labelZh: '中国大陆', labelEn: 'Chinese (Mainland)', sample: '你好，请问有什么可以帮你的吗？' },
+    { id: 'zh-TW', labelZh: '中国台湾', labelEn: 'Chinese (Taiwan)', sample: '你好，請問有什麼可以幫你的嗎？' },
+    { id: 'zh-HK', labelZh: '中国香港', labelEn: 'Chinese (Hong Kong)', sample: '你好，請問有咩可以幫到你？' },
+    { id: 'en-US', labelZh: '美国英语', labelEn: 'English (US)', sample: 'Hello, how can I help you?' },
+    { id: 'en-GB', labelZh: '英国英语', labelEn: 'English (UK)', sample: 'Hello, how can I help you?' },
+    { id: 'en-AU', labelZh: '澳大利亚英语', labelEn: 'English (Australia)', sample: 'Hello, how can I help you?' },
+    { id: 'en-CA', labelZh: '加拿大英语', labelEn: 'English (Canada)', sample: 'Hello, how can I help you?' },
+    { id: 'ja-JP', labelZh: '日语', labelEn: 'Japanese', sample: 'こんにちは' },
+    { id: 'ko-KR', labelZh: '韩语', labelEn: 'Korean', sample: '안녕하세요' },
+    { id: 'fr-FR', labelZh: '法语', labelEn: 'French', sample: 'Bonjour' },
+    { id: 'de-DE', labelZh: '德语', labelEn: 'German', sample: 'Hallo' },
+    { id: 'es-ES', labelZh: '西班牙语', labelEn: 'Spanish', sample: 'Hola' },
+    { id: 'pt-PT', labelZh: '葡萄牙语', labelEn: 'Portuguese', sample: 'Olá' },
+    { id: 'it-IT', labelZh: '意大利语', labelEn: 'Italian', sample: 'Ciao' },
+    { id: 'ru-RU', labelZh: '俄语', labelEn: 'Russian', sample: 'Здравствуйте' },
+    { id: 'th-TH', labelZh: '泰语', labelEn: 'Thai', sample: 'สวัสดี' },
+    { id: 'ar-SA', labelZh: '阿拉伯语', labelEn: 'Arabic', sample: 'مرحبا' },
+    { id: 'vi-VN', labelZh: '越南语', labelEn: 'Vietnamese', sample: 'Xin chào' },
+    { id: 'id-ID', labelZh: '印尼语', labelEn: 'Indonesian', sample: 'Halo' },
+    { id: 'hi-IN', labelZh: '印地语', labelEn: 'Hindi', sample: 'नमस्ते' },
+    { id: 'tr-TR', labelZh: '土耳其语', labelEn: 'Turkish', sample: 'Merhaba' },
+    { id: 'nl-NL', labelZh: '荷兰语', labelEn: 'Dutch', sample: 'Hallo' },
+    { id: 'pl-PL', labelZh: '波兰语', labelEn: 'Polish', sample: 'Cześć' },
+    { id: 'sv-SE', labelZh: '瑞典语', labelEn: 'Swedish', sample: 'Hej' }
+  ];
+  const LANG_TWO = { ja:'ja-JP', ko:'ko-KR', fr:'fr-FR', de:'de-DE', es:'es-ES', pt:'pt-PT', it:'it-IT', ru:'ru-RU', th:'th-TH', ar:'ar-SA', vi:'vi-VN', id:'id-ID', hi:'hi-IN', tr:'tr-TR', nl:'nl-NL', pl:'pl-PL', sv:'sv-SE' };
+
+  const state = {
+    uiLang: 'zh',
+    messages: [],
+    identity: 'deaf',
+    fs: 1.0,
+    tts: false,
+    hc: false,
+    viewing: -1,
+    voiceLang: 'zh-CN',
+    voiceURI: '',
+    presetEdited: false,
+    presets: cloneDefaults('zh')
+  };
+  let roleTab = 'deaf';
+  let quickMore = false;  /* 快捷用语是否展开（默认最多显示 4 条） */
+  let voices = [];
+
+  const $ = id => document.getElementById(id);
+  const chatEl = $('chat'), presenter = $('presenter'), pBig = $('pBig');
+
+  /* ============ 图标 ============ */
+  function ic(name, size) {
+    const s = size || 16;
+    const P = {
+      play:   '<path d="M8 5v14l11-7z"/>',
+      close:  '<path d="M6 6l12 12M18 6L6 18"/>',
+      plus:   '<path d="M12 5v14M5 12h14"/>',
+      check:  '<path d="M20 6L9 17l-5-5"/>'
+    };
+    const attrs = ' fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"';
+    return '<svg viewBox="0 0 24 24" width="' + s + '" height="' + s + '"' + attrs + '>' + P[name] + '</svg>';
+  }
+
+  function langGroupFor(v) {
+    const l = (v.lang || '').toLowerCase().replace(/_/g, '-');
+    if (/^zh(?:-|$)/.test(l)) {
+      if (l.indexOf('tw') > -1) return 'zh-TW';
+      if (l.indexOf('hk') > -1) return 'zh-HK';
+      return 'zh-CN';
+    }
+    if (/^en(?:-|$)/.test(l)) {
+      if (l.indexOf('-gb') > -1) return 'en-GB';
+      if (l.indexOf('-au') > -1) return 'en-AU';
+      if (l.indexOf('-ca') > -1) return 'en-CA';
+      return 'en-US';
+    }
+    return LANG_TWO[l.split('-')[0]] || '';
+  }
+  function voicesFor(lang) { return voices.filter(v => langGroupFor(v) === lang); }
+
+  function refreshVoices() {
+    if (!voices.length && 'speechSynthesis' in window) voices = speechSynthesis.getVoices() || [];
+    return voices;
+  }
+  function autoPick(lang) {
+    const list = voicesFor(lang);
+    const prefs = ['xiaoxiao','xiaoyi','tingting','meijia','yaoyao','huihui','kangkang','xiaoyun','tiantian','sinji','sin','zhiyu','zhiling','lili','ting'];
+    for (const p of prefs) { const v = list.find(v => v.name.toLowerCase().indexOf(p) > -1); if (v) return v; }
+    return list[0] || null;
+  }
+  function pickVoice() {
+    refreshVoices();
+    if (state.voiceURI) { const v = voices.find(v => v.voiceURI === state.voiceURI); if (v) return v; }
+    return autoPick(state.voiceLang || 'zh-CN');
+  }
+  function langLabel(id) {
+    const e = LANGS.find(x => x.id === id);
+    return e ? (state.uiLang === 'en' ? e.labelEn : e.labelZh) : id;
+  }
+
+  function seed() {
+    if (state.messages.length) return;
+    state.messages.push(
+      { by: 'deaf', text: state.uiLang === 'en' ? 'Hello, where is the restroom?' : '你好，请问厕所在哪边？' },
+      { by: 'vol',  text: state.uiLang === 'en' ? 'Go straight and turn right at the corner.' : '你好，往前走，路口右转就到了。' }
+    );
+  }
+
+  /* ============ 渲染 ============ */
+  function render() {
+    document.body.style.setProperty('--fs', state.fs);
+    document.body.classList.toggle('hc', state.hc);
+    $('whoDeaf').classList.toggle('on', state.identity === 'deaf');
+    $('whoVol').classList.toggle('on', state.identity === 'vol');
+    $('btnHc').classList.toggle('on', state.hc);
+    $('ttsState').textContent = state.tts ? t('ttsOnShort') : t('ttsOffShort');
+    $('fontVal').textContent = Math.round(state.fs * 100) + '%';
+
+    const roleName = t(state.identity === 'deaf' ? 'roleDeaf' : 'roleVol');
+    const roleColor = getComputedStyle(document.body).getPropertyValue(state.identity === 'deaf' ? '--deaf' : '--vol').trim();
+    $('whoLine').innerHTML = t('whoLineA') + '<b style="color:' + roleColor + '">' + escapeHtml(roleName) + '</b>' + t('whoLineB');
+
+    chatEl.innerHTML = state.messages.length
+      ? state.messages.map((m, i) => `
+          <div class="msg ${m.by}" data-i="${i}">
+            <div class="row">
+              <span class="who">${t(m.by === 'deaf' ? 'roleDeaf' : 'roleVol')} · ${m.time || ''}</span>
+              <div class="bubrow">
+                <button class="play" data-i="${i}" title="${t('autoRead')}">${ic('play', 18)}</button>
+                <div class="bubble">${escapeHtml(m.text)}</div>
+              </div>
+            </div>
+          </div>`).join('')
+      : `<div class="empty">${t('empty')}</div>`;
+
+    chatEl.scrollTop = chatEl.scrollHeight;
+    save();
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  /* ============ 快捷用语 ============ */
+  function renderQuick() {
+    const box = $('quick');
+    box.innerHTML = '';
+    const all = state.presets[state.identity];
+    /* 预设最多占 3 格，第 4 格固定放「+N / 收起」，和预设等宽、一行 4 格 */
+    all.slice(0, 3).forEach(p => box.appendChild(makeChip(p)));
+    if (all.length > 3) {
+      const more = document.createElement('button');
+      more.className = 'chip';
+      more.textContent = quickMore ? '收起' : '+' + (all.length - 3);
+      more.onclick = () => { quickMore = !quickMore; renderQuick(); };
+      box.appendChild(more);
+      if (quickMore) all.slice(3).forEach(p => box.appendChild(makeChip(p)));
+    }
+  }
+  function makeChip(p) {
+    const b = document.createElement('button');
+    b.className = 'chip' + (p.k === 'fill' ? ' fill' : '');
+    b.textContent = p.t;
+    b.onclick = () => {
+      if (p.k === 'send') { doSend(p.t); }
+      else { $('text').value = p.t; $('text').focus(); }
+    };
+    return b;
+  }
+
+  /* ============ 发送 ============ */
+  function doSend(text) {
+    state.messages.push({ by: state.identity, text: text, time: now() });
+    render();
+    if (state.tts) speak(text);
+  }
+  function send() {
+    const v = $('text').value.trim();
+    if (!v) return;
+    $('text').value = '';
+    doSend(v);
+  }
+
+  /* ============ 朗读 ============ */
+  function clearPlay() {
+    const p = chatEl.querySelector('.play.playing');
+    if (p) p.classList.remove('playing');
+  }
+  function speak(text, onEnd) {
+    if (!('speechSynthesis' in window)) { toast(t('noTts')); return false; }
+    speechSynthesis.cancel();
+    clearPlay();
+    const u = new SpeechSynthesisUtterance(text);
+    const v = pickVoice();
+    if (v) { u.voice = v; u.lang = v.lang; }
+    u.rate = 1; u.pitch = 1.05;
+    const done = () => { clearPlay(); if (onEnd) onEnd(); };
+    u.onend = done;
+    u.onerror = done;
+    speechSynthesis.speak(u);
+    return true;
+  }
+  function playMsg(i, btn) {
+    const m = state.messages[i];
+    if (!m) return;
+    if (btn.classList.contains('playing')) {
+      if ('speechSynthesis' in window) speechSynthesis.cancel();
+      clearPlay();
+      return;
+    }
+    if (speak(m.text)) btn.classList.add('playing');
+  }
+
+  /* ============ 设置：语音 ============ */
+  function renderVoicePane() {
+    refreshVoices();
+    const sel = $('langSel');
+    sel.innerHTML = '';
+    LANGS.forEach(x => {
+      const o = document.createElement('option');
+      o.value = x.id; o.textContent = (state.uiLang === 'en') ? x.labelEn : x.labelZh;
+      sel.appendChild(o);
+    });
+    sel.value = state.voiceLang;
+
+    const list = $('voiceList');
+    list.innerHTML = '';
+    if (!voices.length) { list.innerHTML = '<div class="empty-voices">' + t('noVoice') + '</div>'; return; }
+    const langVoices = voicesFor(state.voiceLang);
+    if (!langVoices.length) { list.innerHTML = '<div class="empty-voices">' + t('noVoiceLang') + '</div>'; return; }
+    const auto = autoPick(state.voiceLang);
+    list.appendChild(makeVoiceRow(t('autoVoice') + ' (' + (auto ? auto.name : '') + ')', state.voiceURI === '', null));
+    langVoices.forEach(v => list.appendChild(makeVoiceRow(v.name + ' · ' + v.lang, state.voiceURI === v.voiceURI, v)));
+  }
+  function makeVoiceRow(name, on, v) {
+    const row = document.createElement('div');
+    row.className = 'vrow' + (on ? ' on' : '');
+    row.innerHTML = '<span class="vname"></span><span class="vcheck">' + ic('check', 12) + '</span>';
+    row.querySelector('.vname').textContent = name;
+    row.onclick = () => { state.voiceURI = v ? v.voiceURI : ''; renderVoicePane(); };
+    return row;
+  }
+
+  /* ============ 设置：预设管理 ============ */
+  function renderPresetList() {
+    const list = $('presetList');
+    list.innerHTML = '';
+    state.presets[roleTab].forEach((p, i) => {
+      const row = document.createElement('div');
+      row.className = 'proll';
+      const sendMode = (p.k === 'send');
+      row.innerHTML = '<span class="ptext"></span>'
+        + '<button class="ptype">' + (sendMode ? t('sendDirect') : t('fill')) + '</button>'
+        + '<button class="pdel" title="×">' + ic('close', 14) + '</button>';
+      row.querySelector('.ptext').textContent = p.t;
+      row.querySelector('.ptype').onclick = () => {
+        p.k = (p.k === 'send') ? 'fill' : 'send';
+        save(); renderPresetList(); renderQuick();
+      };
+      row.querySelector('.pdel').onclick = () => {
+        state.presets[roleTab].splice(i, 1);
+        state.presetEdited = true;
+        save(); renderPresetList(); renderQuick();
+      };
+      list.appendChild(row);
+    });
+  }
+
+  /* ============ 大字展示 ============ */
+  function openPresenter(i) {
+    stopPresenterPlay();
+    state.viewing = i;
+    presenter.classList.add('show');
+    renderBig();
+  }
+  function renderBig() {
+    if (state.viewing < 0 || state.viewing >= state.messages.length) return;
+    const m = state.messages[state.viewing];
+    pBig.textContent = m.text;
+    $('pCount').textContent = (state.viewing + 1) + ' / ' + state.messages.length;
+    const n = m.text.length;
+    pBig.style.fontSize = (n > 30 ? 4.5 : n > 16 ? 5.5 : 6.5) + 'vh';
+  }
+  function step(d) {
+    state.viewing = (state.viewing + d + state.messages.length) % state.messages.length;
+    renderBig();
+    stopPresenterPlay();
+  }
+  function stopPresenterPlay() {
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+    const b = $('pPlay');
+    if (b) b.classList.remove('playing');
+    clearPlay();
+  }
+  function playCurrent() {
+    const m = state.messages[state.viewing];
+    if (!m) return;
+    const btn = $('pPlay');
+    if (btn.classList.contains('playing')) { stopPresenterPlay(); return; }
+    if (speak(m.text, () => btn.classList.remove('playing'))) btn.classList.add('playing');
+  }
+
+  /* ============ 工具 ============ */
+  function now() {
+    const d = new Date();
+    return (d.getHours() + '').padStart(2,'0') + ':' + (d.getMinutes()+'').padStart(2,'0');
+  }
+  function toast(msg) {
+    const tEl = $('toast');
+    tEl.textContent = msg; tEl.style.display = 'block';
+    clearTimeout(toast._t); toast._t = setTimeout(() => tEl.style.display = 'none', 1800);
+  }
+  function save() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+  function load() {
+    try {
+      const s = JSON.parse(localStorage.getItem(LS_KEY));
+      if (s && s.messages) {
+        state.messages = s.messages;
+        if (s.uiLang === 'en' || s.uiLang === 'zh') state.uiLang = s.uiLang;
+        if (s.fs) state.fs = s.fs;
+        if (s.tts) state.tts = s.tts;
+        if (s.hc) state.hc = s.hc;
+        if (s.voiceLang) state.voiceLang = s.voiceLang;
+        if (s.voiceURI) state.voiceURI = s.voiceURI;
+        if (s.presetEdited) state.presetEdited = true;
+        if (s.identity === 'deaf' || s.identity === 'vol') state.identity = s.identity;
+        if (s.presets && s.presets.deaf && s.presets.vol) {
+          const norm = list => list.map(p => (typeof p === 'string') ? { t: p, k: 'fill' } : { t: p.t, k: (p.k === 'send' ? 'send' : 'fill') });
+          state.presets = { deaf: norm(s.presets.deaf), vol: norm(s.presets.vol) };
+        }
+      } else seed();
+    } catch (e) { seed(); }
+  }
+
+  /* ============ 语言应用与切换 ============ */
+  function applyLang() {
+    L = I18N[state.uiLang] || I18N.zh;
+    document.documentElement.lang = (state.uiLang === 'en') ? 'en' : 'zh-CN';
+    document.title = (state.uiLang === 'en') ? 'ZiTan' : '字谈';
+    document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.getAttribute('data-i18n')); });
+    document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.setAttribute('placeholder', t(el.getAttribute('data-i18n-ph'))); });
+    document.querySelectorAll('[data-i18n-title]').forEach(el => { el.setAttribute('title', t(el.getAttribute('data-i18n-title'))); });
+    $('langToggle').textContent = (state.uiLang === 'zh') ? 'EN' : '汉';
+    render();
+    renderQuick();
+    renderPresetList();
+    if (!$('voicePane').hidden) renderVoicePane();
+  }
+  function setUiLang(lang) {
+    if (state.uiLang === lang) return;
+    state.uiLang = lang;
+    if (!state.presetEdited) state.presets = cloneDefaults(lang);
+    applyLang();
+  }
+
+  /* ============ 事件 ============ */
+  function init() {
+    load(); applyLang();
+
+    $('whoDeaf').onclick = () => { state.identity = 'deaf'; render(); renderQuick(); };
+    $('whoVol').onclick  = () => { state.identity = 'vol';  render(); renderQuick(); };
+    $('send').onclick = send;
+    $('text').addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+
+    $('btnPlus').onclick  = () => { state.fs = Math.min(2.2, +(state.fs + 0.15).toFixed(2)); render(); };
+    $('btnMinus').onclick = () => { state.fs = Math.max(0.6, +(state.fs - 0.15).toFixed(2)); render(); };
+    $('btnTts').onclick   = () => { state.tts = !state.tts; render(); toast(state.tts ? t('ttsOn') : t('ttsOff')); };
+    $('btnHc').onclick    = () => { state.hc = !state.hc; render(); };
+
+    $('langToggle').onclick = () => setUiLang(state.uiLang === 'zh' ? 'en' : 'zh');
+
+    /* 设置面板 */
+    $('btnSettings').onclick = () => {
+      $('settingsOverlay').classList.add('show');
+      showSettingsPane('preset');
+      renderPresetList();
+    };
+    $('settingsClose').onclick = () => $('settingsOverlay').classList.remove('show');
+    $('settingsX').onclick = () => $('settingsOverlay').classList.remove('show');
+    $('settingsOverlay').addEventListener('click', e => { if (e.target === $('settingsOverlay')) $('settingsOverlay').classList.remove('show'); });
+    $('sTabPreset').onclick = () => showSettingsPane('preset');
+    $('sTabVoice').onclick  = () => showSettingsPane('voice');
+
+    $('tabDeaf').onclick = () => { roleTab = 'deaf'; $('tabDeaf').classList.add('on'); $('tabVol').classList.remove('on'); renderPresetList(); };
+    $('tabVol').onclick  = () => { roleTab = 'vol';  $('tabVol').classList.add('on'); $('tabDeaf').classList.remove('on'); renderPresetList(); };
+    $('addBtn').onclick = () => {
+      const txt = $('addText').value.trim();
+      if (!txt) return;
+      state.presets[roleTab].push({ t: txt, k: $('addType').value });
+      state.presetEdited = true;
+      $('addText').value = '';
+      save(); renderPresetList(); renderQuick();
+    };
+    $('addText').addEventListener('keydown', e => { if (e.key === 'Enter') $('addBtn').click(); });
+
+    $('langSel').onchange = e => { state.voiceLang = e.target.value; state.voiceURI = ''; renderVoicePane(); };
+    $('previewBtn').onclick = () => {
+      const entry = LANGS.find(x => x.id === state.voiceLang) || LANGS[0];
+      if (speak(entry.sample, () => $('previewBtn').classList.remove('playing'))) {
+        $('previewBtn').classList.add('playing');
+      }
+    };
+
+    /* 设置里：使用说明 / 清空 */
+    $('openHelpRow').onclick = () => { $('settingsOverlay').classList.remove('show'); $('helpOverlay').classList.add('show'); };
+    $('clearChatRow').onclick = () => { if (confirm(t('confirmClear'))) { state.messages = []; render(); } };
+
+    /* 帮助 */
+    $('helpClose').onclick = () => $('helpOverlay').classList.remove('show');
+    $('helpX').onclick = () => $('helpOverlay').classList.remove('show');
+    $('helpOverlay').addEventListener('click', e => { if (e.target === $('helpOverlay')) $('helpOverlay').classList.remove('show'); });
+
+    /* 聊天区：播放 / 大字展示 */
+    chatEl.addEventListener('click', e => {
+      const play = e.target.closest('.play');
+      if (play) { playMsg(+play.dataset.i, play); return; }
+      const bubble = e.target.closest('.bubble');
+      if (bubble) {
+        const row = bubble.closest('.msg');
+        if (row) openPresenter(+row.dataset.i);
+      }
+    });
+
+    /* 大字展示控件 */
+    $('btnPresent').onclick = () => {
+      if (!state.messages.length) { toast(t('noMessages')); return; }
+      openPresenter(state.messages.length - 1);
+    };
+    $('pClose').onclick = () => { stopPresenterPlay(); presenter.classList.remove('show'); };
+    $('pPlay').onclick = playCurrent;
+    $('pPrev').onclick = e => { e.stopPropagation(); step(-1); };
+    $('pNext').onclick = e => { e.stopPropagation(); step(1); };
+    document.addEventListener('keydown', e => {
+      if (!presenter.classList.contains('show')) return;
+      if (e.key === 'ArrowLeft') step(-1);
+      if (e.key === 'ArrowRight') step(1);
+      if (e.key === 'Escape') presenter.classList.remove('show');
+    });
+    let startX = null;
+    presenter.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
+    presenter.addEventListener('touchend', e => {
+      if (startX === null) return;
+      const dx = e.changedTouches[0].clientX - startX;
+      if (Math.abs(dx) > 60) step(dx < 0 ? 1 : -1);
+      startX = null;
+    });
+
+    if ('speechSynthesis' in window) {
+      speechSynthesis.onvoiceschanged = () => { if (!$('voicePane').hidden) renderVoicePane(); };
+    }
+
+    /* 开发阶段：先不启用离线缓存，并清掉旧的缓存，保证改动刷新即可见。
+       上线发布时，把下面这段换成：navigator.serviceWorker.register('./sw.js') */
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function (regs) { regs.forEach(function (r) { r.unregister(); }); });
+      if (window.caches) window.caches.keys().then(function (keys) { keys.forEach(function (k) { window.caches.delete(k); }); });
+    }
+  }
+
+  function showSettingsPane(which) {
+    const presetOn = (which === 'preset');
+    $('sTabPreset').classList.toggle('on', presetOn);
+    $('sTabVoice').classList.toggle('on', !presetOn);
+    $('presetPane').hidden = !presetOn;
+    $('voicePane').hidden = presetOn;
+    if (!presetOn) renderVoicePane();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

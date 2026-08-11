@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#2563eb"/>
+  <path d="M136 118h240a44 44 0 0 1 44 44v148a44 44 0 0 1-44 44H292l-68 66-18-66h-70a44 44 0 0 1-44-44V162a44 44 0 0 1 44-44z" fill="#ffffff"/>
+  <text x="256" y="312" font-family="'PingFang SC','Heiti SC','Hiragino Sans GB','Noto Sans SC',sans-serif" font-size="168" font-weight="700" fill="#2563eb" text-anchor="middle">字</text>
+</svg>
