@@ -500,8 +500,8 @@
     zh: {
       deaf: [
         { t: '你好，我想去', k: 'fill' },
-        { t: '你好，请问', k: 'fill' },
         { t: '你好，厕所在哪边？', k: 'send' },
+        { t: '你好，请问', k: 'fill' },
         { t: '你好，怎么去公交站台？', k: 'send' },
         { t: '你好，可以帮帮我吗？', k: 'send' },
         { t: '我听不到，请你打字告诉我', k: 'send' },
@@ -519,8 +519,8 @@
     en: {
       deaf: [
         { t: "I want to go to", k: 'fill' },
-        { t: "Excuse me,", k: 'fill' },
         { t: "Where is the restroom?", k: 'send' },
+        { t: "Excuse me,", k: 'fill' },
         { t: "How do I get to the bus stop?", k: 'send' },
         { t: "Can you help me?", k: 'send' },
         { t: "I can't hear. Please type.", k: 'send' },
@@ -794,6 +794,7 @@
       row.querySelector('.ptext').textContent = p.t;
       row.querySelector('.ptype').onclick = () => {
         p.k = (p.k === 'send') ? 'fill' : 'send';
+        state.presetEdited = true;
         save(); renderPresetList(); renderQuick();
       };
       row.querySelector('.pdel').onclick = () => {
@@ -865,9 +866,11 @@
         if (s.voiceURI) state.voiceURI = s.voiceURI;
         if (s.presetEdited) state.presetEdited = true;
         if (s.identity === 'deaf' || s.identity === 'vol') state.identity = s.identity;
-        if (s.presets && s.presets.deaf && s.presets.vol) {
+        if (state.presetEdited && s.presets && s.presets.deaf && s.presets.vol) {
           const norm = list => list.map(p => (typeof p === 'string') ? { t: p, k: 'fill' } : { t: p.t, k: (p.k === 'send' ? 'send' : 'fill') });
           state.presets = { deaf: norm(s.presets.deaf), vol: norm(s.presets.vol) };
+        } else {
+          state.presets = cloneDefaults(state.uiLang);
         }
       } else seed();
     } catch (e) { seed(); }
