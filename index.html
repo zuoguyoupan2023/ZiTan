@@ -463,7 +463,7 @@
       ttsOnShort: '开', ttsOffShort: '关',
       noTts: '此浏览器不支持朗读', noMessages: '还没有消息', confirmClear: '清空全部聊天记录？',
       empty: '还没有消息', autoVoice: '自动',
-      noVoice: '此浏览器暂无可用语音，或试试点「试听」刷新', noVoiceLang: '该语言下暂无可用语音'
+      noVoice: '暂无可用语音。安卓请在系统「文字转语音」中安装启用 Google 语音服务并下载语音数据；可点「试听」再触发加载。', noVoiceLang: '该语言下暂无可用语音，可切换其他语言试试'
     },
     en: {
       settings: 'Settings', fontDown: 'Smaller font', fontUp: 'Larger font',
@@ -489,7 +489,7 @@
       ttsOnShort: 'On', ttsOffShort: 'Off',
       noTts: 'TTS not supported in this browser', noMessages: 'No messages', confirmClear: 'Clear all messages?',
       empty: 'No messages', autoVoice: 'Auto',
-      noVoice: 'No voices available in this browser yet', noVoiceLang: 'No voices for this language'
+      noVoice: 'No voices available. On Android, enable Google Speech Services (TTS) in system settings and download its voice data; tap Preview to trigger a reload.', noVoiceLang: 'No voices for this language — try another'
     }
   };
   let L = I18N.zh;
@@ -583,6 +583,7 @@
   let roleTab = 'deaf';
   let quickMore = false;  /* 快捷用语是否展开（默认最多显示 4 条） */
   let voices = [];
+  let voicesKicked = false;  /* 是否已用静音占位触发过语音加载（安卓 getVoices 首次为空），避免反复触发造成闪烁 */
 
   const $ = id => document.getElementById(id);
   const chatEl = $('chat'), presenter = $('presenter'), pBig = $('pBig');
@@ -618,8 +619,25 @@
   function voicesFor(lang) { return voices.filter(v => langGroupFor(v) === lang); }
 
   function refreshVoices() {
-    if (!voices.length && 'speechSynthesis' in window) voices = speechSynthesis.getVoices() || [];
+    if ('speechSynthesis' in window) {
+      try {
+        const list = speechSynthesis.getVoices() || [];
+        if (list.length) voices = list;  /* 只在拿到列表时覆盖，空列表不清掉已缓存的语音 */
+      } catch (e) {}
+    }
     return voices;
+  }
+  function kickVoices() {
+    if (!('speechSynthesis' in window) || voicesKicked) return;
+    voicesKicked = true;
+    /* 安卓 Chrome 的 getVoices() 首次为空，必须真正 speak() 一次（静音空串）才会加载语音列表，
+       然后靠 voiceschanged 事件重渲染即可，不需要轮询。 */
+    try {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0;
+      speechSynthesis.speak(u);
+    } catch (e) {}
   }
   function autoPick(lang) {
     const list = voicesFor(lang);
@@ -760,7 +778,11 @@
 
     const list = $('voiceList');
     list.innerHTML = '';
-    if (!voices.length) { list.innerHTML = '<div class="empty-voices">' + t('noVoice') + '</div>'; return; }
+    if (!voices.length) {
+      kickVoices();  /* 用户手势里触发一次加载，成功后 voiceschanged 会自动重渲染 */
+      list.innerHTML = '<div class="empty-voices">' + t('noVoice') + '</div>';
+      return;
+    }
     const langVoices = voicesFor(state.voiceLang);
     if (!langVoices.length) { list.innerHTML = '<div class="empty-voices">' + t('noVoiceLang') + '</div>'; return; }
     const auto = autoPick(state.voiceLang);
@@ -986,6 +1008,7 @@
     });
 
     if ('speechSynthesis' in window) {
+      if (!speechSynthesis.getVoices().length) kickVoices();  /* 安卓 Chrome 首次为空，先触发一次加载 */
       speechSynthesis.onvoiceschanged = () => { if (!$('voicePane').hidden) renderVoicePane(); };
     }
 
@@ -1003,7 +1026,10 @@
     $('sTabVoice').classList.toggle('on', !presetOn);
     $('presetPane').hidden = !presetOn;
     $('voicePane').hidden = presetOn;
-    if (!presetOn) renderVoicePane();
+    if (!presetOn) {
+      if (!voices.length) voicesKicked = false;  /* 用户手势：允许重新触发一次语音加载 */
+      renderVoicePane();
+    }
   }
 
   init();
