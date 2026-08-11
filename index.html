@@ -76,7 +76,9 @@
   .toolbtn.langbtn { min-width: 44px; justify-content: center; }
 
   /* ===== 身份（谁在用） ===== */
-  .identity-bar { background: var(--panel); padding: 4px 12px; border-bottom: 1px solid var(--line); }
+  .idrow { display: flex; align-items: center; gap: 8px; padding: 4px 12px 6px; }
+  .idrow .who-line { flex: none; white-space: nowrap; }
+  .idrow .seg { flex: 1; min-width: 0; }
   .seg { display: flex; gap: 8px; }
   .seg button {
     flex: 1; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink);
@@ -84,11 +86,11 @@
     padding: 4px 8px; border-radius: 12px; cursor: pointer;
     display: flex; align-items: center; justify-content: center; gap: 8px;
   }
-  #whoDeaf, #tabDeaf { border-color: var(--deaf); color: var(--deaf); background: var(--panel); background: color-mix(in srgb, var(--deaf) 12%, var(--panel)); }
+  #whoDeaf, #tabDeaf { border-color: var(--line); color: var(--deaf); background: var(--panel); }
   #whoDeaf.on, #tabDeaf.on { background: var(--deaf); color: var(--deaf-ink); border-color: var(--deaf); }
-  #whoVol, #tabVol { border-color: var(--vol); color: var(--vol); background: var(--panel); background: color-mix(in srgb, var(--vol) 12%, var(--panel)); }
+  #whoVol, #tabVol { border-color: var(--line); color: var(--vol); background: var(--panel); }
   #whoVol.on, #tabVol.on { background: var(--vol); color: var(--vol-ink); border-color: var(--vol); }
-  body.hc #whoDeaf, body.hc #tabDeaf, body.hc #whoVol, body.hc #tabVol { color: var(--accent); border-color: var(--accent); background: var(--panel); }
+  body.hc #whoDeaf, body.hc #tabDeaf, body.hc #whoVol, body.hc #tabVol { color: var(--accent); border-color: var(--line); background: var(--panel); }
   body.hc #whoDeaf.on, body.hc #tabDeaf.on { background: var(--deaf); color: var(--deaf-ink); border-color: var(--deaf); }
   body.hc #whoVol.on, body.hc #tabVol.on { background: var(--vol); color: var(--vol-ink); border-color: var(--vol); }
   .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; flex: none; background: currentColor; opacity: .9; }
@@ -111,7 +113,7 @@
     max-width: 100%;
     padding: 8px 14px;
     border-radius: 18px;
-    font-size: calc(20px * var(--fs));
+    font-size: calc(28px * var(--fs));
     line-height: 1.5;
     word-break: break-word;
     box-shadow: 0 1px 2px rgba(0,0,0,.08);
@@ -141,7 +143,7 @@
   .chip:active { background: var(--accent); color: #fff; border-color: var(--accent); }
   .chip.fill { border: 2px solid var(--fill); background: var(--fill-bg); }
 
-  .who-line { font-size: 12px; color: var(--muted); padding: 0 12px 4px; }
+  .who-line { font-size: 12px; color: var(--muted); }
   .who-line b { font-weight: 700; }
   .inputrow { display: flex; align-items: center; gap: 8px; padding: 1px 12px 1px; }
   #text {
@@ -250,8 +252,8 @@
   #addBtn { width: 40px; border: none; border-radius: 10px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
   .card .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
   .credit { text-align: center; font-size: 12px; color: var(--muted); margin: 14px 0 0; }
-  .credit a { color: inherit; text-decoration: none; }
-  .credit a:hover { color: var(--accent); }
+  .credit a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  .credit a:hover { opacity: .75; }
 
   /* 语音 */
   .sec-title { font-size: 13px; font-weight: 700; color: var(--muted); margin: 16px 0 8px; }
@@ -292,8 +294,8 @@
     main { padding: 10px 10px 6px; }
     .msg { margin-bottom: 4px; }
     .msg .who { margin: 0 4px 2px; }
-    .msg .bubble { padding: 6px 12px; font-size: calc(23px * var(--fs)); }
-    .identity-bar { padding: 3px 10px; }
+    .msg .bubble { padding: 6px 12px; font-size: calc(32px * var(--fs)); }
+    .idrow { padding: 3px 10px 5px; }
     .seg button { padding: 3px 8px; }
     .quick { padding: 4px 10px 2px; }
     .chip { padding: 3px 9px; }
@@ -328,23 +330,22 @@
       </button>
       <button class="toolbtn" id="btnTts" data-i18n-title="autoRead" title="发送后朗读">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
-        <span class="st" id="ttsState">关</span>
+        <span class="st" id="ttsState">开</span>
       </button>
     </div>
   </header>
-
-  <div class="identity-bar">
-    <div class="seg">
-      <button id="whoDeaf"><span class="dot"></span><span data-i18n="roleDeaf">听障朋友</span></button>
-      <button id="whoVol"><span class="dot"></span><span data-i18n="roleVol">志愿者 / 路人</span></button>
-    </div>
-  </div>
 
   <main id="chat"></main>
 
   <footer>
     <div class="quick" id="quick"></div>
-    <div class="who-line" id="whoLine"></div>
+    <div class="idrow">
+      <span class="who-line" id="whoLine"></span>
+      <div class="seg">
+        <button id="whoDeaf"><span class="dot"></span><span data-i18n="roleDeaf">听障朋友</span></button>
+        <button id="whoVol"><span class="dot"></span><span data-i18n="roleVol">志愿者 / 路人</span></button>
+      </div>
+    </div>
     <div class="inputrow">
       <input id="text" type="text" autocomplete="off" placeholder="输入要说的话" data-i18n-ph="typeHere">
       <button id="send" data-i18n="send">发送</button>
@@ -424,7 +425,7 @@
       <div class="minirow" id="openHelpRow" data-i18n="howTo">使用说明</div>
 
       <button class="done" id="settingsClose" data-i18n="done">完成</button>
-      <p class="credit"><a href="https://wewalk.world/" target="_blank" rel="noopener" data-i18n="creditFrom">来自 wewalk.world</a><span data-i18n="creditTag"> · 公益项目</span></p>
+      <p class="credit"><span data-i18n="creditFrom">由</span><a href="https://wewalk.world/" target="_blank" rel="noopener">左顾右盼</a><span data-i18n="creditTag">开发</span></p>
     </div>
   </div>
 
@@ -468,7 +469,7 @@
       presetHint: '黄边 = 填入输入框继续写；无黄边 = 点一下直接发。点标签可切换，× 删除。',
       language: '语言', preview: '试听', others: '其他',
       howTo: '使用说明', clearChat: '清空聊天记录', done: '完成',
-      creditFrom: '来自 wewalk.world', creditTag: ' · 公益项目',
+      creditFrom: '由', creditTag: '开发',
       howTitle: '字谈怎么用？',
       help1: '顶部选「听障朋友」或「志愿者」，决定快捷用语和气泡颜色。',
       help2: '快捷用语：黄边 = 填入输入框继续写；无黄边 = 直接发。',
@@ -477,7 +478,7 @@
       help5: '点任意消息 → 全屏超大字；左右滑看上一条 / 下一条。',
       helpNote: '本地运行，内容不离开设备。对话和设置存在本机浏览器，刷新不丢。',
       gotIt: '开始使用',
-      whoLineA: '以「', whoLineB: '」身份书写 · 换人点上方',
+      whoLineA: '当前是 ', whoLineB: '',
       ttsOn: '发送后朗读已开启', ttsOff: '发送后朗读已关闭',
       ttsOnShort: '开', ttsOffShort: '关',
       noTts: '此浏览器不支持朗读', noMessages: '还没有消息', confirmClear: '清空全部聊天记录？',
@@ -495,7 +496,7 @@
       presetHint: 'Yellow = fill in box; plain = send now. Tap the label to switch, × to delete.',
       language: 'Language', preview: 'Preview', others: 'More',
       howTo: 'How to use', clearChat: 'Clear chat', done: 'Done',
-      creditFrom: 'From wewalk.world', creditTag: ' · a non-profit project',
+      creditFrom: 'Developed by ', creditTag: '',
       howTitle: 'How to use 字谈?',
       help1: 'Choose "Deaf friend" or "Volunteer" at top to set presets and bubble colors.',
       help2: 'Presets: yellow = fill in the box; plain = send now.',
@@ -504,7 +505,7 @@
       help5: 'Tap any message for fullscreen big text; swipe for the previous / next message.',
       helpNote: 'Runs locally; nothing leaves your device. Chat and settings are stored in this browser.',
       gotIt: 'Got it',
-      whoLineA: 'Typing as ', whoLineB: ' · tap above to switch',
+      whoLineA: 'Currently ', whoLineB: '',
       ttsOn: 'Read after send: on', ttsOff: 'Read after send: off',
       ttsOnShort: 'On', ttsOffShort: 'Off',
       noTts: 'TTS not supported in this browser', noMessages: 'No messages', confirmClear: 'Clear all messages?',
@@ -592,7 +593,7 @@
     messages: [],
     identity: 'deaf',
     fs: 1.0,
-    tts: false,
+    tts: true,
     hc: false,
     viewing: -1,
     voiceLang: 'zh-CN',
@@ -898,7 +899,7 @@
         state.messages = s.messages;
         if (s.uiLang === 'en' || s.uiLang === 'zh') state.uiLang = s.uiLang;
         if (s.fs) state.fs = s.fs;
-        if (s.tts) state.tts = s.tts;
+        if (typeof s.tts === 'boolean') state.tts = s.tts;
         if (s.hc) state.hc = s.hc;
         if (s.voiceLang) state.voiceLang = s.voiceLang;
         if (s.voiceURI) state.voiceURI = s.voiceURI;
