@@ -522,20 +522,20 @@
   const DEFAULT_PRESETS = {
     zh: {
       deaf: [
-        { t: '你好，我想去', k: 'fill' },
-        { t: '你好，请问', k: 'fill' },
-        { t: '你好，厕所在哪边？', k: 'send' },
-        { t: '你好，怎么去公交站台？', k: 'send' },
-        { t: '你好，可以帮帮我吗？', k: 'send' },
-        { t: '我听不到，请你打字告诉我', k: 'send' },
-        { t: '谢谢', k: 'send' }
+        { t: '您好，我想去', k: 'fill' },
+        { t: '您好，请问', k: 'fill' },
+        { t: '您好，我是听障人，请打字告诉我', k: 'send' },
+        { t: '您好，怎么去公交站台？', k: 'send' },
+        { t: '您好，可以帮我一下吗？', k: 'send' },
+        { t: '我听不到，可以在这里打字', k: 'send' },
+        { t: '谢谢，谢谢', k: 'send' }
       ],
       vol: [
-        { t: '你好，是需要帮忙吗？', k: 'send' },
-        { t: '好的，我明白了', k: 'send' },
-        { t: '我帮你去问一下，请稍等', k: 'send' },
-        { t: '好的，这边走', k: 'send' },
-        { t: '你好，请告诉我你需要什么', k: 'fill' },
+        { t: '我明白了，我看一下', k: 'send' },
+        { t: '我帮您去问一下，请稍等', k: 'send' },
+        { t: '我对这里不熟悉，帮您查一下', k: 'send' },
+        { t: '这边走', k: 'send' },
+        { t: '您好，请告诉我您需要什么', k: 'fill' },
         { t: '不客气', k: 'send' }
       ]
     },
@@ -563,9 +563,9 @@
 
   /* ============ 语音语言列表（列出尽可能多，不再用「其他」） ============ */
   const LANGS = [
-    { id: 'zh-CN', labelZh: '中国大陆', labelEn: 'Chinese (Mainland)', sample: '你好，请问有什么可以帮你的吗？' },
-    { id: 'zh-TW', labelZh: '中国台湾', labelEn: 'Chinese (Taiwan)', sample: '你好，請問有什麼可以幫你的嗎？' },
-    { id: 'zh-HK', labelZh: '中国香港', labelEn: 'Chinese (Hong Kong)', sample: '你好，請問有咩可以幫到你？' },
+    { id: 'zh-CN', labelZh: '中国大陆', labelEn: 'Chinese (Mainland)', sample: '您好，请问有什么可以帮您的吗？' },
+    { id: 'zh-TW', labelZh: '中国台湾', labelEn: 'Chinese (Taiwan)', sample: '您好，請問有什麼可以幫您的嗎？' },
+    { id: 'zh-HK', labelZh: '中国香港', labelEn: 'Chinese (Hong Kong)', sample: '您好，請問有咩可以幫到您？' },
     { id: 'en-US', labelZh: '美国英语', labelEn: 'English (US)', sample: 'Hello, how can I help you?' },
     { id: 'en-GB', labelZh: '英国英语', labelEn: 'English (UK)', sample: 'Hello, how can I help you?' },
     { id: 'en-AU', labelZh: '澳大利亚英语', labelEn: 'English (Australia)', sample: 'Hello, how can I help you?' },
