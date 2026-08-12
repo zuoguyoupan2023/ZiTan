@@ -144,7 +144,7 @@
   }
   .chip:active { background: var(--accent); color: #fff; border-color: var(--accent); }
   .chip.fill { border: 2px solid var(--fill); background: var(--fill-bg); }
-  .chip.collapse { border: 2px solid var(--danger); color: var(--danger); font-weight: 700; }
+  .chip.collapse { border: 2px solid var(--danger); font-weight: 700; }
 
   .who-line { font-size: 12px; color: var(--muted); }
   .who-line b { font-weight: 700; }
@@ -288,16 +288,23 @@
   .minirow.danger { color: var(--danger); }
 
   .hist-row {
-    display: block; width: 100%; text-align: left;
+    display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
     border: 1.5px solid transparent; background: var(--bg); color: var(--ink);
     border-radius: 10px; padding: 10px 12px; margin-bottom: 6px; cursor: pointer;
   }
   .hist-row:active { background: var(--accent); color: #fff; }
   .hist-row.on { border-color: var(--accent); }
+  .hist-main { flex: 1; min-width: 0; }
   .hist-row .ht { font-size: 12px; color: var(--muted); }
   .hist-row .hcur { color: var(--accent); font-weight: 700; }
   .hist-row .hp { font-size: 15px; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .hist-row:active .ht, .hist-row:active .hp, .hist-row:active .hcur { color: #fff; }
+  .hist-del {
+    flex: none; width: 30px; height: 30px; border: none; border-radius: 8px;
+    background: transparent; color: var(--muted);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .hist-del:active { background: var(--danger); color: #fff; }
 
   .toast {
     position: fixed; left: 50%; bottom: 110px; transform: translateX(-50%);
@@ -323,7 +330,7 @@
   <header>
     <div class="hrow">
       <div class="brand"><h1>字谈</h1></div>
-      <button class="toolbtn" id="btnClear" title="清空聊天记录" data-i18n-title="clearChat">
+      <button class="toolbtn" id="btnClear" title="清空当前窗口内容" data-i18n-title="clearChat">
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5L11 13"/><path d="M11 13l-7 7"/><path d="M13 13l-8 8"/></svg>
       </button>
       <button class="toolbtn" id="btnSettings" title="设置" data-i18n-title="settings">
@@ -439,7 +446,7 @@
 
       <div class="sec-title" data-i18n="others">其他</div>
       <div class="minirow" id="openHelpRow" data-i18n="howTo">使用说明</div>
-      <div class="minirow" id="historyRow" data-i18n="history">聊天历史</div>
+      <div class="minirow" id="historyRow" data-i18n="history">对话历史</div>
       <div class="minirow" id="exportRow" data-i18n="exportChat">导出聊天记录 (JSON)</div>
 
       <button class="done" id="settingsClose" data-i18n="done">完成</button>
@@ -453,7 +460,7 @@
       <button class="x" id="historyX" title="关闭">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
-      <h2 data-i18n="history">聊天历史</h2>
+      <h2 data-i18n="history">对话历史</h2>
       <p class="hint" data-i18n="historyHint">点击任意一条，可恢复到对话界面查看。</p>
       <div id="historyList"></div>
       <button class="done" id="historyClose" data-i18n="done">完成</button>
@@ -500,10 +507,11 @@
       presetHint: '黄边 = 填入输入框继续写；无黄边 = 点一下直接发。点文字可编辑，点标签可切换，× 删除。',
       confirmDelPreset: '删除这条预设？',
       language: '语言', preview: '试听', others: '其他',
-      howTo: '使用说明', clearChat: '清空聊天记录', done: '完成',
+      howTo: '使用说明', clearChat: '清空当前窗口内容\n（放心聊天记录不会消失）', done: '完成',
       exportChat: '导出聊天记录 (JSON)', exportDone: '已导出', exportFail: '导出失败',
-      history: '聊天历史', historyHint: '点击任意一条，可恢复到对话界面查看。',
-      historyEmpty: '暂无历史会话', historyCurrent: '当前', historyMsgs: '条消息', historyLoaded: '已恢复到对话界面',
+      history: '对话历史', historyHint: '点击任意一条，可恢复到对话界面查看。',
+      historyEmpty: '暂无对话记录', historyCurrent: '当前', historyMsgs: '条消息', historyLoaded: '已恢复到对话界面',
+      del: '删除', confirmDelSession: '删除这条对话记录？', historyDeleted: '已删除',
       creditFrom: '由', creditTag: '开发',
       howTitle: '字谈怎么用？',
       help1: '顶部选「听障朋友」或「志愿者」，决定快捷用语和气泡颜色。',
@@ -516,7 +524,7 @@
       whoLineA: '当前是', whoLineB: '',
       ttsOn: '发送后朗读已开启', ttsOff: '发送后朗读已关闭',
       ttsOnShort: '开', ttsOffShort: '关',
-      noTts: '此浏览器不支持朗读', noMessages: '还没有消息', confirmClear: '清空全部聊天记录？',
+      noTts: '此浏览器不支持朗读', noMessages: '还没有消息', confirmClear: '清空当前窗口内容？',
       empty: '还没有消息', autoVoice: '自动',
       noVoice: '部分手机无法显示列表，试听有默认音频', noVoiceLang: '该语言下暂无可用语音，可切换其他语言试试'
     },
@@ -531,10 +539,11 @@
       presetHint: 'Yellow = fill in box; plain = send now. Tap text to edit, tap the label to switch, × to delete.',
       confirmDelPreset: 'Delete this preset?',
       language: 'Language', preview: 'Preview', others: 'More',
-      howTo: 'How to use', clearChat: 'Clear chat', done: 'Done',
+      howTo: 'How to use', clearChat: 'Clear current window\n(Your chat history is kept)', done: 'Done',
       exportChat: 'Export chat (JSON)', exportDone: 'Exported', exportFail: 'Export failed',
-      history: 'Chat history', historyHint: 'Tap a session to restore it to the chat view.',
-      historyEmpty: 'No saved sessions', historyCurrent: 'Current', historyMsgs: 'messages', historyLoaded: 'Restored to chat view',
+      history: 'Conversation history', historyHint: 'Tap a session to restore it to the chat view.',
+      historyEmpty: 'No saved conversations', historyCurrent: 'Current', historyMsgs: 'messages', historyLoaded: 'Restored to chat view',
+      del: 'Delete', confirmDelSession: 'Delete this conversation?', historyDeleted: 'Deleted',
       creditFrom: 'Developed by ', creditTag: '',
       howTitle: 'How to use 字谈?',
       help1: 'Choose "Deaf friend" or "Volunteer" at top to set presets and bubble colors.',
@@ -547,7 +556,7 @@
       whoLineA: 'Currently', whoLineB: '',
       ttsOn: 'Read after send: on', ttsOff: 'Read after send: off',
       ttsOnShort: 'On', ttsOffShort: 'Off',
-      noTts: 'TTS not supported in this browser', noMessages: 'No messages', confirmClear: 'Clear all messages?',
+      noTts: 'TTS not supported in this browser', noMessages: 'No messages', confirmClear: 'Clear the current window?',
       empty: 'No messages', autoVoice: 'Auto',
       noVoice: 'Some phones can\'t show the voice list — Preview reads with the default voice.', noVoiceLang: 'No voices for this language — try another'
     }
@@ -1058,13 +1067,20 @@
         const msgs = s.messages || [];
         const first = msgs.length ? msgs[0].text : '';
         const isCur = (s.id === state.sessionId);
-        const row = document.createElement('button');
+        const row = document.createElement('div');
         row.className = 'hist-row' + (isCur ? ' on' : '');
-        row.innerHTML = '<div class="ht">' + escapeHtml(fmtDT(s.start))
+        row.innerHTML = '<div class="hist-main">'
+          + '<div class="ht">' + escapeHtml(fmtDT(s.start))
           + (isCur ? ' <span class="hcur">' + escapeHtml(t('historyCurrent')) + '</span>' : '')
           + ' · ' + msgs.length + ' ' + escapeHtml(t('historyMsgs')) + '</div>'
-          + '<div class="hp">' + escapeHtml(first || '') + '</div>';
+          + '<div class="hp">' + escapeHtml(first || '') + '</div>'
+          + '</div>'
+          + '<button class="hist-del" title="' + escapeHtml(t('del')) + '">' + ic('close', 15) + '</button>';
         row.onclick = () => loadSession(s);
+        row.querySelector('.hist-del').onclick = e => {
+          e.stopPropagation();
+          deleteSession(s);
+        };
         list.appendChild(row);
       });
     });
@@ -1079,6 +1095,28 @@
     render();
     renderQuick();
     toast(t('historyLoaded'));
+  }
+  function deleteSession(s) {
+    if (!confirm(t('confirmDelSession'))) return;
+    const done = () => {
+      if (s.id === state.sessionId) {
+        /* 删的是当前会话：清空当前窗口并另开新会话（该条已从 IndexedDB 删除，不会被重新持久化回来） */
+        state.messages = [];
+        state.sessionId = Date.now();
+        state.sessionStart = Date.now();
+        render();
+        renderQuick();
+      }
+      renderHistoryList();
+      toast(t('historyDeleted'));
+    };
+    if (!('indexedDB' in window)) return done();
+    openIDB().then(db => new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).delete(s.id);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    })).then(done).catch(() => toast(t('exportFail')));
   }
 
   /* ============ 语言应用与切换 ============ */
