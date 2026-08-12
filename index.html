@@ -242,7 +242,8 @@
     background: var(--panel); color: var(--ink); font-size: 14px; font-weight: 600; cursor: pointer;
   }
   .proll { display: flex; align-items: center; gap: 8px; background: var(--bg); border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; }
-  .proll .ptext { flex: 1; font-size: 15px; word-break: break-word; }
+  .proll .ptext { flex: 1; font-size: 15px; word-break: break-word; cursor: text; }
+  .proll .pedit { flex: 1; min-width: 0; font-size: 15px; padding: 4px 8px; border: 1.5px solid var(--accent); border-radius: 8px; background: var(--panel); color: var(--ink); outline: none; }
   .proll .ptype {
     flex: none; font-size: 12px; padding: 5px 9px; border-radius: 8px;
     border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer;
@@ -425,6 +426,7 @@
 
       <div class="sec-title" data-i18n="others">其他</div>
       <div class="minirow" id="openHelpRow" data-i18n="howTo">使用说明</div>
+      <div class="minirow" id="exportRow" data-i18n="exportChat">导出聊天记录 (JSON)</div>
 
       <button class="done" id="settingsClose" data-i18n="done">完成</button>
       <p class="credit"><span data-i18n="creditFrom">由</span><a href="https://wewalk.world/" target="_blank" rel="noopener">左顾右盼</a><span data-i18n="creditTag">开发</span></p>
@@ -468,9 +470,11 @@
       exit: '退出', prev: '上一条', next: '下一条',
       presets: '预设', voice: '语音', fill: '填入', sendDirect: '直接发',
       add: '添加', newPhrase: '输入新用语',
-      presetHint: '黄边 = 填入输入框继续写；无黄边 = 点一下直接发。点标签可切换，× 删除。',
+      presetHint: '黄边 = 填入输入框继续写；无黄边 = 点一下直接发。点文字可编辑，点标签可切换，× 删除。',
+      confirmDelPreset: '删除这条预设？',
       language: '语言', preview: '试听', others: '其他',
       howTo: '使用说明', clearChat: '清空聊天记录', done: '完成',
+      exportChat: '导出聊天记录 (JSON)', exportDone: '已导出', exportFail: '导出失败',
       creditFrom: '由', creditTag: '开发',
       howTitle: '字谈怎么用？',
       help1: '顶部选「听障朋友」或「志愿者」，决定快捷用语和气泡颜色。',
@@ -495,9 +499,11 @@
       exit: 'Exit', prev: 'Previous', next: 'Next',
       presets: 'Presets', voice: 'Voice', fill: 'Fill', sendDirect: 'Send',
       add: 'Add', newPhrase: 'New phrase',
-      presetHint: 'Yellow = fill in box; plain = send now. Tap the label to switch, × to delete.',
+      presetHint: 'Yellow = fill in box; plain = send now. Tap text to edit, tap the label to switch, × to delete.',
+      confirmDelPreset: 'Delete this preset?',
       language: 'Language', preview: 'Preview', others: 'More',
       howTo: 'How to use', clearChat: 'Clear chat', done: 'Done',
+      exportChat: 'Export chat (JSON)', exportDone: 'Exported', exportFail: 'Export failed',
       creditFrom: 'Developed by ', creditTag: '',
       howTitle: 'How to use 字谈?',
       help1: 'Choose "Deaf friend" or "Volunteer" at top to set presets and bubble colors.',
@@ -526,6 +532,7 @@
         { t: '您好，请问', k: 'fill' },
         { t: '您好，我是听障人，请打字告诉我', k: 'send' },
         { t: '您好，怎么去公交站台？', k: 'send' },
+        { t: '您好，哪位，有什么事？', k: 'send' },
         { t: '您好，可以帮我一下吗？', k: 'send' },
         { t: '我听不到，可以在这里打字', k: 'send' },
         { t: '谢谢，谢谢', k: 'send' }
@@ -598,6 +605,8 @@
     tts: true,
     hc: false,
     viewing: -1,
+    sessionId: Date.now(),
+    sessionStart: Date.now(),
     voiceLang: 'zh-CN',
     voiceURI: '',
     presetEdited: false,
@@ -830,13 +839,37 @@
       row.innerHTML = '<span class="ptext"></span>'
         + '<button class="ptype">' + (sendMode ? t('sendDirect') : t('fill')) + '</button>'
         + '<button class="pdel" title="×">' + ic('close', 14) + '</button>';
-      row.querySelector('.ptext').textContent = p.t;
+      const ptext = row.querySelector('.ptext');
+      ptext.textContent = p.t;
+      /* 点击文本 → 内联编辑，Enter/失焦保存，Esc 取消 */
+      ptext.onclick = () => {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'pedit';
+        input.value = p.t;
+        ptext.replaceWith(input);
+        input.focus(); input.select();
+        let done = false;
+        const commit = () => {
+          if (done) return; done = true;
+          const v = input.value.trim();
+          if (v && v !== p.t) { p.t = v; state.presetEdited = true; save(); }
+          renderPresetList(); renderQuick();
+        };
+        const cancel = () => { if (done) return; done = true; renderPresetList(); };
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Enter') commit();
+          else if (e.key === 'Escape') cancel();
+        });
+        input.addEventListener('blur', commit);
+      };
       row.querySelector('.ptype').onclick = () => {
         p.k = (p.k === 'send') ? 'fill' : 'send';
         state.presetEdited = true;
         save(); renderPresetList(); renderQuick();
       };
       row.querySelector('.pdel').onclick = () => {
+        if (!confirm(t('confirmDelPreset'))) return;
         state.presets[roleTab].splice(i, 1);
         state.presetEdited = true;
         save(); renderPresetList(); renderQuick();
@@ -891,12 +924,15 @@
   }
   function save() {
     try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {}
+    persistSession();
   }
   function load() {
     try {
       const s = JSON.parse(localStorage.getItem(LS_KEY));
       if (s && s.messages) {
         state.messages = s.messages;
+        if (s.sessionId) { state.sessionId = s.sessionId; state.sessionStart = s.sessionStart || s.sessionId; }
+        else { state.sessionId = Date.now(); state.sessionStart = Date.now(); }
         if (s.uiLang === 'en' || s.uiLang === 'zh') state.uiLang = s.uiLang;
         if (s.fs) state.fs = s.fs;
         if (typeof s.tts === 'boolean') state.tts = s.tts;
@@ -913,6 +949,62 @@
         }
       } else seed();
     } catch (e) { seed(); }
+  }
+
+  /* ============ IndexedDB 会话历史 ============ */
+  const IDB_NAME = 'zitan', IDB_STORE = 'sessions';
+  let idb = null;
+  function openIDB() {
+    return new Promise((resolve, reject) => {
+      if (idb) return resolve(idb);
+      if (!('indexedDB' in window)) return reject(new Error('no indexedDB'));
+      const req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = e => {
+        const d = e.target.result;
+        if (!d.objectStoreNames.contains(IDB_STORE)) d.createObjectStore(IDB_STORE, { keyPath: 'id' });
+      };
+      req.onsuccess = e => { idb = e.target.result; resolve(idb); };
+      req.onerror = e => reject(e);
+    });
+  }
+  function persistSession() {
+    if (!('indexedDB' in window)) return;
+    openIDB().then(db => {
+      db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).put({
+        id: state.sessionId, start: state.sessionStart, end: Date.now(), messages: state.messages
+      });
+    }).catch(() => {});
+  }
+  function allSessions() {
+    if (!('indexedDB' in window)) return Promise.resolve([]);
+    return openIDB().then(db => new Promise((resolve, reject) => {
+      const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    }));
+  }
+  function exportChat() {
+    allSessions().then(sessions => {
+      const payload = {
+        app: 'zitan', exportedAt: new Date().toISOString(), sessionCount: sessions.length,
+        sessions: sessions
+          .map(s => ({
+            sessionId: s.id,
+            start: new Date(s.start).toISOString(),
+            end: s.end ? new Date(s.end).toISOString() : null,
+            messageCount: s.messages.length,
+            messages: s.messages
+          }))
+          .sort((a, b) => (a.start < b.start ? -1 : 1))
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'zitan-chat-export.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      toast(t('exportDone'));
+    }).catch(() => toast(t('exportFail')));
   }
 
   /* ============ 语言应用与切换 ============ */
@@ -986,7 +1078,8 @@
 
     /* 设置里：使用说明 / 清空 */
     $('openHelpRow').onclick = () => { $('settingsOverlay').classList.remove('show'); $('helpOverlay').classList.add('show'); };
-    $('btnClear').onclick = () => { if (confirm(t('confirmClear'))) { state.messages = []; render(); } };
+    $('exportRow').onclick = exportChat;
+    $('btnClear').onclick = () => { if (confirm(t('confirmClear'))) { state.messages = []; state.sessionId = Date.now(); state.sessionStart = Date.now(); render(); } };
 
     /* 帮助 */
     $('helpClose').onclick = () => $('helpOverlay').classList.remove('show');
