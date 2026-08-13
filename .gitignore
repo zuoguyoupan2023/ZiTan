@@ -1,0 +1,10 @@
+# 大模型二进制资产 → 上传 Cloudflare R2，不进入 git（部署见 006）
+# 原则：网页代码走 Pages（git 管），模型/引擎二进制走 R2（git 不管），避免仓库膨胀 ~967MB
+/sensevoice/model.int8.onnx
+/sensevoice/silero_vad.onnx
+/sensevoice/*.data
+/sensevoice/*.wasm
+/sensevoice/ort/*.wasm
+
+# 系统/临时文件
+.DS_Store

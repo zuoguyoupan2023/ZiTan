@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SenseVoice 浏览器验证页</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, sans-serif; background: #1a1a2e; color: #e0e0e0;
+         margin: 0; padding: 24px; max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 20px; } .sub { color: #888; font-size: 13px; margin-bottom: 16px; }
+  .card { background: #16213e; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  button { background: #10a37f; color: #fff; border: none; border-radius: 8px; padding: 10px 16px;
+           font-size: 14px; cursor: pointer; margin-right: 8px; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  .status { color: #51cf66; font-size: 13px; margin-bottom: 8px; white-space: pre-wrap; }
+  .status.err { color: #ff6b6b; }
+  #out { background: #0f3460; border-radius: 8px; padding: 12px; min-height: 100px;
+         font-size: 20px; line-height: 1.6; white-space: pre-wrap; }
+  .row { margin: 8px 0; }
+  input[type=file] { color: #aaa; }
+  details { margin-top: 12px; } summary { cursor: pointer; color: #888; }
+  #log { color: #777; font-size: 12px; white-space: pre-wrap; max-height: 150px; overflow: auto; }
+</style>
+</head>
+<body>
+<h1>🎤 SenseVoice 离线语音识别（浏览器）</h1>
+<div class="sub">模型: <b>sensevoice/model.int8.onnx</b>（228MB 本地加载）+ sherpa-onnx wasm 引擎。完全离线，不离开设备。</div>
+
+<div class="card">
+  <div class="status" id="status">正在初始化引擎…</div>
+  <div class="row">
+    <button id="startBtn" disabled>🎤 开始录音</button>
+    <button id="stopBtn" disabled>⏹ 停止</button>
+    <span style="color:#888;font-size:13px">按住识别志愿者说的话</span>
+  </div>
+  <div class="row">
+    <button id="autoBtn" disabled>▶ 自动演示（识别 demo.wav）</button>
+    <label style="color:#888;font-size:13px">或上传音频：
+      <input type="file" id="fileInput" accept="audio/wav,.wav,audio/*" disabled>
+    </label>
+  </div>
+</div>
+
+<div class="card">
+  <div style="color:#888;font-size:13px;margin-bottom:6px">识别结果（填入输入框可直接发送）</div>
+  <div id="out">（等待输入…）</div>
+  <button id="fillBtn" disabled style="margin-top:10px">↳ 填入聊天输入框</button>
+</div>
+
+<details>
+  <summary>日志</summary><pre id="log"></pre>
+</details>
+
+<script>
+window.Module = {};
+// 引擎 .wasm 与 .data 都在 /sensevoice/ 下，统一从这里取
+Module.locateFile = (path, scriptDirectory = '') => '/sensevoice/' + path;
+</script>
+<script src="/sensevoice/sherpa-onnx-asr.js"></script>
+<script src="/sensevoice/sherpa-onnx-vad.js"></script>
+<script src="/sensevoice/sherpa-onnx-wasm-main-vad-asr.js"></script>
+<script>
+(function () {
+  'use strict';
+  const SR = 16000;
+  const $ = (id) => document.getElementById(id);
+  const statusEl = $('status'), outEl = $('out'), logEl = $('log');
+  const startBtn = $('startBtn'), stopBtn = $('stopBtn'), autoBtn = $('autoBtn');
+  const fileInput = $('fileInput'), fillBtn = $('fillBtn');
+  let recognizer = null, vad = null, buffer = null, ready = false;
+  let audioCtx = null, mediaStream = null, recorder = null;
+
+  function log(...a) {
+    logEl.textContent += a.join(' ') + '\n';
+    console.log('[sensevoice]', ...a);
+  }
+  function status(s, isErr) {
+    statusEl.textContent = s;
+    statusEl.className = 'status' + (isErr ? ' err' : '');
+  }
+
+  // ---------- Emscripten 钩子 ----------
+  Module.setStatus = function (s) {
+    if (!s) { init(); return; }          // 空串 = 模型数据加载完
+    const m = s.match(/Downloading data\.\.\. \((\d+)\/(\d+)\)/);
+    if (m) status('正在下载模型… ' + (m[1] / m[2] * 100).toFixed(1) + '%');
+    else status(s);
+    log('setStatus: ' + s);
+  };
+  Module.onRuntimeInitialized = function () {
+    log('wasm 运行时就绪（等待模型数据…）');
+  };
+
+  function init() {
+    if (ready) return;
+    try {
+      vad = createVad(Module);
+      buffer = new CircularBuffer(30 * SR, Module);
+      recognizer = new OfflineRecognizer({
+        modelConfig: {
+          debug: 0,
+          tokens: '/tokens.txt',
+          senseVoice: { model: '/sense-voice.onnx', useInverseTextNormalization: 1 },
+        },
+      }, Module);
+      ready = true;
+      status('✅ 模型就绪，可开始识别');
+      startBtn.disabled = autoBtn.disabled = fileInput.disabled = false;
+      log('模型就绪');
+      // 就绪后自动跑一遍 demo.wav（方便首次验证）
+      setTimeout(() => { if (autoBtn.disabled === false) autoBtn.click(); }, 300);
+    } catch (e) {
+      status('初始化失败: ' + e.message, true);
+      log('init err', e);
+    }
+  }
+
+  // ---------- 识别（一段 Float32Array） ----------
+  function recognizeSamples(samples) {
+    if (!ready) return;
+    const t0 = performance.now();
+    const stream = recognizer.createStream();
+    stream.acceptWaveform(SR, samples);
+    recognizer.decode(stream);
+    const r = recognizer.getResult(stream);
+    stream.free();
+    const ms = (performance.now() - t0).toFixed(0);
+    log(`识别耗时 ${ms}ms, 原始: ${JSON.stringify(r)}`);
+    if (r.text) {
+      outEl.textContent = r.text;
+      fillBtn.disabled = false;
+    } else {
+      outEl.textContent = '（未识别到内容）';
+    }
+    return r.text;
+  }
+
+  // ---------- WAV 解析（16k 单声道 PCM16 / 也容忍其他采样率降采样） ----------
+  function wavToFloat32(buf) {
+    const u8 = new Uint8Array(buf); // buf 是 ArrayBuffer，先包一层才能按字节索引
+    const dv = new DataView(buf);
+    const getS = (o, l) => String.fromCharCode(u8[o], u8[o + 1], u8[o + 2], u8[o + 3]);
+    let fmt = { rate: 16000, bits: 16, channels: 1 }, dataOff = 0, dataLen = 0;
+    let off = 12;
+    while (off < buf.byteLength) {
+      const id = getS(off, 4), sz = dv.getUint32(off + 4, true);
+      if (id === 'fmt ') {
+        fmt.channels = dv.getUint16(off + 10, true);
+        fmt.rate = dv.getUint32(off + 12, true);
+        fmt.bits = dv.getUint16(off + 22, true);
+      } else if (id === 'data') { dataOff = off + 8; dataLen = sz; }
+      off += 8 + sz + (sz % 2);
+    }
+    let samples;
+    if (fmt.bits === 16) {
+      samples = new Float32Array(dataLen / 2);
+      for (let i = 0; i < samples.length; i++) samples[i] = dv.getInt16(dataOff + i * 2, true) / 32768;
+    } else if (fmt.bits === 32) { // float
+      samples = new Float32Array(dataLen / 4);
+      for (let i = 0; i < samples.length; i++) samples[i] = dv.getFloat32(dataOff + i * 4, true);
+    } else throw new Error('不支持的位深: ' + fmt.bits);
+    if (fmt.channels > 1) {
+      const mono = new Float32Array(samples.length / fmt.channels);
+      for (let i = 0; i < mono.length; i++) mono[i] = samples[i * fmt.channels];
+      samples = mono;
+    }
+    if (fmt.rate !== SR) return downsample(samples, fmt.rate, SR);
+    return samples;
+  }
+  function downsample(buf, srcRate, outRate) {
+    if (srcRate === outRate) return buf;
+    const ratio = srcRate / outRate, n = Math.round(buf.length / ratio);
+    const out = new Float32Array(n);
+    for (let i = 0; i < n; i++) out[i] = buf[Math.floor(i * ratio)];
+    return out;
+  }
+
+  // ---------- 文件上传 ----------
+  fileInput.addEventListener('change', (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    f.arrayBuffer().then((b) => {
+      status('正在识别上传音频…');
+      setTimeout(() => { recognizeSamples(wavToFloat32(b)); status('✅ 完成'); }, 30);
+    });
+  });
+
+  // ---------- 自动演示 ----------
+  autoBtn.onclick = () => {
+    fetch('/sensevoice-test/demo.wav')
+      .then((r) => r.arrayBuffer())
+      .then((b) => { status('自动演示：识别 demo.wav…'); recognizeSamples(wavToFloat32(b)); status('✅ 完成'); })
+      .catch((e) => status('自动演示失败: ' + e.message, true));
+  };
+
+  // ---------- 麦克风 + VAD ----------
+  startBtn.onclick = async () => {
+    if (!ready) return;
+    try {
+      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e) { status('麦克风授权失败: ' + e.message, true); return; }
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = audioCtx.createMediaStreamSource(mediaStream);
+    recorder = audioCtx.createScriptProcessor(4096, 1, 2);
+    recorder.onaudioprocess = (ev) => {
+      const samples = downsample(new Float32Array(ev.inputBuffer.getChannelData(0)), audioCtx.sampleRate, SR);
+      buffer.push(samples);
+      while (buffer.size() > vad.config.sileroVad.windowSize) {
+        vad.acceptWaveform(buffer.get(buffer.head(), vad.config.sileroVad.windowSize));
+        buffer.pop(vad.config.sileroVad.windowSize);
+        while (!vad.isEmpty()) {
+          const seg = vad.front(); vad.pop();
+          recognizeSamples(seg.samples);
+        }
+      }
+    };
+    src.connect(recorder);
+    recorder.connect(audioCtx.destination);
+    startBtn.disabled = true; stopBtn.disabled = false;
+    status('🎤 录音中…（停顿即自动识别）');
+  };
+  stopBtn.onclick = () => {
+    try { recorder.disconnect(audioCtx.destination); mediaStream.getTracks().forEach((t) => t.stop()); } catch (e) {}
+    vad && vad.reset(); buffer && buffer.reset();
+    startBtn.disabled = false; stopBtn.disabled = true;
+    status('已停止');
+  };
+
+  // 调试钩子：加载 demo.wav，按 scale 缩放后识别，返回 JSON（供 CDP 测试不同缩放）
+  window.__svTest = (scale) => {
+    return fetch('/sensevoice-test/demo.wav').then((r) => r.arrayBuffer()).then((b) => {
+      let s = wavToFloat32(b);
+      if (scale && scale !== 1) for (let i = 0; i < s.length; i++) s[i] *= scale;
+      const stream = recognizer.createStream();
+      stream.acceptWaveform(SR, s);
+      recognizer.decode(stream);
+      const r = recognizer.getResult(stream);
+      stream.free();
+      outEl.textContent = r.text || '(空)';
+      return JSON.stringify(r);
+    });
+  };
+
+  fillBtn.onclick = () => {
+    const text = outEl.textContent;
+    const input = window.parent && window.parent.document ? null : null;
+    // 填充聊天输入框（若同页面存在 #text 输入框）
+    const t = document.getElementById('text');
+    if (t) { t.value = text; t.focus(); }
+    else { navigator.clipboard && navigator.clipboard.writeText(text); }
+  };
+
+  // 引擎脚本加载失败兜底
+  window.addEventListener('error', (e) => {
+    status('加载出错: ' + e.message, true);
+  });
+})();
+</script>
+</body>
+</html>

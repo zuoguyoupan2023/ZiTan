@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SenseVoice 浏览器识别（onnxruntime-web）</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, sans-serif; background: #1a1a2e; color: #e0e0e0; margin: 0; padding: 24px; }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 20px; }
+  .sub { color: #888; font-size: 13px; margin-bottom: 16px; }
+  .card { background: #16213e; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  button { background: #10a37f; color: #fff; border: none; border-radius: 8px; padding: 10px 16px; font-size: 14px; cursor: pointer; margin-right: 8px; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  .status { color: #51cf66; font-size: 13px; margin-bottom: 8px; white-space: pre-wrap; }
+  .status.err { color: #ff6b6b; }
+  #out { background: #0f3460; border-radius: 8px; padding: 12px; min-height: 100px; font-size: 20px; line-height: 1.6; white-space: pre-wrap; }
+  .row { margin: 8px 0; }
+  #log { color: #777; font-size: 12px; white-space: pre-wrap; max-height: 150px; overflow: auto; margin-top: 12px; }
+  details { margin-top: 12px; } summary { cursor: pointer; color: #888; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🎤 SenseVoice 浏览器识别（onnxruntime-web 版）</h1>
+<div class="sub">模型: <b>sensevoice/model.int8.onnx</b>（228MB）+ onnxruntime-web WASM。纯本地、离线，不离开设备。</div>
+
+<div class="card">
+  <div class="status" id="status">正在加载 onnxruntime + 模型…</div>
+  <div class="row">
+    <button id="startBtn" disabled>🎤 开始录音</button>
+    <button id="stopBtn" disabled>⏹ 停止</button>
+    <span style="color:#888;font-size:13px">志愿者说话 → 自动识别成文字</span>
+  </div>
+  <div class="row">
+    <button id="autoBtn" disabled>▶ 自动演示（demo.wav）</button>
+    <label style="color:#888;font-size:13px">或上传音频：
+      <input type="file" id="fileInput" accept="audio/wav,.wav,audio/*" disabled>
+    </label>
+  </div>
+</div>
+
+<div class="card">
+  <div style="color:#888;font-size:13px;margin-bottom:6px">识别结果</div>
+  <div id="out">（等待输入…）</div>
+  <button id="fillBtn" disabled style="margin-top:10px">↳ 填入聊天输入框</button>
+</div>
+
+<details><summary>日志</summary><pre id="log"></pre></details>
+</div>
+
+<script src="/sensevoice/ort/ort.min.js"></script>
+<script>
+(function () {
+  'use strict';
+  const SR = 16000;
+  const $ = (id) => document.getElementById(id);
+  const statusEl = $('status'), outEl = $('out'), logEl = $('log');
+  const startBtn = $('startBtn'), stopBtn = $('stopBtn'), autoBtn = $('autoBtn');
+  const fileInput = $('fileInput'), fillBtn = $('fillBtn');
+
+  let session = null, meta = null, tokensTable = null, ready = false;
+  let audioCtx = null, mediaStream = null, recorder = null;
+  let inited = false;
+
+  function log(...a) { logEl.textContent += a.join(' ') + '\n'; console.log('[ort-sv]', ...a); }
+  function status(s, isErr) { statusEl.textContent = s; statusEl.className = 'status' + (isErr ? ' err' : ''); }
+
+  ort.env.wasm.wasmPaths = '/sensevoice/ort/';
+  if (navigator.hardwareConcurrency > 1) ort.env.wasm.numThreads = 1; // 简单起见单线程
+
+  // ---------- DSP（与已验证的 Python 管线一致） ----------
+  const FS = 400, FSHIFT = 160, FFT = 512, NBINS = 80;
+  function hamming(n) { const w = new Float32Array(n); for (let i = 0; i < n; i++) w[i] = 0.54 - 0.46 * Math.cos(2 * Math.PI * i / (n - 1)); return w; }
+  const WIN = hamming(FS);
+  const hz2mel = (h) => 2595 * Math.log10(1 + h / 700), mel2hz = (m) => 700 * (Math.pow(10, m / 2595) - 1);
+  function melbank() {
+    const fMin = 20, fMax = 8000, mMin = hz2mel(fMin), mMax = hz2mel(fMax);
+    const mp = new Float32Array(NBINS + 2), hzp = new Float32Array(NBINS + 2), bin = new Float32Array(NBINS + 2);
+    for (let i = 0; i < NBINS + 2; i++) { mp[i] = mMin + (mMax - mMin) * i / (NBINS + 1); hzp[i] = mel2hz(mp[i]); bin[i] = Math.floor((FFT + 1) * hzp[i] / SR); }
+    const nB = FFT / 2 + 1, filters = new Array(NBINS);
+    for (let i = 0; i < NBINS; i++) {
+      const s = bin[i], c = bin[i + 1], e = bin[i + 2], fb = new Float32Array(nB);
+      for (let j = s; j < c; j++) fb[j] = (j - s) / (c - s + 1e-6);
+      for (let j = c; j < e; j++) fb[j] = (e - j) / (e - c + 1e-6);
+      filters[i] = fb;
+    }
+    return filters;
+  }
+  const FILTERS = melbank();
+
+  function fft(real, imag) {
+    const n = real.length;
+    for (let i = 1, j = 0; i < n; i++) { let bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit; if (i < j) { [real[i], real[j]] = [real[j], real[i]]; [imag[i], imag[j]] = [imag[j], imag[i]]; } }
+    for (let len = 2; len <= n; len <<= 1) {
+      const ang = -2 * Math.PI / len, wlR = Math.cos(ang), wlI = Math.sin(ang);
+      for (let i = 0; i < n; i += len) { let wR = 1, wI = 0;
+        for (let j = 0; j < len / 2; j++) {
+          const uR = real[i + j], uI = imag[i + j], vR = real[i + j + len / 2] * wR - imag[i + j + len / 2] * wI, vI = real[i + j + len / 2] * wI + imag[i + j + len / 2] * wR;
+          real[i + j] = uR + vR; imag[i + j] = uI + vI; real[i + j + len / 2] = uR - vR; imag[i + j + len / 2] = uI - vI;
+          const nwR = wR * wlR - wI * wlI, nwI = wR * wlI + wI * wlR; wR = nwR; wI = nwI;
+        } }
+    }
+  }
+  function computeFbank(samples) {
+    const numFrames = Math.floor((samples.length - FS) / FSHIFT) + 1;
+    if (numFrames <= 0) return [];
+    const real = new Float32Array(FFT), imag = new Float32Array(FFT), power = new Float32Array(FFT / 2 + 1);
+    const feats = new Array(numFrames); let offset = 0;
+    for (let f = 0; f < numFrames; f++) {
+      real.fill(0); imag.fill(0);
+      for (let i = 0; i < FS; i++) {
+        const s = samples[offset + i] ?? 0, prev = i === 0 ? s : samples[offset + i - 1];
+        real[i] = (s - 0.97 * prev) * WIN[i];
+      }
+      fft(real, imag);
+      for (let i = 0; i < power.length; i++) power[i] = real[i] * real[i] + imag[i] * imag[i];
+      const mel = new Float32Array(NBINS);
+      for (let m = 0; m < NBINS; m++) { const fl = FILTERS[m]; let e = 0; for (let i = 0; i < fl.length; i++) e += fl[i] * power[i]; mel[m] = Math.log(Math.max(e, 1e-10)); }
+      feats[f] = mel; offset += FSHIFT;
+    }
+    return feats;
+  }
+  function applyLfr(feats, ws, sh) { const red = Math.floor((feats.length - ws) / sh) + 1; if (red <= 0) return []; const dim = feats[0].length, out = new Array(red);
+    for (let i = 0; i < red; i++) { const c = new Float32Array(dim * ws); for (let j = 0; j < ws; j++) c.set(feats[i * sh + j], j * dim); out[i] = c; } return out; }
+
+  // ---------- 识别核心 ----------
+  async function recognizeSamples(samples) {
+    if (!ready) return '';
+    const t0 = performance.now();
+    try {
+    // buildWaveform
+    const normalize = !!meta.normalize_samples;
+    const out = new Float32Array(samples.length); let sum = 0;
+    for (let i = 0; i < samples.length; i++) { const v = normalize ? samples[i] : samples[i] * 32768; out[i] = v; sum += v; }
+    const mean = sum / out.length; for (let i = 0; i < out.length; i++) out[i] -= mean;
+
+    const feats = computeFbank(out);
+    const lfr = applyLfr(feats, meta.lfr_window_size, meta.lfr_window_shift);
+    const T = lfr.length, D = lfr[0].length;
+    const cmvn = new Float32Array(T * D);
+    for (let i = 0; i < T; i++) for (let j = 0; j < D; j++) cmvn[i * D + j] = (lfr[i][j] + meta.neg_mean[j]) * meta.inv_stddev[j];
+
+    const feeds = {
+      x: new ort.Tensor('float32', cmvn, [1, T, D]),
+      x_length: new ort.Tensor('int32', new Int32Array([T]), [1]),
+      language: new ort.Tensor('int32', new Int32Array([meta.lang_auto]), [1]),
+      text_norm: new ort.Tensor('int32', new Int32Array([meta.with_itn]), [1]),
+    };
+    const outputs = await session.run(feeds);
+    const logits = outputs.logits || Object.values(outputs)[0];
+    const text = ctcGreedy(logits);
+    const ms = (performance.now() - t0).toFixed(0);
+    log(`识别 ${ms}ms, ${T}帧`);
+    if (text) { outEl.textContent = text; fillBtn.disabled = false; }
+    else outEl.textContent = '（未识别到内容）';
+    return text;
+    } catch (e) { log('识别出错: ' + (e.message || e) + ' | ' + e.stack?.slice(0, 300)); status('识别出错: ' + (e.message || e), true); return ''; }
+  }
+
+  function ctcGreedy(logits) {
+    const T = logits.dims[1], VS = logits.dims[2], data = logits.data;
+    const out = []; let prev = -1;
+    for (let t = 0; t < T; t++) {
+      let mi = 0, mv = -Infinity; const o = t * VS;
+      for (let i = 0; i < VS; i++) { const v = data[o + i]; if (v > mv) { mv = v; mi = i; } }
+      if (mi === 0 || mi === prev) { prev = mi; continue; }
+      prev = mi;
+      const tok = tokensTable[mi];
+      if (tok && !tok.startsWith('<|')) out.push(tok);
+    }
+    return out.join('');
+  }
+
+  function parseTokens(t) {
+    const table = {}; let maxId = 0;
+    for (const line of t.split(/\r?\n/)) { const p = line.trim().split(/\s+/); if (p.length >= 2 && /^\d+$/.test(p[1])) { const id = Number(p[1]); if (id > maxId) maxId = id; } }
+    const arr = new Array(maxId + 1).fill('');
+    for (const line of t.split(/\r?\n/)) { const p = line.trim().split(/\s+/); if (p.length >= 2 && /^\d+$/.test(p[1])) arr[Number(p[1])] = p[0]; }
+    return arr;
+  }
+
+  // ---------- 初始化 ----------
+  async function init() {
+    if (inited) return; inited = true;
+    try {
+      status('加载模型元数据…');
+      meta = await (await fetch('/sensevoice/meta.json')).json();
+      const tokText = await (await fetch('/sensevoice/tokens.txt')).text();
+      tokensTable = parseTokens(tokText);
+      status('加载 onnxruntime + 模型（228MB，请稍候）…');
+      const t0 = performance.now();
+      session = await ort.InferenceSession.create('/sensevoice/model.int8.onnx', { executionProviders: ['wasm'] });
+      log(`模型加载 ${((performance.now() - t0) / 1000).toFixed(1)}s, provider=${session.executionProvider || 'wasm'}`);
+      ready = true;
+      status('✅ 模型就绪，可开始识别');
+      startBtn.disabled = autoBtn.disabled = fileInput.disabled = false;
+      setTimeout(() => { if (autoBtn.disabled === false) autoBtn.click(); }, 300);
+    } catch (e) {
+      status('初始化失败: ' + (e.message || e), true);
+      log('init err', e);
+    }
+  }
+  init();
+
+  // ---------- 音频输入 ----------
+  function wavToFloat32(buf) {
+    const u8 = new Uint8Array(buf); // buf 是 ArrayBuffer，先包一层才能按字节索引
+    const dv = new DataView(buf);
+    let fmt = { rate: 16000, bits: 16, channels: 1 }, dataOff = 0, dataLen = 0, off = 12;
+    while (off < buf.byteLength) {
+      const id = String.fromCharCode(u8[off], u8[off + 1], u8[off + 2], u8[off + 3]);
+      const sz = dv.getUint32(off + 4, true);
+      if (id === 'fmt ') { fmt.channels = dv.getUint16(off + 10, true); fmt.rate = dv.getUint32(off + 12, true); fmt.bits = dv.getUint16(off + 22, true); }
+      else if (id === 'data') { dataOff = off + 8; dataLen = sz; }
+      off += 8 + sz + (sz % 2);
+    }
+    let samples;
+    if (fmt.bits === 16) { samples = new Float32Array(dataLen / 2); for (let i = 0; i < samples.length; i++) samples[i] = dv.getInt16(dataOff + i * 2, true) / 32768; }
+    else if (fmt.bits === 32) { samples = new Float32Array(dataLen / 4); for (let i = 0; i < samples.length; i++) samples[i] = dv.getFloat32(dataOff + i * 4, true); }
+    else throw new Error('不支持位深 ' + fmt.bits);
+    if (fmt.channels > 1) { const m = new Float32Array(samples.length / fmt.channels); for (let i = 0; i < m.length; i++) m[i] = samples[i * fmt.channels]; samples = m; }
+    return fmt.rate === SR ? samples : downsample(samples, fmt.rate, SR);
+  }
+  function downsample(buf, src, dst) { const r = src / dst, n = Math.round(buf.length / r), o = new Float32Array(n); for (let i = 0; i < n; i++) o[i] = buf[Math.floor(i * r)]; return o; }
+
+  autoBtn.onclick = () => { fetch('/sensevoice-test/demo.wav').then(r => r.arrayBuffer()).then(b => { status('自动演示…'); recognizeSamples(wavToFloat32(b)).then(() => status('✅ 完成')); }).catch(e => status('失败: ' + e.message, true)); };
+  fileInput.addEventListener('change', (e) => { const f = e.target.files[0]; if (!f) return; f.arrayBuffer().then(b => { status('识别上传音频…'); recognizeSamples(wavToFloat32(b)).then(() => status('✅ 完成')); }); });
+
+  startBtn.onclick = async () => {
+    if (!ready) return;
+    try { mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    catch (e) { status('麦克风失败: ' + e.message, true); return; }
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = audioCtx.createMediaStreamSource(mediaStream);
+    recorder = audioCtx.createScriptProcessor(4096, 1, 2);
+    let buf = [];
+    recorder.onaudioprocess = async (ev) => {
+      const s = downsample(new Float32Array(ev.inputBuffer.getChannelData(0)), audioCtx.sampleRate, SR);
+      buf = buf.concat(Array.from(s));
+      if (buf.length >= SR * 3) { // 3 秒自动识别一段
+        const chunk = Float32Array.from(buf); buf = [];
+        // 能量门：近静音段不识别（避免模型对空白输出「그」等乱码）
+        let rms = 0; for (let i = 0; i < chunk.length; i++) rms += chunk[i] * chunk[i];
+        rms = Math.sqrt(rms / chunk.length);
+        if (rms < 0.01) return;
+        await recognizeSamples(chunk);
+      }
+    };
+    src.connect(recorder); recorder.connect(audioCtx.destination);
+    startBtn.disabled = true; stopBtn.disabled = false;
+    status('🎤 录音中…（每 3 秒自动识别）');
+  };
+  stopBtn.onclick = () => {
+    try { recorder.disconnect(audioCtx.destination); mediaStream.getTracks().forEach(t => t.stop()); } catch (e) {}
+    startBtn.disabled = false; stopBtn.disabled = true; status('已停止');
+  };
+  fillBtn.onclick = () => { const t = document.getElementById('text'); if (t) { t.value = outEl.textContent; t.focus(); } else { navigator.clipboard && navigator.clipboard.writeText(outEl.textContent); } };
+})();
+</script>
+</body>
+</html>

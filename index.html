@@ -163,6 +163,15 @@
     background: var(--accent); color: #fff;
     font-size: 17px; font-weight: 700; cursor: pointer;
   }
+  .micbtn {
+    flex: none; width: 48px; height: 48px; border-radius: 14px;
+    border: 1.5px solid var(--line); background: var(--bg); color: var(--ink);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    transition: background .15s;
+  }
+  .micbtn:hover { background: var(--panel); }
+  .micbtn.rec { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .micbtn:disabled { opacity: .5; cursor: not-allowed; }
 
   /* ===== 大字展示 ===== */
   #presenter {
@@ -370,6 +379,9 @@
       </div>
     </div>
     <div class="inputrow">
+      <button id="micBtn" class="micbtn" title="语音输入" data-i18n-title="micTitle" aria-label="语音输入">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v5"/></svg>
+      </button>
       <input id="text" type="text" autocomplete="off" placeholder="输入要说的话" data-i18n-ph="typeHere">
       <button id="send" data-i18n="send">发送</button>
     </div>
@@ -488,6 +500,8 @@
 
   <div class="toast" id="toast"></div>
 
+<script src="/sensevoice/native-asr.js"></script>
+<script src="/sensevoice/sensevoice-asr.js"></script>
 <script>
 (function () {
   'use strict';
@@ -501,6 +515,9 @@
       autoRead: '发送后朗读', darkMode: '明暗切换',
       roleDeaf: '听障朋友', roleVol: '志愿者 / 路人',
       typeHere: '输入要说的话', send: '发送',
+      micTitle: '语音输入（说话自动转文字）', micLoading: '正在加载语音模型…', micListening: '请说话…',
+      micNoSpeech: '没听清，请再试一次', micFail: '语音识别失败: ',
+      micNative: '联网识别中（音频上传云端）…', micNativeFallback: '联网识别不可用，改用本地模型',
       exit: '退出', prev: '上一条', next: '下一条',
       presets: '预设', voice: '语音', fill: '填入', sendDirect: '直接发',
       add: '添加', newPhrase: '输入新用语',
@@ -533,6 +550,9 @@
       autoRead: 'Read after send', darkMode: 'Light / Dark',
       roleDeaf: 'Deaf person', roleVol: 'Volunteer',
       typeHere: 'Type here', send: 'Send',
+      micTitle: 'Voice input (speak to type)', micLoading: 'Loading speech model…', micListening: 'Speak now…',
+      micNoSpeech: 'Could not hear, try again', micFail: 'Speech failed: ',
+      micNative: 'Cloud recognition (audio to cloud)…', micNativeFallback: 'Cloud speech offline, using local model',
       exit: 'Exit', prev: 'Previous', next: 'Next',
       presets: 'Presets', voice: 'Voice', fill: 'Fill', sendDirect: 'Send',
       add: 'Add', newPhrase: 'New phrase',
@@ -1148,6 +1168,48 @@
     $('whoVol').onclick  = () => { state.identity = 'vol';  render(); renderQuick(); };
     $('send').onclick = send;
     $('text').addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+
+    /* 语音输入：点麦克风 → 说话 → 停顿自动识别并填入输入框
+       优先原生 Web Speech API（联网、零下载）；不支持/断网/出错时回退本地 SenseVoice */
+    const micBtn = $('micBtn');
+    const finishMic = (text) => {
+      micBtn.classList.remove('rec'); micBtn.disabled = false;
+      if (text) { $('text').value = text; $('text').focus(); toast(text); }
+      else toast(t('micNoSpeech'));
+    };
+    const stopMic = () => { NativeAsr.stop(); SenseVoiceAsr.stop(); micBtn.classList.remove('rec'); };
+    const startLocal = (finish) => {
+      SenseVoiceAsr.ensureLoaded((p) => toast(typeof p === 'string' ? p : t('micLoading')))
+        .then(() => { micBtn.classList.add('rec'); toast(t('micListening') || '请说话'); SenseVoiceAsr.start(finish); })
+        .catch((e) => { micBtn.classList.remove('rec'); micBtn.disabled = false; toast(t('micFail') + (e.message || e)); });
+    };
+    micBtn.onclick = async () => {
+      if (micBtn.classList.contains('rec')) { stopMic(); return; }
+      micBtn.disabled = true;
+      let active = 'native';                       /* 防止原生 onend 回落时误复位本地状态 */
+      const fallbackToLocal = () => {
+        if (active !== 'native') return;
+        active = 'local';
+        toast(t('micNativeFallback'));
+        startLocal(finishMic);
+      };
+      if (NativeAsr.isSupported()) {
+        try {
+          await NativeAsr.start(finishMic, (err) => {
+            if (active !== 'native') return;
+            if (NativeAsr.CAN_FALLBACK.includes(err.code)) fallbackToLocal();
+            else finishMic(null);                  /* no-speech / end-no-result 等 */
+          });
+          micBtn.classList.add('rec');
+          toast(t('micNative'));
+        } catch (e) {
+          if (active !== 'native') return;
+          fallbackToLocal();
+        }
+      } else {
+        fallbackToLocal();
+      }
+    };
 
     $('btnPlus').onclick  = () => { state.fs = Math.min(2.2, +(state.fs + 0.15).toFixed(2)); render(); };
     $('btnMinus').onclick = () => { state.fs = Math.max(0.6, +(state.fs - 0.15).toFixed(2)); render(); };
