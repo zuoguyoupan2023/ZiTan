@@ -518,6 +518,7 @@
       micTitle: '语音输入（说话自动转文字）', micLoading: '正在加载语音模型…', micListening: '请说话…',
       micNoSpeech: '没听清，请再试一次', micFail: '语音识别失败: ',
       micNative: '联网识别中（音频上传云端）…', micNativeFallback: '联网识别不可用，改用本地模型',
+      micNoPermission: '麦克风权限被拒绝，请在浏览器设置里允许', micTimeout: '识别服务无响应（Edge 在 macOS 上可能不支持），试试 Chrome / Safari',
       exit: '退出', prev: '上一条', next: '下一条',
       presets: '预设', voice: '语音', fill: '填入', sendDirect: '直接发',
       add: '添加', newPhrase: '输入新用语',
@@ -553,6 +554,7 @@
       micTitle: 'Voice input (speak to type)', micLoading: 'Loading speech model…', micListening: 'Speak now…',
       micNoSpeech: 'Could not hear, try again', micFail: 'Speech failed: ',
       micNative: 'Cloud recognition (audio to cloud)…', micNativeFallback: 'Cloud speech offline, using local model',
+      micNoPermission: 'Microphone permission denied — allow it in browser settings', micTimeout: 'Recognition service unresponsive (Edge may not work on macOS), try Chrome / Safari',
       exit: 'Exit', prev: 'Previous', next: 'Next',
       presets: 'Presets', voice: 'Voice', fill: 'Fill', sendDirect: 'Send',
       add: 'Add', newPhrase: 'New phrase',
@@ -1198,6 +1200,8 @@
           await NativeAsr.start(finishMic, (err) => {
             if (active !== 'native') return;
             if (NativeAsr.CAN_FALLBACK.includes(err.code)) fallbackToLocal();
+            else if (err.code === 'not-allowed') { micBtn.classList.remove('rec'); micBtn.disabled = false; toast(t('micNoPermission')); }
+            else if (err.code === 'timeout') { micBtn.classList.remove('rec'); micBtn.disabled = false; toast(t('micTimeout')); }
             else finishMic(null);                  /* no-speech / end-no-result 等 */
           });
           micBtn.classList.add('rec');

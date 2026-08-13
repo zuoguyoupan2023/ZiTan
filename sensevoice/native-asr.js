@@ -16,13 +16,20 @@
   /* 这些错误意味着"联网识别这条路走不通"，上层应回退本地 SenseVoice */
   const CAN_FALLBACK = ['network', 'service-not-allowed', 'language-not-supported'];
 
+  /* 看门狗：开始监听后这么久仍无任何结果/错误/结束 → 按"服务无响应"终止（Edge on macOS 等会挂住）
+   * 可用 window.ZITAN_ASR = { nativeTimeoutMs: 8000 } 覆盖（测试/调参用） */
+  const REC_TIMEOUT_MS = (global.ZITAN_ASR && global.ZITAN_ASR.nativeTimeoutMs) || 10000;
+
   let rec = null;            // 当前识别器
   let onResultCb = null;     // onResult(text)
   let onErrorCb = null;      // onError({code})
   let finalCollected = false;
   let manualStop = false;    // stop() 主动停止后，onend 不再上报 end-no-result
+  let timeoutTimer = null;   // 看门狗定时器
 
   function isSupported() { return !!SR; }
+
+  function clearWatchdog() { if (timeoutTimer) { clearTimeout(timeoutTimer); timeoutTimer = null; } }
 
   /* 开始监听：onResult(text) 得到最终结果；onError({code}) 遇错（aborted 忽略）。
    * 返回 Promise，resolve = 已开始监听，reject = 启动即失败（上层转本地）。 */
@@ -40,7 +47,14 @@
       r.interimResults = false;  // Safari 中间结果有 bug，只用 isFinal
       r.maxAlternatives = 1;
 
-      r.onstart = () => resolve();
+      const armTimer = () => { clearWatchdog(); timeoutTimer = setTimeout(() => {
+        timeoutTimer = null;
+        manualStop = true;                        // 让随后的 onend 不再补报 end-no-result
+        try { r.abort(); } catch (e) {}
+        if (onErrorCb) onErrorCb({ code: 'timeout' });
+      }, REC_TIMEOUT_MS); };
+
+      r.onstart = () => { armTimer(); resolve(); };
 
       r.onresult = (e) => {
         let text = '';
@@ -48,28 +62,31 @@
           if (e.results[i].isFinal) text += e.results[i][0].transcript;
         }
         text = text.trim();
-        if (text) { finalCollected = true; if (onResultCb) onResultCb(text); }
+        if (text) { finalCollected = true; clearWatchdog(); if (onResultCb) onResultCb(text); }
       };
 
       r.onerror = (e) => {
         if (e.error === 'aborted') return;   // 手动 stop() 触发，忽略
+        clearWatchdog();
         if (onErrorCb) onErrorCb({ code: e.error });
       };
 
       r.onend = () => {
+        clearWatchdog();
         // 自然结束但没出结果（如 no-speech），交回上层复位；主动停止或已出结果则不上报
         if (onErrorCb && !finalCollected && !manualStop) onErrorCb({ code: 'end-no-result' });
         rec = null;
       };
 
       try { r.start(); }
-      catch (err) { reject(err); }
+      catch (err) { clearWatchdog(); reject(err); }
     });
   }
 
   /* 手动停止（放弃本轮） */
   function stop() {
     manualStop = true;
+    clearWatchdog();
     if (rec) { try { rec.abort(); } catch (e) {} rec = null; }
   }
 

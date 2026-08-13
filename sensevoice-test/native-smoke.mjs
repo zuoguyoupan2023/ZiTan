@@ -1,7 +1,7 @@
 // native-smoke.mjs — 原生 Web Speech API 集成冒烟测试（CDP 驱动 headless Chrome）
 // 前置：python3 -m http.server 8000 &  +  chrome --headless=new --remote-debugging-port=9222 --user-data-dir=/tmp/...
 // 用法：node sensevoice-test/native-smoke.mjs
-// 覆盖：①模块存在 ②原生优先路径（不下载 228MB 模型即出字） ③network 错误回退本地
+// 覆盖：①模块存在 ②原生优先路径（不下载 228MB 模型即出字） ③network 错误回退本地 ④服务挂起看门狗超时
 
 const URL = 'http://127.0.0.1:8000/index.html';
 const targets = await (await fetch('http://127.0.0.1:9222/json')).json();
@@ -36,8 +36,9 @@ ws.addEventListener('message', (ev) => {
 });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// 页面脚本执行前注入：mock SpeechRecognition + 统计模型 fetch 次数
+// 页面脚本执行前注入：mock SpeechRecognition（nativeTimeoutMs 缩短看门狗）+ 统计模型 fetch 次数
 await send('Page.addScriptToEvaluateOnNewDocument', { source: `
+  window.ZITAN_ASR = { nativeTimeoutMs: 800 };
   window.__srMode = 'ok';
   window.SpeechRecognition = class {
     constructor(){ this.lang=''; this.continuous=false; this.interimResults=false; this.maxAlternatives=1; }
@@ -48,6 +49,8 @@ await send('Page.addScriptToEvaluateOnNewDocument', { source: `
         setTimeout(() => { this.onresult && this.onresult({ resultIndex:0, results:[{ isFinal:true, 0:{ transcript:'你好原生' } }] }); this.onend && this.onend(); }, 400);
       } else if (m === 'network') {
         setTimeout(() => { this.onerror && this.onerror({ error:'network' }); this.onend && this.onend(); }, 200);
+      } else if (m === 'hang') {
+        /* 只触发 onstart，永不返回结果/错误/结束 —— 模拟 Edge on macOS 挂起 */
       }
     }
     abort(){ this.onend && this.onend(); }
@@ -105,13 +108,26 @@ const o2 = await evalJson(`JSON.stringify({
 })`);
 console.log('③ 回退本地:', JSON.stringify({ text: o2.text, rec: o2.rec }), '· toasts:', o2.toasts);
 
-console.log('④ 运行时异常:', errors.length ? errors.join('\n') : '无 ✓');
+// ④ 服务挂起：mock 只 onstart 永不返回 → 看门狗 800ms 后应报"识别服务无响应"并复位按钮
+await send('Runtime.evaluate', { expression: `
+  window.__srMode = 'hang';
+  document.getElementById('text').value = '';
+  document.getElementById('micBtn').click(); true`, returnByValue: true });
+await sleep(1500);
+const o3 = await evalJson(`JSON.stringify({
+  rec: document.getElementById('micBtn').classList.contains('rec'),
+  toasts: window.__toasts.join('|')
+})`);
+console.log('④ 看门狗超时:', JSON.stringify({ rec: o3.rec }), '· toasts:', o3.toasts);
+
+console.log('⑤ 运行时异常:', errors.length ? errors.join('\n') : '无 ✓');
 ws.close();
 
 const pass =
   m.nativeAsr === 'object' && m.senseVoiceAsr === 'object' && m.micBtn === true && m.info.secure === true &&
   o1.text === '你好原生' && o1.rec === false && o1.modelFetches === 0 && /联网识别中/.test(o1.toasts) &&
   o2.text === '本地兜底' && o2.rec === false && /联网识别不可用/.test(o2.toasts) &&
+  o3.rec === false && /识别服务无响应/.test(o3.toasts) &&
   errors.length === 0;
 console.log(pass ? '\n✅ SMOKE PASS' : '\n❌ SMOKE FAIL');
 process.exit(pass ? 0 : 1);
