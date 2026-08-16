@@ -2956,11 +2956,11 @@
       speechSynthesis.onvoiceschanged = () => { if (!$('voicePane').hidden) renderVoicePane(); };
     }
 
-    /* 开发阶段：先不启用离线缓存，并清掉旧的缓存，保证改动刷新即可见。
-       上线发布时，把下面这段换成：navigator.serviceWorker.register('./sw.js') */
+    /* 暂不启用离线 Service Worker（页面始终联网拉最新）。
+       注意：不要清空 caches() —— 语音模型的 Cache API 缓存（zitan-asr）就在这里，
+       清空会导致模型下次刷新后必须重新下载。 */
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(function (regs) { regs.forEach(function (r) { r.unregister(); }); });
-      if (window.caches) window.caches.keys().then(function (keys) { keys.forEach(function (k) { window.caches.delete(k); }); });
     }
   }
 

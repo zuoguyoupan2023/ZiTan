@@ -46,32 +46,48 @@
     });
   }
   /* 带进度地下载模型文件（供 228MB 大模型 / 设置页进度条用）。
-   * 正常时应落到 Cache/apiStorage 缓存，下次直接走缓存秒开。 */
-  function fetchWithProgress(url, onProgress) {
-    return fetch(url).then(r => {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      const total = parseInt(r.headers.get('Content-Length') || '0', 10) || 0;
-      const reader = r.body.getReader();
-      const chunks = [];
-      let got = 0;
-      return (function pump() {
-        return reader.read().then(({ done, value }) => {
-          if (done) {
-            if (onProgress) onProgress(1);
-            const len = chunks.reduce((a, b) => a + b.length, 0);
-            const buf = new Uint8Array(len);
-            let off = 0;
-            for (const c of chunks) { buf.set(c, off); off += c.length; }
-            return buf;
-          }
-          chunks.push(value);
-          got += value.length;
-          if (onProgress && total) onProgress(got / total);
-          return pump();
-        });
-      })();
-    });
+   * 下载完成后写入 Cache API（zitan-asr），下次走到缓存直接秒开，无需重新下载。 */
+  const ASR_CACHE = 'zitan-asr';
+  function asrCache() {
+    if (typeof caches === 'undefined') return null;
+    try { return caches.open(ASR_CACHE); } catch (e) { return null; }
   }
+  async function cacheFetch(url, onProgress) {
+    // 1) 先查 Cache API
+    const c = await asrCache();
+    if (c) {
+      const hit = await c.match(url).catch(() => null);
+      if (hit && hit.ok) {
+        if (onProgress) onProgress(1);
+        return new Uint8Array(await hit.arrayBuffer());
+      }
+    }
+    // 2) 未命中：网络下载（带进度），并写入缓存
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const total = parseInt(res.headers.get('Content-Length') || '0', 10) || 0;
+    const reader = res.body.getReader();
+    const chunks = [];
+    let got = 0;
+    const pump = () => reader.read().then(({ done, value }) => {
+      if (done) {
+        if (onProgress) onProgress(1);
+        const len = chunks.reduce((a, b) => a + b.length, 0);
+        const buf = new Uint8Array(len);
+        let off = 0;
+        for (const cc of chunks) { buf.set(cc, off); off += cc.length; }
+        // 写缓存（响应副本），失败不影响本次使用
+        if (c) c.put(url, new Response(buf.slice().buffer, { headers: { 'content-type': res.headers.get('content-type') || 'application/octet-stream' } })).catch(() => {});
+        return buf;
+      }
+      chunks.push(value);
+      got += value.length;
+      if (onProgress && total) onProgress(got / total);
+      return pump();
+    });
+    return pump();
+  }
+
   function ensureLoaded(progressCb) {
     if (session) return Promise.resolve();
     if (loadingPromise) return loadingPromise;
@@ -83,11 +99,11 @@
       global.ort.env.wasm.wasmPaths = BASE + '/ort/';
       if (navigator.hardwareConcurrency > 1) global.ort.env.wasm.numThreads = 1;
       if (progressCb) progressCb('加载模型参数…');
-      meta = await (await fetch(BASE + '/meta.json')).json();
-      tokensTable = parseTokens(await (await fetch(BASE + '/tokens.txt')).text());
+      meta = JSON.parse(new TextDecoder().decode(await cacheFetch(BASE + '/meta.json')));
+      tokensTable = parseTokens(new TextDecoder().decode(await cacheFetch(BASE + '/tokens.txt')));
       if (progressCb) progressCb('下载语音模型（约 228MB）…');
-      // 带进度下载模型进内存，再交给 onnxruntime（配合 Cache API 可断点/秒开）
-      const modelBuf = await fetchWithProgress(BASE + '/model.int8.onnx', (p) => {
+      // 带进度下载模型进内存（缓存命中秒开），再交给 onnxruntime
+      const modelBuf = await cacheFetch(BASE + '/model.int8.onnx', (p) => {
         if (progressCb) progressCb(p);      // 数值进度 0..1
       });
       if (progressCb) progressCb(1);

@@ -1,3 +1,10 @@
 # Cloudflare Pages 缓存控制：index.html 每次重新校验，避免旧版本缓存坑人
 /index.html
   Cache-Control: no-cache
+
+# 语音模型/词表等静态资源：长缓存（配合 Cache API 双保险，防止每次重新下载 228MB 模型）
+/sensevoice/*
+  Cache-Control: public, max-age=31536000, immutable
+/js/sensevoice-asr.js
+  Cache-Control: public, max-age=31536000, immutable
+
