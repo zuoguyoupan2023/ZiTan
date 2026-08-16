@@ -2,7 +2,8 @@
  * 用法：
  *   <script src="/sensevoice/sensevoice-asr.js"></script>
  *   await SenseVoiceAsr.ensureLoaded(progressCb)   // 首次懒加载模型（可选，start 时自动）
- *   SenseVoiceAsr.start(onResult, onStatus)        // 开始录音；说话停顿自动识别并停止
+ *   SenseVoiceAsr.start(onResult, onStatus)        // 开始录音；说话停顿自动识别并停止；onResult(text, recording)
+ *   SenseVoiceAsr.recognizeBlob(blob)              // 解码已有音频并用模型识别
  *   SenseVoiceAsr.stop()                           // 手动停止
  *
  * 特性：
@@ -26,7 +27,7 @@
   /* ---------- 麦克风状态 ---------- */
   let audioCtx = null, mediaStream = null, processor = null;
   let running = false;
-  let onResultCb = null, onStatusCb = null;
+  let onResultCb = null, onStatusCb = null, onRecordingCb = null;
   let seg = [];                 // 当前语音段样本
   let state = 'idle';           // idle | silence | speech
   let silMs = 0;                // 静音累计时长(ms)
@@ -247,16 +248,36 @@
     if (ms < MIN_MS) return;                       // 太短，忽略
     if (rms(samples) < RMS_TH * 0.8) return;       // 整段能量复查：近静音段不识别
     if (onStatusCb) onStatusCb('正在识别…');
+    const recording = { blob: encodeWav(samples, SR), type: 'audio/wav', ms: Math.round(ms) };
+    if (onRecordingCb) onRecordingCb(recording);
     recognizeSamples(samples).then((text) => {
       text = filterText(text);
       stop();                                       // 一次说一句，识别完自动停
-      if (onResultCb) onResultCb(text);
-    }).catch((err) => { stop(); if (onResultCb) onResultCb(null); });
+      if (onResultCb) onResultCb(text, recording);
+    }).catch((err) => { stop(); if (onResultCb) onResultCb(null, recording); });
   }
   function downsample(buf, src, dst) { if (src === dst) return buf; const r = src / dst, n = Math.round(buf.length / r), o = new Float32Array(n); for (let i = 0; i < n; i++) o[i] = buf[Math.floor(i * r)]; return o; }
 
-  function start(onResult, onStatus) {
-    onResultCb = onResult; onStatusCb = onStatus || null;
+  /* 把 16k 单声道 Float32 样本打包成 WAV Blob（16bit PCM） */
+  function encodeWav(samples, sampleRate) {
+    const n = samples.length;
+    const buf = new ArrayBuffer(44 + n * 2);
+    const v = new DataView(buf);
+    const writeStr = (off, s) => { for (let i = 0; i < s.length; i++) v.setUint8(off + i, s.charCodeAt(i)); };
+    writeStr(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); writeStr(8, 'WAVE');
+    writeStr(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, sampleRate, true); v.setUint32(28, sampleRate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    writeStr(36, 'data'); v.setUint32(40, n * 2, true);
+    let off = 44;
+    for (let i = 0; i < n; i++, off += 2) {
+      let s = Math.max(-1, Math.min(1, samples[i]));
+      v.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+    }
+    return new Blob([buf], { type: 'audio/wav' });
+  }
+
+  function start(onResult, onStatus, onRecording) {
+    onResultCb = onResult; onStatusCb = onStatus || null; onRecordingCb = onRecording || null;
     return (async () => {
       await ensureLoaded();
       mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -277,11 +298,21 @@
     try { if (audioCtx) { audioCtx.close(); audioCtx = null; } } catch (e) {}
   }
 
+  /* 解码任意音频 Blob（wav/webm 等）→ 16k 单声道 Float32 样本；供“长按录音换引擎重识别”使用 */
+  async function recognizeBlob(blob) {
+    const OffCtx = global.OfflineAudioContext || global.webkitOfflineAudioContext;
+    const ctx = new OffCtx(1, 1, SR);
+    const buf = await ctx.decodeAudioData((blob.arrayBuffer ? await blob.arrayBuffer() : await new Response(blob).arrayBuffer()));
+    let ch0 = buf.getChannelData(0);
+    ch0 = downsample(ch0, buf.sampleRate, SR);
+    return recognizeSamples(ch0);
+  }
+
   /* 调试钩子：直接识别一段 16k 样本（供验证/测试用） */
   function debugRecognize(samples) { return recognizeSamples(samples); }
 
   /* 模型是否已加载就绪（供设置页展示“线下模型”状态） */
   function getReady() { return !!session; }
 
-  global.SenseVoiceAsr = { ensureLoaded, start, stop, debugRecognize, getReady };
+  global.SenseVoiceAsr = { ensureLoaded, start, stop, debugRecognize, recognizeBlob, getReady };
 })(window);

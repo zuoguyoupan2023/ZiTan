@@ -132,6 +132,26 @@
   .play.playing svg { animation: zoom .6s ease-in-out infinite; }
   @keyframes zoom { 0%,100% { transform: scale(1); } 50% { transform: scale(1.4); } }
 
+  /* 语音识别录音条：点按播放，长按弹“重新识别” */
+  .audiobar {
+    display: inline-flex; align-items: center; gap: 7px;
+    margin-top: 8px; padding: 6px 10px;
+    border-radius: 999px; background: rgba(0,0,0,.10);
+    cursor: pointer; user-select: none; -webkit-user-select: none;
+    font-size: calc(13px * var(--fs)); line-height: 1.2;
+  }
+  .msg.deaf .audiobar { color: var(--deaf-ink); }
+  .msg.vol .audiobar { color: var(--vol-ink); }
+  .audiobar .ab-play {
+    flex: none; width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(255,255,255,.28); display: flex; align-items: center; justify-content: center;
+  }
+  .audiobar.playing .ab-play svg { animation: zoom .5s ease-in-out infinite; }
+  .audiobar .ab-dur { opacity: .75; font-size: calc(11px * var(--fs)); }
+  .audiobar .ab-eng { opacity: .7; font-size: calc(10px * var(--fs)); border: 1px solid rgba(0,0,0,.15); padding: 1px 5px; border-radius: 8px; }
+  .audiobar:active { background: rgba(0,0,0,.18); }
+  .msg .bubble { display: flex; flex-direction: column; align-items: flex-start; }
+
   .empty { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 15px; line-height: 1.8; }
 
   /* ===== 底部 ===== */
@@ -328,9 +348,12 @@
     border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; cursor: pointer;
   }
   .engine-opt.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .engine-opt.disabled { opacity: .5; cursor: not-allowed; }
+  .engine-opt.disabled .eo-dot { filter: grayscale(1); }
   .engine-opt .eo-name { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
   .engine-opt .eo-name .eo-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
   .engine-opt .eo-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .engine-opt .eo-reason { font-size: 12px; color: var(--danger); line-height: 1.4; margin-top: 4px; }
   .engine-detail {
     margin-top: 10px; padding: 12px 14px; background: var(--bg); border-radius: 12px;
     font-size: 13px; line-height: 1.7; color: var(--ink);
@@ -544,6 +567,19 @@
     </div>
   </div>
 
+    <!-- 长按录音条：换引擎重新识别 -->
+    <div class="overlay" id="asrReOverlay">
+      <div class="card">
+        <button class="x" id="asrReX" title="关闭">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+        <h2 data-i18n="asrReTitle">重新识别</h2>
+        <p class="engine-legend" data-i18n="asrReLegend">用这条录音换一种方式识别。不可用的方式会灰色显示。</p>
+        <div id="asrReList"></div>
+        <button class="done" id="asrReCancel" data-i18n="asrCancel">取消</button>
+      </div>
+    </div>
+
   <!-- 聊天历史 -->
   <div class="overlay" id="historyOverlay">
     <div class="card">
@@ -640,7 +676,13 @@
       asrModelNotFound: '未下载', asrModelSize: '约 300MB', asrCloudNotConfig: '（未配置）',
       asrUsing: '当前识别方式：', asrUnconfigured: '尚未设置',
       asrDownloadStart: '开始下载模型…', asrDownloading: '下载中', asrModelReady: '模型已就绪',
-      asrNoEngine: '当前设备没有可用的识别方式', asrCancel: '取消'
+      asrNoEngine: '当前设备没有可用的识别方式', asrCancel: '取消',
+      asrReTitle: '重新识别', asrReLegend: '用这条录音换一种方式识别。不可用的方式会灰色显示。',
+      asrReDone: '重新识别完成', asrReFail: '重新识别失败', asrReRunning: '正在重新识别…',
+      audioPlayFail: '录音播放失败', audioTapPlay: '点按播放，长按重新识别',
+      asrNeedModel: '请先下载线下模型（设置 → 语音识别 → 线下模型）',
+      asrNeedCloud: '请先在 设置 → 语音识别 → 云端识别 配置 API Key',
+      asrNoBrowser: '当前浏览器不支持', asrReEmpty: '没有识别到内容，保留原文本'
     },
     en: {
       settings: 'Settings', fontDown: 'Smaller font', fontUp: 'Larger font',
@@ -694,7 +736,13 @@
       asrModelNotFound: 'Not downloaded', asrModelSize: '~300 MB', asrCloudNotConfig: '(not configured)',
       asrUsing: 'Current engine: ', asrUnconfigured: 'not set yet',
       asrDownloadStart: 'Starting download…', asrDownloading: 'Downloading', asrModelReady: 'Model ready',
-      asrNoEngine: 'No recognition method available on this device', asrCancel: 'Cancel'
+      asrNoEngine: 'No recognition method available on this device', asrCancel: 'Cancel',
+      asrReTitle: 'Re-recognize', asrReLegend: 'Use this recording with another engine. Unavailable options are greyed out.',
+      asrReDone: 'Re-recognized', asrReFail: 'Re-recognition failed', asrReRunning: 'Recognizing again…',
+      audioPlayFail: 'Could not play recording', audioTapPlay: 'Tap to play, long-press to re-recognize',
+      asrNeedModel: 'Download the local model first (Settings → Speech recognition → Local model)',
+      asrNeedCloud: 'Set up an API Key in Settings → Speech recognition → Cloud first',
+      asrNoBrowser: 'Not supported in this browser', asrReEmpty: 'No speech detected, keeping the original text'
     }
   };
   let L = I18N.zh;
@@ -888,7 +936,7 @@
               <span class="who">${t(m.by === 'deaf' ? 'roleDeaf' : 'roleVol')} · ${m.time || ''}</span>
               <div class="bubrow">
                 <button class="play" data-i="${i}" title="${t('autoRead')}">${ic('play', 18)}</button>
-                <div class="bubble">${escapeHtml(m.text)}</div>
+                <div class="bubble">${escapeHtml(m.text)}${audioBarMarkup(m, i)}</div>
               </div>
             </div>
           </div>`).join('')
@@ -900,6 +948,177 @@
 
   function escapeHtml(s) {
     return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  /* ============ 语音识别录音条：点按播放 / 长按换引擎 ============ */
+  function engineShortName(engine) {
+    return ({ browser: t('engBrowser'), model: t('engModel'), cloud: t('engCloud') })[engine] || '';
+  }
+  function fmtAudioMs(ms) {
+    ms = Math.max(0, Math.round(ms || 0));
+    if (!ms) return '';
+    const s = Math.round(ms / 1000);
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+  function audioBarMarkup(m, i) {
+    if (!m.audioId) return '';
+    const eng = (m.asr && m.asr.engine) ? engineShortName(m.asr.engine) : '';
+    const dur = (m.asr && m.asr.ms) ? fmtAudioMs(m.asr.ms) : '';
+    return '<div class="audiobar" data-i="' + i + '" data-audio="' + escapeHtml(m.audioId) + '" title="' + escapeHtml(t('audioTapPlay')) + '">'
+      + '<span class="ab-play">' + ic('play', 12) + '</span>'
+      + (eng ? '<span class="ab-eng">' + escapeHtml(eng) + '</span>' : '')
+      + (dur ? '<span class="ab-dur">' + escapeHtml(dur) + '</span>' : '')
+      + '</div>';
+  }
+
+  let audioPlayer = null;   /* { el, url, index, stopped } */
+  function stopAudioPlayback() {
+    if (!audioPlayer) return;
+    try { audioPlayer.el.pause(); audioPlayer.el.src = ''; } catch (e) {}
+    try { URL.revokeObjectURL(audioPlayer.url); } catch (e) {}
+    audioPlayer = null;
+  }
+  function setAudioBarPlaying(i, on) {
+    const bar = chatEl.querySelector('.audiobar[data-i="' + i + '"]');
+    if (bar) bar.classList.toggle('playing', on);
+  }
+  function toggleAudioPlay(i) {
+    const m = state.messages[i];
+    if (!m || !m.audioId) return;
+    if (audioPlayer && audioPlayer.index === i && !audioPlayer.stopped) {
+      stopAudioPlayback(); setAudioBarPlaying(i, false); return;
+    }
+    stopAudioPlayback();
+    setAudioBarPlaying(i, true);
+    getAudio(m.audioId).then(rec => {
+      if (!rec || !rec.blob) { setAudioBarPlaying(i, false); toast(t('audioPlayFail')); return; }
+      const url = URL.createObjectURL(rec.blob);
+      const el = new Audio(url);
+      const done = () => {
+        setAudioBarPlaying(i, false);
+        if (audioPlayer && audioPlayer.el === el) audioPlayer.stopped = true;
+      };
+      el.onended = done;
+      el.onerror = () => { setAudioBarPlaying(i, false); toast(t('audioPlayFail')); };
+      audioPlayer = { el: el, url: url, index: i, stopped: false };
+      el.play().catch(() => { setAudioBarPlaying(i, false); toast(t('audioPlayFail')); });
+    }).catch(() => { setAudioBarPlaying(i, false); toast(t('audioPlayFail')); });
+  }
+
+  /* 长按录音条 → 弹出“重新识别” */
+  let lpTimer = null, lpStartX = 0, lpStartY = 0, lpSuppressClick = false, lpBar = null;
+  function clearLongPress() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }
+  function longPressStart(bar, x, y) {
+    lpBar = bar; lpStartX = x; lpStartY = y; lpSuppressClick = false;
+    clearLongPress();
+    lpTimer = setTimeout(() => {
+      lpTimer = null; lpSuppressClick = true;
+      if (lpBar) openReRecognize(+lpBar.dataset.i);
+    }, 500);
+  }
+  function longPressMove(x, y) {
+    if (lpTimer && (Math.abs(x - lpStartX) > 12 || Math.abs(y - lpStartY) > 12)) { clearLongPress(); lpBar = null; }
+  }
+  function longPressFire(bar) {
+    clearLongPress(); lpBar = null;
+  }
+
+  /* 重新识别弹层 */
+  let reIndex = -1;
+  function openReRecognize(i) {
+    const m = state.messages[i];
+    if (!m || !m.audioId) return;
+    reIndex = i;
+    renderReEngineList(i);
+    $('asrReOverlay').classList.add('show');
+  }
+  function closeReRecognize() { $('asrReOverlay').classList.remove('show'); reIndex = -1; }
+  function renderReEngineList(i) {
+    const m = state.messages[i];
+    const cur = (m.asr && m.asr.engine) || '';
+    const box = $('asrReList');
+    box.innerHTML = '';
+    const push = (which, enabled, reason) => {
+      const meta = ENGINE_META[which] || ENGINE_META.model;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'engine-opt' + (enabled ? '' : ' disabled');
+      btn.dataset.eng = which;
+      btn.innerHTML = '<span class="eo-name"><span class="eo-dot" style="background:' + meta.dot + '"></span>' + meta.name() + '</span>'
+        + '<span class="eo-desc">' + meta.desc() + '</span>'
+        + (reason ? '<span class="eo-reason">' + escapeHtml(reason) + '</span>' : '');
+      btn.onclick = () => { if (enabled) { closeReRecognize(); runReRecognize(which, i); } };
+      box.appendChild(btn);
+    };
+
+    /* 除当前引擎外的方案；不可用仍显示但置灰。
+       云端识别当前整体隐藏（CLOUD_ASR_ENABLED=false）：
+       代码先作为第三选项写全，这里用开关隐藏，日后一并开放。 */
+    if (cur !== 'browser' && EnvDetect.supportsBrowser()) {
+      const ok = typeof NativeAsr !== 'undefined' && NativeAsr.isSupported();
+      push('browser', ok, ok ? '' : t('asrNoBrowser'));
+    }
+    if (cur !== 'model') {
+      const ready = typeof SenseVoiceAsr !== 'undefined' && SenseVoiceAsr.getReady && SenseVoiceAsr.getReady();
+      push('model', ready, ready ? '' : t('asrNeedModel'));
+    }
+    /* 云端第三选项：代码先写上并注释掉；当前 CLOUD_ASR_ENABLED=false 时不会显示，日后一起开放。 */
+    if (cur !== 'cloud' && CLOUD_ASR_ENABLED) {
+      const cfg = !!(state.cloud.vendor && state.cloud.apiKey);
+      push('cloud', cfg, cfg ? '' : t('asrNeedCloud'));
+    }
+    if (!box.children.length) {
+      box.innerHTML = '<div class="empty-voices">' + escapeHtml(t('asrNoEngine')) + '</div>';
+    }
+  }
+
+  /* 用已保存的录音重新识别：成功 → 覆盖替换文本与 asr，写回 IndexedDB（旧文本丢弃） */
+  function runReRecognize(engine, i) {
+    const m = state.messages[i];
+    if (!m || !m.audioId) return;
+    toast(t('asrReRunning'));
+    const apply = (text) => {
+      text = (text || '').trim();
+      if (!text) { toast(t('asrReEmpty')); return; }
+      m.text = text;
+      m.asr = { engine: engine, text: text, time: Date.now(), ms: (m.asr && m.asr.ms) || null };
+      render();          /* render 内部会 save() → persistSession() 把新文本写回 IndexedDB */
+      toast(t('asrReDone'));
+    };
+    getAudio(m.audioId).then(rec => {
+      if (!rec || !rec.blob) { toast(t('asrReFail')); return; }
+      if (engine === 'model') {
+        if (typeof SenseVoiceAsr === 'undefined') { toast(t('asrReFail')); return; }
+        SenseVoiceAsr.ensureLoaded()
+          .then(() => SenseVoiceAsr.recognizeBlob(rec.blob))
+          .then(apply)
+          .catch(() => toast(t('asrReFail')));
+      } else if (engine === 'browser') {
+        replayAudioForBrowser(rec.blob, apply);
+      } else {
+        /* cloud 第三选项：真实云端识别另行接入；本期不执行 */
+        toast(t('asrCloudNeed'));
+      }
+    }).catch(() => toast(t('asrReFail')));
+  }
+
+  /* 浏览器识别无法直接吃音频：回放录音同时跑 Web Speech API 拾音识别 */
+  function replayAudioForBrowser(blob, apply) {
+    if (typeof NativeAsr === 'undefined' || !NativeAsr.isSupported()) { toast(t('asrReFail')); return; }
+    const url = URL.createObjectURL(blob);
+    const el = new Audio(url);
+    let active = true;
+    const finish = (text) => {
+      if (!active) return;
+      active = false;
+      try { el.pause(); } catch (e) {}
+      URL.revokeObjectURL(url);
+      apply(text);
+    };
+    NativeAsr.start(finish, () => finish(null)).then(() => {
+      el.play().catch(() => finish(null));
+    }).catch(() => finish(null));
+    el.onended = () => finish(null);
   }
 
   /* ============ 快捷用语 ============ */
@@ -1066,7 +1285,11 @@
       if (!CLOUD_ASR_ENABLED) list = list.filter(e => e !== 'cloud');
       return list;
     }
-    return { platform, browser, region, engineName, brName, available,
+    function supportsBrowser() {   // 平台/地域矩阵是否含 browser（长按重识别用）
+      if (region === 'overseas') return true;
+      return platform !== 'android' && platform !== 'harmony' && platform !== 'windows';
+    }
+    return { platform, browser, region, engineName, brName, available, supportsBrowser,
       regionLabel: () => region === 'china' ? 'china' : 'overseas' };
   })();
 
@@ -1341,16 +1564,17 @@
   }
 
   /* ============ IndexedDB 会话历史 ============ */
-  const IDB_NAME = 'zitan', IDB_STORE = 'sessions';
+  const IDB_NAME = 'zitan', IDB_STORE = 'sessions', IDB_AUDIO = 'audio';
   let idb = null;
   function openIDB() {
     return new Promise((resolve, reject) => {
       if (idb) return resolve(idb);
       if (!('indexedDB' in window)) return reject(new Error('no indexedDB'));
-      const req = indexedDB.open(IDB_NAME, 1);
+      const req = indexedDB.open(IDB_NAME, 2);
       req.onupgradeneeded = e => {
         const d = e.target.result;
-        if (!d.objectStoreNames.contains(IDB_STORE)) d.createObjectStore(IDB_STORE, { keyPath: 'id' });
+        if (!d.objectStoreNames.contains(IDB_STORE)) d.createObjectStore;
+          if (!d.objectStoreNames.contains(IDB_AUDIO)) d.createObjectStore(IDB_AUDIO, { keyPath: 'id' })(IDB_STORE, { keyPath: 'id' });
       };
       req.onsuccess = e => { idb = e.target.result; resolve(idb); };
       req.onerror = e => reject(e);
@@ -1369,6 +1593,34 @@
     return openIDB().then(db => new Promise((resolve, reject) => {
       const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).getAll();
       req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    }));
+  }
+
+  function putAudio(rec) {
+    if (!('indexedDB' in window)) return Promise.reject(new Error('no indexedDB'));
+    return openIDB().then(db => new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_AUDIO, 'readwrite');
+      const store = tx.objectStore(IDB_AUDIO);
+      const id = Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+      tx.oncomplete = () => resolve(id);
+      tx.onerror = () => reject(tx.error);
+      store.put({
+        id: id,
+        type: rec.type || 'audio/webm',
+        duration: rec.duration || 0,
+        size: rec.blob ? rec.blob.size : 0,
+        created: rec.created || Date.now(),
+        engine: rec.engine || '',
+        blob: rec.blob
+      });
+    }));
+  }
+  function getAudio(id) {
+    if (!('indexedDB' in window)) return Promise.reject(new Error('no indexedDB'));
+    return openIDB().then(db => new Promise((resolve, reject) => {
+      const req = db.transaction(IDB_AUDIO, 'readonly').objectStore(IDB_AUDIO).get(id);
+      req.onsuccess = () => resolve(req.result || null);
       req.onerror = () => reject(req.error);
     }));
   }
@@ -1499,46 +1751,111 @@
     $('send').onclick = send;
     $('text').addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 
-    /* 语音输入：点麦克风 → 选择/使用识别引擎 → 说话 → 自动转文字填入输入框
-       引擎：browser(原生) / model(本地 SenseVoice) / cloud(云端，本轮引导)。
-       首次未手动选择时自动默认；首次点麦克风弹出选择，设置里可随时改。 */
+    /* 语音输入：点麦克风 → 识别 → 录音随识别结果一起入消息 */
     const micBtn = $('micBtn');
-    const finishMic = (text) => {
+    let asrCurrentEngine = 'model';           // 本轮识别实际使用的引擎（写入 asr.engine）
+    let activeBrowserRecorder = null;         // 浏览器识别时的同步录音（MediaRecorder）
+
+    /* 浏览器识别：Web Speech API 拿不到音频，需要同时开一个 MediaRecorder 录音 */
+    function beginBrowserRecording() {
+      if (typeof MediaRecorder === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return Promise.resolve(null);
+      return navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null).then(stream => {
+        if (!stream) return null;
+        let mime = '';
+        ['audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'].forEach(m => { if (!mime && MediaRecorder.isTypeSupported(m)) mime = m; });
+        const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+        const chunks = [];
+        rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+        const started = Date.now();
+        let finished = false;
+        const stopped = new Promise(resolve => {
+          rec.onstop = () => {
+            if (!finished) {
+              finished = true;
+              stream.getTracks().forEach(t => t.stop());
+              resolve(chunks.length ? new Blob(chunks, { type: rec.mimeType || mime || 'audio/webm' }) : null);
+            }
+          };
+        });
+        rec.start();
+        return { rec, started, stop: () => { if (!finished) { try { rec.stop(); } catch (e) { stream.getTracks().forEach(t => t.stop()); } } return stopped; } };
+      });
+    }
+    function stopBrowserRecording() {
+      const r = activeBrowserRecorder; activeBrowserRecorder = null;
+      if (!r) return Promise.resolve(null);
+      return r.stop().then(blob => blob ? { blob: blob, type: (blob.type || 'audio/webm'), ms: Math.max(0, Date.now() - r.started) } : null);
+    }
+
+    /* 识别结果 + 录音一起写入消息（自动发送，不经过输入框） */
+    function sendAsrMessage(text, recording) {
+      const eng = asrCurrentEngine || 'model';
+      const commit = (audioId) => {
+        state.messages.push({
+          by: state.identity,
+          text: text,
+          time: now(),
+          audioId: audioId || undefined,
+          asr: { engine: eng, text: text, time: Date.now(), ms: (recording && recording.ms) || null }
+        });
+        render();
+        if (state.tts) speak(text);
+        toast(text);
+      };
+      if (recording && recording.blob) {
+        putAudio({ type: recording.type || recording.blob.type || 'audio/webm', duration: recording.ms || 0, created: Date.now(), engine: eng, blob: recording.blob })
+          .then(id => commit(id)).catch(() => commit(null));
+      } else {
+        commit(null);
+      }
+    }
+
+    const finishMic = (text, recording) => {
       micBtn.classList.remove('rec'); micBtn.disabled = false;
-      if (text) { $('text').value = text; $('text').focus(); toast(text); }
+      stopBrowserRecording();
+      if (text) sendAsrMessage(text, recording);
       else toast(t('micNoSpeech'));
     };
-    const stopMic = () => { NativeAsr.stop(); SenseVoiceAsr.stop(); micBtn.classList.remove('rec'); };
+    const stopMic = () => { NativeAsr.stop(); SenseVoiceAsr.stop(); stopBrowserRecording(); micBtn.classList.remove('rec'); };
     const startLocal = (finish) => {
+      asrCurrentEngine = 'model';
       SenseVoiceAsr.ensureLoaded((p) => toast(typeof p === 'string' ? p : t('micLoading')))
         .then(() => { micBtn.classList.add('rec'); toast(t('micListening') || '请说话'); SenseVoiceAsr.start(finish); })
         .catch((e) => { micBtn.classList.remove('rec'); micBtn.disabled = false; toast(t('micFail') + (e.message || e)); });
     };
     const startBrowser = (finish) => {
       let active = 'native';
+      asrCurrentEngine = 'browser';
+      const wrapFinish = (text) => { if (active === 'native') stopBrowserRecording().then(rec => finish(text, rec)); };
       const fallbackToLocal = () => {
         if (active !== 'native') return;
         active = 'local';
+        stopBrowserRecording();
         toast(t('micNativeFallback'));
         startLocal(finish);
       };
-      if (NativeAsr.isSupported()) {
-        NativeAsr.start(finish, (err) => {
-          if (active !== 'native') return;
-          if (NativeAsr.CAN_FALLBACK.includes(err.code)) fallbackToLocal();
-          else if (err.code === 'not-allowed') { micBtn.classList.remove('rec'); micBtn.disabled = false; toast(t('micNoPermission')); }
-          else if (err.code === 'timeout') { micBtn.classList.remove('rec'); micBtn.disabled = false; toast(t('micTimeout')); }
-          else finish(null);
-        }).then(() => { if (active === 'native') { micBtn.classList.add('rec'); toast(t('micNative')); } })
-          .catch(() => { if (active === 'native') fallbackToLocal(); });
-      } else {
-        fallbackToLocal();
-      }
+      beginBrowserRecording().then(recorder => {
+        activeBrowserRecorder = recorder;
+        if (active !== 'native') return;
+        if (NativeAsr.isSupported()) {
+          NativeAsr.start(wrapFinish, (err) => {
+            if (active !== 'native') return;
+            if (NativeAsr.CAN_FALLBACK.includes(err.code)) fallbackToLocal();
+            else if (err.code === 'not-allowed') { stopBrowserRecording(); micBtn.classList.remove('rec'); micBtn.disabled = false; toast(t('micNoPermission')); }
+            else if (err.code === 'timeout') { stopBrowserRecording(); micBtn.classList.remove('rec'); micBtn.disabled = false; toast(t('micTimeout')); }
+            else wrapFinish(null);
+          }).then(() => { if (active === 'native') { micBtn.classList.add('rec'); toast(t('micNative')); } })
+            .catch(() => { if (active === 'native') fallbackToLocal(); });
+        } else {
+          fallbackToLocal();
+        }
+      });
     };
     const runEngine = (which) => {
       if (which === 'browser') startBrowser(finishMic);
       else if (which === 'model') startLocal(finishMic);
       else {   // cloud
+        asrCurrentEngine = 'cloud';
         if (!CLOUD_ASR_ENABLED) {            /* 云端未开放：降级到本地 */
           toast(t('asrCloudNeed'));
           startLocal(finishMic);
@@ -1604,6 +1921,11 @@
     $('asrChooseX').onclick = () => closeAsrChooser();
     $('asrChooseOverlay').addEventListener('click', e => { if (e.target === $('asrChooseOverlay')) closeAsrChooser(); });
 
+      /* 长按录音条：重新识别弹层 */
+      $('asrReX').onclick = () => closeReRecognize();
+      $('asrReCancel').onclick = () => closeReRecognize();
+      $('asrReOverlay').addEventListener('click', e => { if (e.target === $('asrReOverlay')) closeReRecognize(); });
+
     $('tabDeaf').onclick = () => { roleTab = 'deaf'; $('tabDeaf').classList.add('on'); $('tabVol').classList.remove('on'); renderPresetList(); };
     $('tabVol').onclick  = () => { roleTab = 'vol';  $('tabVol').classList.add('on'); $('tabDeaf').classList.remove('on'); renderPresetList(); };
     $('addBtn').onclick = () => {
@@ -1638,8 +1960,15 @@
     $('helpX').onclick = () => $('helpOverlay').classList.remove('show');
     $('helpOverlay').addEventListener('click', e => { if (e.target === $('helpOverlay')) $('helpOverlay').classList.remove('show'); });
 
-    /* 聊天区：播放 / 大字展示 */
+    /* 聊天区：播放 / 录音条点按播放、长按换引擎 / 大字展示 */
     chatEl.addEventListener('click', e => {
+      const bar = e.target.closest('.audiobar');
+      if (bar) {
+        const i = +bar.dataset.i;
+        if (lpSuppressClick) { lpSuppressClick = false; return; }
+        toggleAudioPlay(i);
+        return;
+      }
       const play = e.target.closest('.play');
       if (play) { playMsg(+play.dataset.i, play); return; }
       const bubble = e.target.closest('.bubble');
@@ -1648,6 +1977,29 @@
         if (row) openPresenter(+row.dataset.i);
       }
     });
+
+    /* 录音条长按（触屏 + 鼠标）：500ms 且不滑动 → 弹出“重新识别” */
+    chatEl.addEventListener('touchstart', e => {
+      const bar = e.target.closest('.audiobar');
+      if (bar) longPressStart(bar, e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+    chatEl.addEventListener('touchmove', e => {
+      if (e.touches.length) longPressMove(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+    chatEl.addEventListener('touchend', e => {
+      const bar = e.target.closest('.audiobar');
+      if (bar) longPressFire(bar); else clearLongPress();
+    }, { passive: true });
+    chatEl.addEventListener('mousedown', e => {
+      const bar = e.target.closest('.audiobar');
+      if (bar) longPressStart(bar, e.clientX, e.clientY);
+    });
+    chatEl.addEventListener('mousemove', e => longPressMove(e.clientX, e.clientY));
+    chatEl.addEventListener('mouseup', e => {
+      const bar = e.target.closest('.audiobar');
+      if (bar) longPressFire(bar); else clearLongPress();
+    });
+    chatEl.addEventListener('mouseleave', () => clearLongPress());
 
     /* 大字展示控件 */
     $('btnPresent').onclick = () => {
