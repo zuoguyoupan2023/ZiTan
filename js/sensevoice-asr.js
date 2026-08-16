@@ -44,6 +44,33 @@
       document.head.appendChild(s);
     });
   }
+  /* 带进度地下载模型文件（供 228MB 大模型 / 设置页进度条用）。
+   * 正常时应落到 Cache/apiStorage 缓存，下次直接走缓存秒开。 */
+  function fetchWithProgress(url, onProgress) {
+    return fetch(url).then(r => {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const total = parseInt(r.headers.get('Content-Length') || '0', 10) || 0;
+      const reader = r.body.getReader();
+      const chunks = [];
+      let got = 0;
+      return (function pump() {
+        return reader.read().then(({ done, value }) => {
+          if (done) {
+            if (onProgress) onProgress(1);
+            const len = chunks.reduce((a, b) => a + b.length, 0);
+            const buf = new Uint8Array(len);
+            let off = 0;
+            for (const c of chunks) { buf.set(c, off); off += c.length; }
+            return buf;
+          }
+          chunks.push(value);
+          got += value.length;
+          if (onProgress && total) onProgress(got / total);
+          return pump();
+        });
+      })();
+    });
+  }
   function ensureLoaded(progressCb) {
     if (session) return Promise.resolve();
     if (loadingPromise) return loadingPromise;
@@ -57,8 +84,13 @@
       if (progressCb) progressCb('加载模型参数…');
       meta = await (await fetch(BASE + '/meta.json')).json();
       tokensTable = parseTokens(await (await fetch(BASE + '/tokens.txt')).text());
-      if (progressCb) progressCb('加载语音模型（约 228MB）…');
-      session = await global.ort.InferenceSession.create(BASE + '/model.int8.onnx',
+      if (progressCb) progressCb('下载语音模型（约 228MB）…');
+      // 带进度下载模型进内存，再交给 onnxruntime（配合 Cache API 可断点/秒开）
+      const modelBuf = await fetchWithProgress(BASE + '/model.int8.onnx', (p) => {
+        if (progressCb) progressCb(p);      // 数值进度 0..1
+      });
+      if (progressCb) progressCb(1);
+      session = await global.ort.InferenceSession.create(modelBuf.buffer,
         { executionProviders: ['wasm'] });
       return session;
     })().catch((e) => { loadingPromise = null; throw e; });

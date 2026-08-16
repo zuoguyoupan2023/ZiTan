@@ -505,7 +505,8 @@
 
         <div class="sec-title" data-i18n="asrLocal">线下模型</div>
         <div id="asrLocalStatus" class="asr-status"></div>
-        <div class="asr-progress" id="asrLocalBar"><i></i></div>
+        <div class="asr-progress" id="asrLocalBar" hidden><i></i></div>
+        <button class="pvbtn" id="asrDownloadBtn" data-i18n="asrModelDownload">下载模型</button>
 
         <div class="sec-title" data-i18n="asrCloud">云端识别</div>
         <div class="asr-cloud-row">
@@ -575,8 +576,8 @@
 
   <div class="toast" id="toast"></div>
 
-<script src="/sensevoice/native-asr.js"></script>
-<script src="/sensevoice/sensevoice-asr.js"></script>
+<script src="/js/native-asr.js"></script>
+<script src="/js/sensevoice-asr.js"></script>
 <script>
 (function () {
   'use strict';
@@ -1102,12 +1103,28 @@
     renderEngineList('asrEngineList', (which) => { state.asrEngine = which; save(); renderAsrPane(); }, cur);
     // 线下模型状态
     const lk = $('asrLocalStatus');
-    if (typeof SenseVoiceAsr !== 'undefined' && SenseVoiceAsr.getReady && SenseVoiceAsr.getReady()) {
+    const btn = $('asrDownloadBtn');
+    const bar = $('asrLocalBar');
+    const ready = typeof SenseVoiceAsr !== 'undefined' && SenseVoiceAsr.getReady && SenseVoiceAsr.getReady();
+    if (ready) {
       lk.innerHTML = '<span class="asr-label">' + t('asrModelReady') + '</span><span class="asr-val"> ✓</span>';
-      $('asrLocalBar').style.display = 'none';
+      bar.hidden = true;
+      btn.hidden = true;
     } else {
-      lk.innerHTML = '<span class="asr-label">' + t('asrModelNotFound') + '</span><span class="asr-val">' + t('asrModelSize') + '</span>';
-      $('asrLocalBar').style.display = '';
+      if (_asrDownloading) {
+        lk.innerHTML = '<span class="asr-label">' + t('asrDownloading') + '</span><span class="asr-val">' + (_asrDownloadPct + '%') + '</span>';
+        bar.hidden = false;
+        const i = bar.querySelector('i'); if (i) i.style.width = _asrDownloadPct + '%';
+        btn.hidden = false;
+        btn.disabled = true;
+        btn.textContent = t('asrDownloading') + ' ' + _asrDownloadPct + '%';
+      } else {
+        lk.innerHTML = '<span class="asr-label">' + t('asrModelNotFound') + '</span><span class="asr-val">' + t('asrModelSize') + '</span>';
+        bar.hidden = true;
+        btn.hidden = false;
+        btn.disabled = false;
+        btn.textContent = t('asrModelDownload');
+      }
     }
     // 云端
     const cv = $('cloudVendor');
@@ -1118,6 +1135,35 @@
     }
     cv.value = state.cloud.vendor || '';
     $('cloudApiKey').value = state.cloud.apiKey || '';
+  }
+  let _asrDownloading = false;
+  let _asrDownloadPct = 0;
+  function startAsrDownload() {
+    if (typeof SenseVoiceAsr === 'undefined' || _asrDownloading) return;
+    _asrDownloading = true;
+    _asrDownloadPct = 0;
+    renderAsrPane();
+    SenseVoiceAsr.ensureLoaded((p) => {
+      /* p 可能是文字说明（如'加载识别引擎…'）或 0~1 进度 */
+      if (typeof p === 'number') {
+        _asrDownloadPct = Math.min(100, Math.round(p * 100));
+        const lk2 = $('asrLocalStatus'); const b2 = $('asrDownloadBtn');
+        if (lk2) lk2.querySelector('.asr-val') && (lk2.querySelector('.asr-val').textContent = _asrDownloadPct + '%');
+        if (b2) b2.textContent = t('asrDownloading') + ' ' + _asrDownloadPct + '%';
+        const bar2 = $('asrLocalBar');
+        if (bar2 && !bar2.hidden) { const i = bar2.querySelector('i'); if (i) i.style.width = _asrDownloadPct + '%'; }
+      }
+    })
+      .then(() => {
+        _asrDownloading = false;
+        renderAsrPane();
+        toast(t('asrModelReady'));
+      })
+      .catch((e) => {
+        _asrDownloading = false;
+        renderAsrPane();
+        toast(t('micFail') + (e && e.message || e));
+      });
   }
 
   /* 首次点麦克风：弹出引擎选择 */
@@ -1532,6 +1578,7 @@
     /* 识别引擎：设置面板选择 */
     $('cloudVendor').onchange = (e) => { state.cloud.vendor = e.target.value; save(); };
     $('cloudApiKey').oninput = (e) => { state.cloud.apiKey = e.target.value; save(); };
+    $('asrDownloadBtn').onclick = startAsrDownload;
 
     /* 识别引擎选择弹层 */
     $('asrChooseDone').onclick = () => {
