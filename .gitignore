@@ -6,5 +6,10 @@
 /sensevoice/*.wasm
 /sensevoice/ort/*.wasm
 
+# 归档的 sherpa 遗留大文件（历史备份，不上 git/不部署）
+/archive/sherpa-sensevoice/*.data
+/archive/sherpa-sensevoice/*.wasm
+/archive/sherpa-sensevoice/silero_vad.onnx
+
 # 系统/临时文件
 .DS_Store
