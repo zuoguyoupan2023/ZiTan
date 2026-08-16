@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>云端语音识别 API 真机测试（第三条腿）</title>
+<style>
+  :root { --panel:#f4f6f8; --line:#dde3e8; --ink:#1c2733; --acc:#2f6fdb; --ok:#1f9d55; --warn:#d97706; --err:#d64545; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:24px; font:15px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .sub { color:#667; margin-bottom:20px; }
+  .card { border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin-bottom:16px; background:var(--panel); }
+  .card h2 { font-size:15px; margin:0 0 10px; }
+  .row { display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center; margin:6px 0; }
+  .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:13px; }
+  input[type=text], input[type=number] { font-size:14px; padding:6px 8px; border:1px solid var(--line); border-radius:6px; }
+  table { border-collapse:collapse; width:100%; margin-top:6px; }
+  td,th { border:1px solid var(--line); padding:5px 8px; font-size:13px; text-align:left; }
+  th { background:#e9eef3; }
+  button { font-size:15px; padding:9px 20px; border-radius:8px; border:1px solid var(--line); cursor:pointer; background:#fff; }
+  button.primary { background:var(--acc); color:#fff; border-color:var(--acc); }
+  button.rec { background:var(--err); border-color:var(--err); color:#fff; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .status { font-weight:600; min-height:24px; }
+  .s-ok { color:var(--ok); } .s-warn { color:var(--warn); } .s-err { color:var(--err); }
+  .meter { height:6px; background:#e9eef3; border-radius:3px; margin:8px 0; overflow:hidden; }
+  .meter > div { height:100%; width:0; background:var(--acc); transition:width .2s; }
+  .result { font-size:22px; font-weight:700; min-height:34px; margin:8px 0; word-break:break-all; }
+  .meta { font-size:13px; color:#667; min-height:20px; }
+  #log { height:160px; overflow:auto; background:#0e1620; color:#bfe; padding:10px; border-radius:8px; font-size:12.5px; white-space:pre-wrap; }
+  .hint { font-size:13px; color:#889; margin-top:8px; }
+</style>
+</head>
+<body>
+  <h1>云端语音识别 API 真机测试</h1>
+  <div class="sub">录音 → Cloudflare Worker 代理 → 讯飞/百度/Azure 云端识别 → 返回文本（对应文档 019）</div>
+
+  <div class="card">
+    <h2>① 配置（Worker URL）</h2>
+    <div class="row">
+      <input id="worker" type="text" style="flex:1" placeholder="https://xxx.workers.dev" class="mono">
+      <button id="save">保存</button>
+    </div>
+    <div class="row">
+      <label>录音时长上限（秒）：<input id="maxSec" type="number" value="8" min="2" max="60"></label>
+    </div>
+    <div class="status" id="cfgStatus"></div>
+  </div>
+
+  <div class="card">
+    <h2>② 浏览器检测</h2>
+    <table>
+      <tr><th>检测项</th><th>结果</th></tr>
+      <tr><td>当前浏览器</td><td id="d_browser" class="mono">…</td></tr>
+      <tr><td>安全上下文（HTTPS/localhost）</td><td id="d_secure" class="mono">…</td></tr>
+      <tr><td>原生 SpeechRecognition（对照②）</td><td id="d_native" class="mono">…</td></tr>
+    </table>
+    <p class="hint">本页专门测「云端 API 这条腿」；想测原生 API 请看 speech-native-test.html。云端路径不挑浏览器，无 GMS / Firefox 也能用。</p>
+  </div>
+
+  <div class="card">
+    <h2>③ 真人测试（录音 → 云端识别）</h2>
+    <div class="row">
+      <button id="btn" class="primary">🎤 开始录音</button>
+      <span class="status" id="status">空闲</span>
+    </div>
+    <div class="meter"><div id="bar"></div></div>
+    <div id="result">（识别结果会显示在这里）</div>
+    <div class="meta" id="meta"></div>
+    <pre id="log"></pre>
+  </div>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const logEl = $('log');
+  function log(msg) {
+    const line = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    logEl.textContent = (logEl.textContent ? logEl.textContent + '\n' : '') + line;
+    logEl.scrollTop = logEl.scrollHeight;
+    console.log(line);
+  }
+  function setStatus(text, cls) { $('status').innerHTML = `<span class="${cls ? 's-' + cls : ''}">${text}</span>`; }
+
+  /* ---------- ① 配置 ---------- */
+  const LS = 'zitan-cloud-asr-worker';
+  $('worker').value = localStorage.getItem(LS) || '';
+  $('maxSec').value = localStorage.getItem('zitan-cloud-asr-max') || '8';
+  $('save').onclick = () => {
+    localStorage.setItem(LS, $('worker').value.trim());
+    localStorage.setItem('zitan-cloud-asr-max', $('maxSec').value);
+    $('cfgStatus').innerHTML = `<span class="s-ok">已保存：${$('worker').value.trim() || '（未填）'}</span>`;
+  };
+
+  /* ---------- ② 检测 ---------- */
+  const ua = navigator.userAgent;
+  $('d_browser').textContent = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Unknown' + '　' + ua;
+  $('d_secure').textContent = window.isSecureContext ? '✅ 是' : '❌ 否（请用 https 或 localhost）';
+  $('d_native').textContent = (window.SpeechRecognition || window.webkitSpeechRecognition) ? '✅ 有' : '— 无（如 Firefox）';
+
+  /* ---------- ③ 录音 → 16k PCM16 base64 → POST Worker ---------- */
+  const btn = $('btn'), bar = $('bar');
+  let stream = null, ctx = null, proc = null, t0 = 0, chunks = [], timer = null;
+  const SR = 16000;
+
+  function downsample(buf, src) { if (src === SR) return buf; const r = src / SR, n = Math.round(buf.length / r), o = new Float32Array(n); for (let i = 0; i < n; i++) o[i] = buf[Math.floor(i * r)]; return o; }
+  function toPcm16(f32) { const out = new Int16Array(f32.length); for (let i = 0; i < f32.length; i++) { const s = Math.max(-1, Math.min(1, f32[i])); out[i] = s < 0 ? s * 0x8000 : s * 0x7fff; } return out; }
+  function b64(arr) { let bin = ''; const c = 0x8000; for (let i = 0; i < arr.length; i += c) bin += String.fromCharCode.apply(null, arr.subarray(i, i + c)); return btoa(bin); }
+
+  async function stopAndSend() {
+    const elapsed = (ctx.currentTime - t0);
+    clearInterval(timer);
+    try { if (proc) proc.disconnect(); if (stream) stream.getTracks().forEach(t => t.stop()); } catch (e) {}
+    const maxSec = +($('maxSec').value || 8);
+
+    let merged = new Float32Array(0);
+    for (const c of chunks) { const n = new Float32Array(merged.length + c.length); n.set(merged); n.set(c, merged.length); merged = n; }
+    const d16 = downsample(merged, ctx.sampleRate);
+    const pcm = toPcm16(d16);
+    const audioB64 = b64(new Uint8Array(pcm.buffer));
+    log(`录音 ${elapsed.toFixed(1)}s → 16k ${(d16.length / SR).toFixed(1)}s → ${(audioB64.length / 1024).toFixed(0)}KB base64`);
+
+    const url = $('worker').value.trim();
+    if (!url) { setStatus('请先在①配置 Worker URL', 'err'); btn.disabled = false; btn.textContent = '🎤 开始录音'; btn.classList.remove('rec'); bar.style.width = '0'; return; }
+    setStatus('发送到云端识别…', 'warn');
+    const ts = performance.now();
+    try {
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ audioB64, rate: SR }) });
+      const data = await res.json();
+      const lat = ((performance.now() - ts) / 1000).toFixed(2);
+      if (data.ok) {
+        $('result').textContent = data.text || '（无识别内容）';
+        $('meta').textContent = `延迟 ${lat}s · 云端返回成功`;
+        log(`✅ 识别成功：${data.text}（延迟 ${lat}s）`);
+        setStatus('成功', 'ok');
+      } else {
+        $('meta').textContent = `延迟 ${lat}s · 云端错误: ${data.err || '未知'}`;
+        log(`❌ 云端错误: ${data.err || '未知'}`);
+        setStatus('云端返回错误', 'err');
+      }
+    } catch (e) {
+      $('meta').textContent = '请求失败: ' + e.message;
+      log('❌ 请求失败: ' + e.message + '（确认 Worker 已部署、URL 正确、CORS 已放开）');
+      setStatus('请求失败', 'err');
+    }
+    btn.disabled = false; btn.textContent = '🎤 开始录音'; btn.classList.remove('rec'); bar.style.width = '0';
+  }
+
+  btn.onclick = async () => {
+    if (btn.classList.contains('rec')) { await stopAndSend(); return; }
+    if (!window.isSecureContext) { setStatus('需要 HTTPS 或 localhost 才能录音', 'err'); return; }
+    btn.disabled = true; btn.textContent = '⏹ 停止并识别'; btn.classList.add('rec');
+    chunks = []; $('result').textContent = ''; $('meta').textContent = '';
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const src = ctx.createMediaStreamSource(stream);
+      proc = ctx.createScriptProcessor(4096, 1, 1);
+      proc.onaudioprocess = (e) => { chunks.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
+      src.connect(proc); proc.connect(ctx.destination);
+      t0 = ctx.currentTime;
+      const maxSec = +($('maxSec').value || 8);
+      timer = setInterval(() => {
+        const p = Math.min(100, (ctx.currentTime - t0) / maxSec * 100);
+        bar.style.width = p + '%';
+        setStatus(`录音中… ${(ctx.currentTime - t0).toFixed(1)}s / ${maxSec}s`, 'warn');
+        if (ctx.currentTime - t0 >= maxSec) stopAndSend();   // 到上限自动发
+      }, 200);
+      setStatus('请说话…', 'warn');
+    } catch (e) {
+      setStatus('获取麦克风失败: ' + e.message, 'err');
+      btn.disabled = false; btn.textContent = '🎤 开始录音'; btn.classList.remove('rec');
+    }
+  };
+
+  log('就绪。填 Worker URL → 点「开始录音」说话 → 停止后看结果。');
+})();
+</script>
+</body>
+</html>

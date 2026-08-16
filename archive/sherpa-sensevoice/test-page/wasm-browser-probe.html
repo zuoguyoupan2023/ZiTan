@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>wasm browser probe</title></head>
+<body>
+<pre id="out">初始化…</pre>
+<script src="/sensevoice/sherpa-onnx-wasm-nodejs.js"></script>
+<script>
+(function () {
+  const out = document.getElementById('out');
+  function log(s) { out.textContent += s + '\n'; console.log(s); }
+  (async () => {
+    try {
+      const m = {};
+      await Module(m);   // Module 是胶水的工厂函数
+      log('引擎加载OK, 版本: ' + m.UTF8ToString(m._SherpaOnnxGetVersionStr()));
+      log('m.FS = ' + typeof m.FS);
+      log('m.FS_createDataFile = ' + typeof m.FS_createDataFile);
+      log('m.FS_readFile = ' + typeof m.FS_readFile);
+      try {
+        m.FS_createDataFile('/', 't.txt', new Uint8Array([72, 105, 33]), true, true, true);
+        log('写入小文件 OK');
+        // 读回
+        const buf = m.FS_readFile ? m.FS_readFile('/t.txt') : null;
+        log('读回: ' + (buf ? String.fromCharCode.apply(null, buf) : '(无FS_readFile)'));
+      } catch (e) {
+        log('写入失败: ' + e.name + ' errno=' + e.errno);
+      }
+      document.title = 'DONE';
+    } catch (e) {
+      log('初始化失败: ' + e.message + ' ' + e.name);
+      document.title = 'FAIL';
+    }
+  })();
+})();
+</script>
+</body>
+</html>

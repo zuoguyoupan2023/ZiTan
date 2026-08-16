@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>module test</title></head>
+<body>
+<pre id="out">…</pre>
+<script src="/sensevoice/sensevoice-asr.js"></script>
+<script>
+(async () => {
+  const out = document.getElementById('out');
+  function log(s) { out.textContent += s + '\n'; }
+  function wavToFloat32(buf) {
+    const u8 = new Uint8Array(buf); const dv = new DataView(buf);
+    let dataOff = 0, dataLen = 0, off = 12;
+    while (off < buf.byteLength) {
+      const id = String.fromCharCode(u8[off], u8[off+1], u8[off+2], u8[off+3]);
+      const sz = dv.getUint32(off+4, true);
+      if (id === 'data') { dataOff = off+8; dataLen = sz; }
+      off += 8 + sz + (sz%2);
+    }
+    const s = new Float32Array(dataLen/2);
+    for (let i=0;i<s.length;i++) s[i] = dv.getInt16(dataOff+i*2,true)/32768;
+    return s;
+  }
+  try {
+    log('① 加载模型…');
+    await SenseVoiceAsr.ensureLoaded(p => log('  ' + p));
+    log('② 模型就绪');
+    const demo = wavToFloat32(await (await fetch('/sensevoice-test/demo.wav')).arrayBuffer());
+    const text = await SenseVoiceAsr.debugRecognize(demo);
+    log('③ demo.wav 识别: ' + JSON.stringify(text));
+    // 静音段：全零 → 应该返回空（能量门在 mic 层把关，这里模型可能输出噪音，但 filterText 会拦）
+    const silence = new Float32Array(16000); // 1 秒静音
+    const t2 = await SenseVoiceAsr.debugRecognize(silence);
+    log('④ 静音识别(过滤后): ' + JSON.stringify(t2));
+    log('RESULT_DONE');
+  } catch (e) {
+    log('ERROR: ' + e.message + ' ' + (e.stack||'').slice(0,300));
+  }
+})();
+</script>
+</body></html>

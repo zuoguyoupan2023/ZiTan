@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>原生语音识别 API 真机测试（Chrome / Edge / Safari）</title>
+<style>
+  :root { --panel:#f4f6f8; --line:#dde3e8; --ink:#1c2733; --acc:#2f6fdb; --ok:#1f9d55; --warn:#d97706; --err:#d64545; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:24px; font:15px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .sub { color:#667; margin-bottom:20px; }
+  .card { border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin-bottom:16px; background:var(--panel); }
+  .card h2 { font-size:15px; margin:0 0 10px; }
+  .row { display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center; margin:6px 0; }
+  label { font-size:14px; }
+  select, input[type=checkbox] { font-size:14px; }
+  .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:13px; }
+  table { border-collapse:collapse; width:100%; margin-top:6px; }
+  td,th { border:1px solid var(--line); padding:5px 8px; font-size:13px; text-align:left; }
+  th { background:#e9eef3; }
+  button { font-size:15px; padding:9px 20px; border-radius:8px; border:1px solid var(--line); cursor:pointer; background:#fff; }
+  button.primary { background:var(--acc); color:#fff; border-color:var(--acc); }
+  button.rec { background:var(--err); border-color:var(--err); color:#fff; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .status { font-weight:600; min-height:24px; }
+  .status .s-ok { color:var(--ok); } .status .s-warn { color:var(--warn); } .status .s-err { color:var(--err); }
+  #interim { color:#889; min-height:24px; font-size:16px; }
+  #final { font-size:22px; font-weight:700; margin:8px 0; min-height:34px; word-break:break-all; }
+  .conf { font-size:13px; color:#667; }
+  #log { height:150px; overflow:auto; background:#0e1620; color:#bfe; padding:10px; border-radius:8px; font-size:12.5px; white-space:pre-wrap; }
+  .pill { display:inline-block; padding:2px 10px; border-radius:99px; font-size:13px; margin-left:6px; }
+  .pill.ok { background:#e3f6ec; color:var(--ok); } .pill.bad { background:#fdeaea; color:var(--err); }
+</style>
+</head>
+<body>
+  <h1>原生语音识别 API 真机测试</h1>
+  <div class="sub">Web Speech API（<span class="mono">SpeechRecognition</span> / <span class="mono">webkitSpeechRecognition</span>）· Chrome / Edge / Safari · 需 HTTPS 或 localhost</div>
+
+  <div class="card">
+    <h2>① 浏览器 / API 检测</h2>
+    <table>
+      <tr><th>检测项</th><th>结果</th></tr>
+      <tr><td>当前浏览器（UA 判定）</td><td id="d_browser" class="mono">…</td></tr>
+      <tr><td>安全上下文（HTTPS/localhost）</td><td id="d_secure" class="mono">…</td></tr>
+      <tr><td>SpeechRecognition</td><td id="d_std" class="mono">…</td></tr>
+      <tr><td>webkitSpeechRecognition</td><td id="d_webkit" class="mono">…</td></tr>
+      <tr><td>可用构造函数</td><td id="d_sr" class="mono">…</td></tr>
+      <tr><td>on-device 扩展（available/install）</td><td id="d_ond" class="mono">…</td></tr>
+      <tr><td>zh-CN on-device 可用性</td><td id="d_ondzh" class="mono">…</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>② 参数</h2>
+    <div class="row">
+      <label>语言：<select id="lang">
+        <option value="zh-CN" selected>中文（大陆）zh-CN</option>
+        <option value="zh-TW">中文（台湾）zh-TW</option>
+        <option value="en-US">English (US)</option>
+        <option value="ja-JP">日本語 ja-JP</option>
+        <option value="ko-KR">한국어 ko-KR</option>
+      </select></label>
+      <label><input type="checkbox" id="continuous"> 连续识别 continuous</label>
+      <label><input type="checkbox" id="interim" checked> 实时中间结果 interimResults</label>
+      <label><input type="checkbox" id="ondev"> 设备端识别 processLocally（仅 Chromium 139+）</label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>③ 真人测试</h2>
+    <div class="row">
+      <button id="btn" class="primary">🎤 开始说话</button>
+      <span class="status" id="status">空闲</span>
+    </div>
+    <div id="interim">（这里会实时显示中间结果）</div>
+    <div id="final">等待说话…</div>
+    <div class="conf" id="conf"></div>
+  </div>
+
+  <div class="card">
+    <h2>④ 事件 / 错误日志</h2>
+    <div id="log"></div>
+  </div>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const logEl = $('log');
+  function log(msg) {
+    const line = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    logEl.textContent = (logEl.textContent ? logEl.textContent + '\n' : '') + line;
+    logEl.scrollTop = logEl.scrollHeight;
+    console.log(line);
+  }
+
+  /* ---------- ① 检测 ---------- */
+  const ua = navigator.userAgent;
+  const browser =
+    /Edg\//.test(ua) ? 'Edge'
+    : /Chrome\//.test(ua) ? 'Chrome'
+    : /Firefox\//.test(ua) ? 'Firefox'
+    : /Safari\//.test(ua) ? 'Safari'
+    : 'Unknown';
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  $('d_browser').textContent = browser + '　' + ua;
+  $('d_secure').textContent = (window.isSecureContext ? '✅ 是（HTTPS/localhost）' : '❌ 否（非安全上下文，API 不可用）') + (window.isSecureContext ? '' : ' · 请用 localhost 或 https');
+  $('d_std').textContent = window.SpeechRecognition ? '✅ 有' : '— 无';
+  $('d_webkit').textContent = window.webkitSpeechRecognition ? '✅ 有（前缀版）' : '— 无';
+  $('d_sr').innerHTML = SR ? `<span class="pill ok">可用</span> ${(window.SpeechRecognition ? 'SpeechRecognition' : 'webkitSpeechRecognition')}` : `<span class="pill bad">不可用</span>`;
+
+  const hasOnDevice = !!(window.SpeechRecognition && typeof SpeechRecognition.available === 'function');
+  $('d_ond').textContent = hasOnDevice ? '✅ 有（Chromium 139+）' : '— 无（仅标准云识别）';
+
+  /* ---------- ③ 真人测试 ---------- */
+  const btn = $('btn'), statusEl = $('status');
+  let rec = null;
+
+  function setStatus(text, cls) {
+    statusEl.innerHTML = `<span class="${cls ? 's-' + cls : ''}">${text}</span>`;
+  }
+  function ui(label) { log(label); setStatus(label, 'warn'); }
+
+  function stop() {
+    if (rec) { try { rec.onend = null; rec.abort(); } catch (e) {} rec = null; }
+    btn.textContent = '🎤 开始说话'; btn.classList.remove('rec');
+  }
+
+  async function start() {
+    if (!SR) { setStatus('本浏览器无 SpeechRecognition（Firefox/旧版）', 'err'); return; }
+    try { rec = new SR(); }
+    catch (e) { setStatus('创建识别器失败: ' + e.message, 'err'); log('构造异常: ' + e.message); return; }
+
+    rec.lang = $('lang').value;
+    rec.continuous = $('continuous').checked;
+    rec.interimResults = $('interim').checked;
+    rec.maxAlternatives = 1;
+    if ($('ondev').checked && hasOnDevice) rec.processLocally = true;
+
+    $('final').textContent = ''; $('conf').textContent = ''; $('interim').textContent = '';
+
+    rec.onstart  = () => { log(`onstart · lang=${rec.lang} · processLocally=${!!rec.processLocally}`); setStatus('🎙 正在听…', 'warn'); btn.textContent = '⏹ 停止'; btn.classList.add('rec'); };
+    rec.onresult = (e) => {
+      let interim = '', final = '', conf = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i], t = r[0].transcript;
+        conf = r[0].confidence;
+        if (r.isFinal) final += t + ' '; else interim += t;
+      }
+      if (interim) $('interim').textContent = '（实时）' + interim;
+      if (final) { $('final').textContent = final.trim(); $('conf').textContent = '置信度 confidence ≈ ' + (+conf).toFixed(3); }
+    };
+    rec.onerror = (e) => {
+      const map = {
+        'not-allowed': '用户拒绝麦克风权限',
+        'no-speech': '没检测到说话',
+        'audio-capture': '没有可用麦克风',
+        'network': '连不上识别服务（Chrome/Edge 断网即此错）',
+        'aborted': 'abort()',
+        'service-not-allowed': '服务被禁用',
+        'language-not-supported': '该语言不可用',
+      };
+      setStatus('错误: ' + e.error + '（' + (map[e.error] || '未知') + '）', 'err');
+      log('onerror · error=' + e.error + ' · ' + (map[e.error] || ''));
+    };
+    rec.onend = () => { log('onend · 识别结束'); setStatus('已结束', 'ok'); btn.textContent = '🎤 开始说话'; btn.classList.remove('rec'); rec = null; };
+
+    rec.start();
+  }
+
+  btn.onclick = () => { if (rec) stop(); else start(); };
+
+  /* ---------- on-device 可用性（Chromium 139+） ---------- */
+  if (hasOnDevice) {
+    SpeechRecognition.available({ langs: ['zh-CN'], processLocally: true })
+      .then(s => {
+        $('d_ondzh').textContent = 'zh-CN processLocally:true → ' + s
+          + (s === 'unavailable' ? '（Android Chrome 常见，见 018 §五）' : '');
+        log('SpeechRecognition.available(zh-CN, local) = ' + s);
+      })
+      .catch(e => { $('d_ondzh').textContent = '查询异常: ' + e.message; log('available() 异常: ' + e.message); });
+  } else {
+    $('d_ondzh').textContent = '—（本浏览器不支持该扩展）';
+  }
+
+  log('浏览器: ' + browser + ' · SR 可用: ' + !!SR + ' · 安全上下文: ' + window.isSecureContext);
+  if (!window.isSecureContext) log('⚠️ 非安全上下文：请用 http://localhost:8000 打开');
+  if (!SR) log('⚠️ 无 SpeechRecognition：Firefox 不支持，请用 Chrome/Edge/Safari');
+})();
+</script>
+</body>
+</html>

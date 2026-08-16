@@ -132,6 +132,26 @@
   .play.playing svg { animation: zoom .6s ease-in-out infinite; }
   @keyframes zoom { 0%,100% { transform: scale(1); } 50% { transform: scale(1.4); } }
 
+  /* 语音识别录音条：点按播放，长按弹“重新识别” */
+  .audiobar {
+    display: inline-flex; align-items: center; gap: 7px;
+    margin-top: 8px; padding: 6px 10px;
+    border-radius: 999px; background: rgba(0,0,0,.10);
+    cursor: pointer; user-select: none; -webkit-user-select: none;
+    font-size: calc(13px * var(--fs)); line-height: 1.2;
+  }
+  .msg.deaf .audiobar { color: var(--deaf-ink); }
+  .msg.vol .audiobar { color: var(--vol-ink); }
+  .audiobar .ab-play {
+    flex: none; width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(255,255,255,.28); display: flex; align-items: center; justify-content: center;
+  }
+  .audiobar.playing .ab-play svg { animation: zoom .5s ease-in-out infinite; }
+  .audiobar .ab-dur { opacity: .75; font-size: calc(11px * var(--fs)); }
+  .audiobar .ab-eng { opacity: .7; font-size: calc(10px * var(--fs)); border: 1px solid rgba(0,0,0,.15); padding: 1px 5px; border-radius: 8px; }
+  .audiobar:active { background: rgba(0,0,0,.18); }
+  .msg .bubble { display: flex; flex-direction: column; align-items: flex-start; }
+
   .empty { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 15px; line-height: 1.8; }
 
   /* ===== 底部 ===== */
@@ -163,6 +183,15 @@
     background: var(--accent); color: #fff;
     font-size: 17px; font-weight: 700; cursor: pointer;
   }
+  .micbtn {
+    flex: none; width: 48px; height: 48px; border-radius: 14px;
+    border: 1.5px solid var(--line); background: var(--bg); color: var(--ink);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    transition: background .15s;
+  }
+  .micbtn:hover { background: var(--panel); }
+  .micbtn.rec { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .micbtn:disabled { opacity: .5; cursor: not-allowed; }
 
   /* ===== 大字展示 ===== */
   #presenter {
@@ -312,6 +341,49 @@
     font-size: 14px; z-index: 120; display: none; max-width: 90%;
   }
 
+  /* ===== 识别引擎选择 ===== */
+  .engine-opt {
+    display: flex; flex-direction: column; gap: 4px; text-align: left;
+    width: 100%; border: 1.5px solid transparent; background: var(--bg); color: var(--ink);
+    border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; cursor: pointer;
+  }
+  .engine-opt.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .engine-opt.disabled { opacity: .5; cursor: not-allowed; }
+  .engine-opt.disabled .eo-dot { filter: grayscale(1); }
+  .engine-opt .eo-name { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .engine-opt .eo-name .eo-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .engine-opt .eo-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .engine-opt .eo-reason { font-size: 12px; color: var(--danger); line-height: 1.4; margin-top: 4px; }
+  .engine-detail {
+    margin-top: 10px; padding: 12px 14px; background: var(--bg); border-radius: 12px;
+    font-size: 13px; line-height: 1.7; color: var(--ink);
+  }
+  .engine-detail .ed-tag { font-weight: 700; }
+  .engine-legend { font-size: 12px; color: var(--muted); margin: 4px 0 10px; }
+
+  /* 设置·语音识别区块 */
+  .asr-status {
+    display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--bg);
+    border-radius: 10px; margin-bottom: 8px; font-size: 14px;
+  }
+  .asr-status .asr-label { flex: none; color: var(--muted); }
+  .asr-status .asr-val { font-weight: 600; }
+  .asr-progress { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; margin: 6px 0; }
+  .asr-progress > i { display: block; height: 100%; width: 0%; background: var(--accent); transition: width .3s; }
+  .asr-cloud-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .asr-cloud-row select, .asr-cloud-row input {
+    flex: 1; min-width: 0; border: 1.5px solid var(--line); border-radius: 10px;
+    background: var(--panel); color: var(--ink); padding: 9px 10px; font-size: 14px;
+  }
+  .asr-choice-row {
+    display: flex; gap: 8px; margin: 8px 0 4px; flex-wrap: wrap;
+  }
+  .asr-choice-row button {
+    flex: 1; min-width: 90px; padding: 9px; border: 1.5px solid var(--line); border-radius: 10px;
+    background: var(--panel); color: var(--ink); font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .asr-choice-row button.on { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+
   /* 手机端：屏幕矮，垂直间距比桌面更宝贵，再压缩一档 */
   @media (max-width: 600px) {
     main { padding: 10px 10px 6px; }
@@ -323,6 +395,138 @@
     .quick { padding: 4px 10px 2px; }
     .chip { padding: 3px 9px; }
   }
+  /* ===== 020 消息增强 ===== */
+  /* 气泡操作区：播放 + 复制 + 收藏 纵向小栈 */
+  .bbtns { display: flex; flex-direction: column; gap: 3px; flex: none; align-items: center; }
+  .bbtns .play {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: none; background: rgba(0,0,0,.07); color: var(--ink);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .bbtns .act {
+    width: 30px; height: 30px; border-radius: 40%;
+    border: none; background: rgba(0,0,0,.05); color: var(--ink);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+  }
+  .bbtns .act:active { background: rgba(0,0,0,.16); }
+  .bbtns .favb.on { color: #ef4444; }
+  .bbtns .favb.on svg { fill: #ef4444; }
+  body.hc .bbtns .play, body.hc .bbtns .act { background: rgba(255,255,255,.12); color: #fff; }
+  body.hc .bbtns .favb.on, body.hc .bbtns .favb.on svg { color: #ff8a80; fill: #ff8a80; }
+
+  /* 气泡内：引用块 / 文本 / 图片 */
+  .msg .bubble { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; max-width: 100%; }
+  .bubtext { word-break: break-word; white-space: pre-wrap; }
+  .quote {
+    display: flex; align-items: flex-start; gap: 6px;
+    max-width: 100%; padding: 6px 10px; margin-bottom: 2px;
+    border-left: 3px solid rgba(0,0,0,.25);
+    background: rgba(0,0,0,.10); border-radius: 8px;
+    font-size: calc(15px * var(--fs)); line-height: 1.4; cursor: pointer;
+  }
+  .quote .q-ic { flex: none; margin-top: 2px; opacity: .7; }
+  .quote .q-txt {
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; text-overflow: ellipsis; word-break: break-word;
+  }
+  .msg.qflash .bubble { animation: qf .9s ease-out; }
+  @keyframes qf { 0%,40% { box-shadow: 0 0 0 3px var(--accent); } 100% { box-shadow: none; } }
+  .bubimg {
+    display: none; max-width: 240px; max-height: 180px;
+    border-radius: 10px; cursor: pointer; object-fit: cover;
+    border: 1px solid rgba(0,0,0,.12);
+  }
+  .msg.deaf .bubimg { background: var(--deaf); }
+  .msg.vol .bubimg { background: var(--vol); }
+
+  /* 输入区图标按钮 */
+  .icobtn {
+    flex: none; width: 40px; height: 40px; border-radius: 50%;
+    border: 1.5px solid var(--line); background: var(--bg); color: var(--ink);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+  }
+  .icobtn:active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .plusic { color: var(--accent); }
+
+  /* 引用占位栏 */
+  #quoteBar {
+    display: flex; align-items: center; gap: 6px; margin: 0 12px 4px;
+    padding: 5px 10px; border-radius: 10px; background: var(--bg);
+    border: 1px solid var(--line); font-size: calc(13px * var(--fs));
+  }
+  #quoteBar:not([hidden]) { display: flex; }
+  #quoteBar .qb-ic { color: var(--accent); }
+  #quoteBar .qb-ic::before { content: '↳'; font-weight: 700; }
+  #quoteBar .qb-txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+  #quoteBar #quoteBarX { border: none; background: transparent; color: var(--ink); font-size: 18px; cursor: pointer; padding: 0 2px; }
+
+  /* 待发送图片条 */
+  #pendingShots {
+    display: none; gap: 8px; padding: 6px 12px 2px; overflow-x: auto;
+  }
+  #pendingShots:not([hidden]) { display: flex; }
+  #pendingShots .shot {
+    position: relative; flex: none; width: 56px; height: 56px; border-radius: 8px; overflow: hidden;
+  }
+  #pendingShots .shot img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+  #pendingShots .shot .shotX {
+    position: absolute; top: 1px; right: 1px; width: 16px; height: 16px; border: none; border-radius: 50%;
+    background: rgba(0,0,0,.6); color: #fff; font-size: 10px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+
+  /* 收藏页 / 相册页 */
+  .fav-tools { display: flex; gap: 8px; margin: 4px 0 10px; }
+  #favList .empty-voices, #galleryGrid .empty-voices { padding: 16px 4px; }
+  .fav-row {
+    display: flex; align-items: center; gap: 8px; padding: 9px 10px;
+    border: 1px solid var(--line); border-radius: 12px; margin-bottom: 6px; cursor: pointer;
+    background: var(--panel);
+  }
+  .fav-row .fav-main { flex: 1; min-width: 0; }
+  .fav-row .fav-type { font-size: 11px; color: var(--accent); margin-bottom: 2px; }
+  .fav-row .fav-txt { font-size: 15px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
+  .fav-row .fav-src { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .fav-row .fav-btn {
+    border: none; background: transparent; color: var(--muted); cursor: pointer;
+    width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; flex: none;
+  }
+  .fav-row .fav-btn:hover { color: var(--danger); }
+  #galleryGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  /* 选图发送：多选网格 */
+  #gpGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .gpcell { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; cursor: pointer; background: var(--line); }
+  .gpcell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .gpcell .gpck {
+    position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%;
+    border: 2px solid #fff; background: rgba(0,0,0,.35); color: #fff; font-size: 14px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .gpcell.on { outline: 3px solid var(--accent); }
+  .gpcell.on .gpck { background: var(--accent); border-color: var(--accent); }
+
+  .gcell { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; cursor: pointer; background: var(--line); }
+  .gcell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .gcell .gbtn {
+    position: absolute; bottom: 2px; right: 2px; left: 2px; width: calc(100% - 4px);
+    border: none; border-radius: 7px; padding: 4px 0; font-size: 11px; cursor: pointer;
+    background: rgba(0,0,0,.62); color: #fff; display: flex; align-items: center; justify-content: center; gap: 4px;
+  }
+  .gcell .g-del { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border: none; border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+  /* 加号弹层 */
+  .srcline { display: flex; gap: 10px; margin: 12px 0; }
+  .srcopt {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 18px 8px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink);
+    font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .srcopt:active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* 图片大图查看 */
+  #imgViewer { align-items: center; justify-content: center; }
+  .imgv-inner { position: relative; max-width: 94vw; max-height: 90vh; }
+  .imgv-inner img { max-width: 94vw; max-height: 88vh; object-fit: contain; border-radius: 10px; display: block; }
+  .imgv-inner .x { position: absolute; top: -40px; right: 0; }
 </style>
 </head>
 <body>
@@ -370,9 +574,20 @@
       </div>
     </div>
     <div class="inputrow">
+      <button id="plusBtn" class="icobtn plusic" title="发送图片" data-i18n-title="plusSend" aria-label="发送图片">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <button id="pasteBtn" class="icobtn" title="粘贴" data-i18n-title="paste" aria-label="粘贴">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="4" width="8" height="4" rx="1"/><path d="M8 6H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3"/><path d="M12 11v6M9 14h6"/></svg>
+      </button>
+      <button id="micBtn" class="micbtn" title="语音输入" data-i18n-title="micTitle" aria-label="语音输入">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v5"/></svg>
+      </button>
       <input id="text" type="text" autocomplete="off" placeholder="输入要说的话" data-i18n-ph="typeHere">
       <button id="send" data-i18n="send">发送</button>
     </div>
+    <div id="quoteBar" hidden><span class="qb-ic"></span><span class="qb-txt" id="quoteBarText"></span><button id="quoteBarX">&times;</button></div>
+    <div id="pendingShots" hidden></div>
   </footer>
 
   <!-- 大字展示 -->
@@ -413,6 +628,9 @@
       <div class="tabs2">
         <button id="sTabPreset" class="on" data-i18n="presets">预设</button>
         <button id="sTabVoice" data-i18n="voice">语音</button>
+        <button id="sTabAsr" data-i18n="asrTitle">语音识别</button>
+        <button id="sTabFav" data-i18n="favTitle">收藏</button>
+        <button id="sTabGallery" data-i18n="galleryTitle">相册</button>
       </div>
 
       <!-- 预设 -->
@@ -444,6 +662,52 @@
         </button>
       </div>
 
+      <!-- 语音识别 -->
+      <div id="asrPane" hidden>
+        <div class="sec-title" data-i18n="asrEngine">识别引擎</div>
+        <div id="asrEngineDesc" class="engine-legend" data-i18n="asrLegend">按当前设备/地区自动给出可用识别方式</div>
+        <div id="asrEngineList"></div>
+
+        <div class="sec-title" data-i18n="asrLocal">线下模型</div>
+        <div id="asrLocalStatus" class="asr-status"></div>
+        <div class="asr-progress" id="asrLocalBar" hidden><i></i></div>
+        <button class="pvbtn" id="asrDownloadBtn" data-i18n="asrModelDownload">下载模型</button>
+
+        <div id="asrCloudWrap">
+          <div class="sec-title" data-i18n="asrCloud">云端识别</div>
+          <div class="asr-cloud-row">
+            <select id="cloudVendor"></select>
+          </div>
+          <div class="asr-cloud-row">
+            <input id="cloudApiKey" type="password" placeholder="" data-i18n-ph="cloudKeyPh">
+          </div>
+          <p class="hint" data-i18n="cloudHint">云端识别会把音频发送到对应厂商服务器。未配置时，点麦克风选择云端会提醒你去填写。</p>
+        </div>
+      </div>
+
+      <!-- 收藏 -->
+      <div id="favPane" hidden>
+        <div class="fav-tools">
+          <button class="pvbtn" id="favClearBtn">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M9 7V4h6v3"/></svg>
+            <span data-i18n="favAll">清空收藏</span>
+          </button>
+        </div>
+        <div id="favList"></div>
+      </div>
+
+      <!-- 相册 -->
+      <div id="galleryPane" hidden>
+        <div class="fav-tools">
+          <button class="pvbtn" id="galleryImportBtn">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            <span data-i18n="importImg">导入图片</span>
+          </button>
+          <input id="galleryFile" type="file" accept="image/*" multiple hidden>
+        </div>
+        <div id="galleryGrid"></div>
+      </div>
+
       <div class="sec-title" data-i18n="others">其他</div>
       <div class="minirow" id="openHelpRow" data-i18n="howTo">使用说明</div>
       <div class="minirow" id="historyRow" data-i18n="history">对话历史</div>
@@ -451,6 +715,78 @@
 
       <button class="done" id="settingsClose" data-i18n="done">完成</button>
       <p class="credit"><span data-i18n="creditFrom">由</span><a href="https://wewalk.world/" target="_blank" rel="noopener">左顾右盼</a><span data-i18n="creditTag">开发</span></p>
+    </div>
+  </div>
+
+  <!-- 识别引擎选择（首次点麦克风弹出） -->
+  <div class="overlay" id="asrChooseOverlay">
+    <div class="card">
+      <button class="x" id="asrChooseX" title="关闭">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <h2 data-i18n="asrChooseTitle">选择语音识别方式</h2>
+      <p class="engine-legend" id="asrChooseLegend"></p>
+      <div id="asrChooseList"></div>
+      <div class="engine-detail" id="asrChooseDetail" hidden></div>
+      <button class="done" id="asrChooseDone" data-i18n="confirm">确定</button>
+    </div>
+  </div>
+
+    <!-- 长按录音条：换引擎重新识别 -->
+    <div class="overlay" id="asrReOverlay">
+      <div class="card">
+        <button class="x" id="asrReX" title="关闭">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+        <h2 data-i18n="asrReTitle">重新识别</h2>
+        <p class="engine-legend" data-i18n="asrReLegend">用这条录音换一种方式识别。不可用的方式会灰色显示。</p>
+        <div id="asrReList"></div>
+        <button class="done" id="asrReCancel" data-i18n="asrCancel">取消</button>
+      </div>
+    </div>
+
+
+  <!-- 加号：选择图片来源 -->
+  <div class="overlay" id="plusOverlay">
+    <div class="card">
+      <button class="x" id="plusX" title="关闭">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <h2 data-i18n="chooseFrom">选择图片来源</h2>
+      <div class="srcline">
+        <button class="srcopt" id="srcGallery">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5-9 9"/></svg>
+          <span data-i18n="builtinGallery">内置相册</span>
+        </button>
+        <button class="srcopt" id="srcPhone">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M21 15l-5-5-5 5-3-3-5 5"/></svg>
+          <span data-i18n="phoneGallery">手机相册</span>
+        </button>
+      </div>
+      <input id="phoneFile" type="file" accept="image/*" multiple hidden>
+      <button class="done" id="plusCancel" data-i18n="asrCancel">取消</button>
+    </div>
+  </div>
+
+  <!-- 选图发送（内置相册多选） -->
+  <div class="overlay" id="galleryPickOverlay">
+    <div class="card">
+      <button class="x" id="gpX" title="关闭">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <h2 data-i18n="pickImages">选择要发送的图片</h2>
+      <div id="gpGrid"></div>
+      <button class="done" id="gpSendBtn" disabled>发送选中</button>
+    </div>
+  </div>
+
+  <!-- 图片大图查看 -->
+  <div class="overlay" id="imgViewer">
+    <div class="imgv-inner">
+      <button class="x" id="imgViewX" title="关闭">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <img id="imgViewMain" alt="" />
     </div>
   </div>
 
@@ -488,6 +824,8 @@
 
   <div class="toast" id="toast"></div>
 
+<script src="/js/native-asr.js"></script>
+<script src="/js/sensevoice-asr.js"></script>
 <script>
 (function () {
   'use strict';
@@ -501,6 +839,10 @@
       autoRead: '发送后朗读', darkMode: '明暗切换',
       roleDeaf: '听障朋友', roleVol: '志愿者 / 路人',
       typeHere: '输入要说的话', send: '发送',
+      micTitle: '语音输入（说话自动转文字）', micLoading: '正在加载语音模型…', micListening: '请说话…',
+      micNoSpeech: '没听清，请再试一次', micFail: '语音识别失败: ',
+      micNative: '联网识别中（音频上传云端）…', micNativeFallback: '联网识别不可用，改用本地模型',
+      micNoPermission: '麦克风权限被拒绝，请在浏览器设置里允许', micTimeout: '识别服务无响应（当前浏览器可能不支持原生识别）',
       exit: '退出', prev: '上一条', next: '下一条',
       presets: '预设', voice: '语音', fill: '填入', sendDirect: '直接发',
       add: '添加', newPhrase: '输入新用语',
@@ -526,13 +868,53 @@
       ttsOnShort: '开', ttsOffShort: '关',
       noTts: '此浏览器不支持朗读', noMessages: '还没有消息', confirmClear: '清空当前窗口内容？',
       empty: '还没有消息', autoVoice: '自动',
-      noVoice: '部分手机无法显示列表，试听有默认音频', noVoiceLang: '该语言下暂无可用语音，可切换其他语言试试'
+      noVoice: '部分手机无法显示列表，试听有默认音频', noVoiceLang: '该语言下暂无可用语音，可切换其他语言试试',
+      asrTitle: '语音识别', asrEngine: '识别引擎', asrLegend: '按当前设备 / 地区自动给出可用的识别方式',
+      asrLocal: '线下模型', asrCloud: '云端识别', asrModelDownload: '下载模型', asrModelDownloaded: '模型已就绪',
+      asrEngineHeader: '点击选择识别方式', asrChooseTitle: '选择语音识别方式', confirm: '确定',
+      asrBack: '自动（推荐）', asrBackDesc: '按设备自动选择最优识别方式',
+      engBrowser: '浏览器识别', engModel: '模型识别', engCloud: '云端识别',
+      engBrowserDesc: '当前使用的是{br}浏览器识别，用{engine}的内部识别能力，音频会上传到它的官方服务器识别。',
+      engineApple: 'Apple', engineGoogle: 'Google', engineMicrosoft: 'Microsoft',
+      engModelDesc: '隐私优先。当前模式需要下载 SenseVoice 模型，下载完成后可用；进度可在「设置 → 语音识别 → 线下模型」看到。优点是保护隐私、无网络也能用；缺点是对设备有一定要求，且需下载模型（约 300MB）。',
+      engCloudDesc: '当前支持自己填写 微软 / 阿里云 / 科大讯飞 等。需要在「设置 → 语音识别 → 云端识别」选择供应商并填写 API Key 等信息。',
+      cloudKeyPh: '填入商家提供的 API Key / Secret',
+      cloudHint: '云端识别会把音频发送到对应厂商服务器。未配置时，点麦克风选择云端会提醒你去填写。',
+      asrCloudNeed: '提醒：使用云端识别请在「设置 → 语音识别 → 云端识别」里选择供应商并填写 API Key。',
+      asrRegionAuto: '自动', asrRegionChina: '中国', asrRegionOverseas: '国外',
+      asrDidAuto: '已自动识别为：', asrPlatform: '设备', asrBrowser: '浏览器',
+      asrModelNotFound: '未下载', asrModelSize: '约 300MB', asrCloudNotConfig: '（未配置）',
+      asrUsing: '当前识别方式：', asrUnconfigured: '尚未设置',
+      asrDownloadStart: '开始下载模型…', asrDownloading: '下载中', asrModelReady: '模型已就绪',
+      asrNoEngine: '当前设备没有可用的识别方式', asrCancel: '取消',
+      asrReTitle: '重新识别', asrReLegend: '用这条录音换一种方式识别。不可用的方式会灰色显示。',
+      asrReDone: '重新识别完成', asrReFail: '重新识别失败', asrReRunning: '正在重新识别…',
+      audioPlayFail: '录音播放失败', audioTapPlay: '点按播放，长按重新识别',
+      asrNeedModel: '请先下载线下模型（设置 → 语音识别 → 线下模型）',
+      asrNeedCloud: '请先在 设置 → 语音识别 → 云端识别 配置 API Key',
+      asrNoBrowser: '当前浏览器不支持', asrReEmpty: '没有识别到内容，保留原文本',
+      /* 020 消息增强 */
+      copyMsg: '复制', copied: '已复制', copyImgFail: '无法复制图片',
+      fav: '收藏', faved: '已收藏', unfaved: '已取消收藏', favAll: '清空收藏', confirmClearFav: '清空全部收藏？',
+      unFav: '取消收藏', favEmpty: '还没有收藏', favBack: '定位到消息',
+      favText: '文本', favImg: '图片', favAudio: '录音',
+      quote: '引用', quoteHint: '引用 “{q}”', quoteMissing: '原消息不可用',
+      paste: '粘贴', pasted: '已粘贴', pasteNeedPerm: '无剪贴板权限，请按 Ctrl/Cmd+V 手动粘贴',
+      plusSend: '发送', gallery: '相册', galleryEmpty: '相册里还没有图片', importImg: '导入图片',
+      sendToChat: '发送到当前会话', delImg: '删除这张图片', confirmDelImg: '删除这张图片？',
+      chooseFrom: '选择图片来源', builtinGallery: '内置相册', phoneGallery: '手机相册',
+      favTitle: '收藏', galleryTitle: '相册', sendImgFail: '发送失败', imgTooBig: '图片太大，已压缩',
+      pickImages: '选择要发送的图片', sendSelected: '发送选中（{n}）', pickEmpty: '相册里还没有图片，去“设置→相册”导入'
     },
     en: {
       settings: 'Settings', fontDown: 'Smaller font', fontUp: 'Larger font',
       autoRead: 'Read after send', darkMode: 'Light / Dark',
       roleDeaf: 'Deaf person', roleVol: 'Volunteer',
       typeHere: 'Type here', send: 'Send',
+      micTitle: 'Voice input (speak to type)', micLoading: 'Loading speech model…', micListening: 'Speak now…',
+      micNoSpeech: 'Could not hear, try again', micFail: 'Speech failed: ',
+      micNative: 'Cloud recognition (audio to cloud)…', micNativeFallback: 'Cloud speech offline, using local model',
+      micNoPermission: 'Microphone permission denied — allow it in browser settings', micTimeout: 'Recognition unresponsive (this browser may not support native speech)',
       exit: 'Exit', prev: 'Previous', next: 'Next',
       presets: 'Presets', voice: 'Voice', fill: 'Fill', sendDirect: 'Send',
       add: 'Add', newPhrase: 'New phrase',
@@ -558,7 +940,43 @@
       ttsOnShort: 'On', ttsOffShort: 'Off',
       noTts: 'TTS not supported in this browser', noMessages: 'No messages', confirmClear: 'Clear the current window?',
       empty: 'No messages', autoVoice: 'Auto',
-      noVoice: 'Some phones can\'t show the voice list — Preview reads with the default voice.', noVoiceLang: 'No voices for this language — try another'
+      noVoice: 'Some phones can\'t show the voice list — Preview reads with the default voice.', noVoiceLang: 'No voices for this language — try another',
+      asrTitle: 'Speech recognition', asrEngine: 'Recognition engine', asrLegend: 'Available options depend on your device / region',
+      asrLocal: 'Local model', asrCloud: 'Cloud recognition', asrModelDownload: 'Download model', asrModelDownloaded: 'Model ready',
+      asrEngineHeader: 'Choose recognition method', asrChooseTitle: 'Choose speech recognition', confirm: 'Confirm',
+      asrBack: 'Auto (recommended)', asrBackDesc: 'Picks the best engine for your device automatically',
+      engBrowser: 'Browser recognition', engModel: 'Local model', engCloud: 'Cloud recognition',
+      engBrowserDesc: 'Uses {br} native recognition ({engine}), which uploads audio to its official servers.',
+      engineApple: 'Apple', engineGoogle: 'Google', engineMicrosoft: 'Microsoft',
+      engModelDesc: 'Privacy first. Downloads SenseVoice; usable offline. Progress is shown in Settings → Speech → Local model. Requires ~300 MB download and a capable device.',
+      engCloudDesc: 'Bring your own vendor (Microsoft / Aliyun / iFlytek...). Choose a provider and enter an API Key in Settings → Speech → Cloud.',
+      cloudKeyPh: 'Enter your API Key / Secret',
+      cloudHint: 'Cloud recognition sends audio to the vendor\'s servers. If unconfigured, choosing Cloud will remind you to fill it in.',
+      asrCloudNeed: 'Reminder: to use cloud recognition, choose a provider and enter your API Key in Settings → Speech recognition → Cloud.',
+      asrRegionAuto: 'Auto', asrRegionChina: 'China', asrRegionOverseas: 'Overseas',
+      asrDidAuto: 'Detected as: ', asrPlatform: 'Device', asrBrowser: 'Browser',
+      asrModelNotFound: 'Not downloaded', asrModelSize: '~300 MB', asrCloudNotConfig: '(not configured)',
+      asrUsing: 'Current engine: ', asrUnconfigured: 'not set yet',
+      asrDownloadStart: 'Starting download…', asrDownloading: 'Downloading', asrModelReady: 'Model ready',
+      asrNoEngine: 'No recognition method available on this device', asrCancel: 'Cancel',
+      asrReTitle: 'Re-recognize', asrReLegend: 'Use this recording with another engine. Unavailable options are greyed out.',
+      asrReDone: 'Re-recognized', asrReFail: 'Re-recognition failed', asrReRunning: 'Recognizing again…',
+      audioPlayFail: 'Could not play recording', audioTapPlay: 'Tap to play, long-press to re-recognize',
+      asrNeedModel: 'Download the local model first (Settings → Speech recognition → Local model)',
+      asrNeedCloud: 'Set up an API Key in Settings → Speech recognition → Cloud first',
+      asrNoBrowser: 'Not supported in this browser', asrReEmpty: 'No speech detected, keeping the original text',
+      /* 020 message enhancements */
+      copyMsg: 'Copy', copied: 'Copied', copyImgFail: 'Could not copy image',
+      fav: 'Favorite', faved: 'Added to favorites', unfaved: 'Removed from favorites', favAll: 'Clear all', confirmClearFav: 'Clear all favorites?',
+      unFav: 'Unfavorite', favEmpty: 'No favorites yet', favBack: 'Locate message',
+      favText: 'Text', favImg: 'Image', favAudio: 'Voice',
+      quote: 'Quote', quoteHint: 'Quote “{q}”', quoteMissing: 'Original message unavailable',
+      paste: 'Paste', pasted: 'Pasted', pasteNeedPerm: 'No clipboard permission — press Ctrl/Cmd+V to paste',
+      plusSend: 'Send', gallery: 'Gallery', galleryEmpty: 'No images in gallery yet', importImg: 'Import images',
+      sendToChat: 'Send to chat', delImg: 'Delete this image', confirmDelImg: 'Delete this image?',
+      chooseFrom: 'Choose image source', builtinGallery: 'Built-in gallery', phoneGallery: 'Phone gallery',
+      favTitle: 'Favorites', galleryTitle: 'Gallery', sendImgFail: 'Send failed', imgTooBig: 'Image was large and has been compressed',
+      pickImages: 'Pick images to send', sendSelected: 'Send selected ({n})', pickEmpty: 'No images in gallery yet — import via Settings → Gallery'
     }
   };
   let L = I18N.zh;
@@ -650,6 +1068,8 @@
     voiceLang: 'zh-CN',
     voiceURI: '',
     presetEdited: false,
+    asrEngine: 'auto',        /* auto | browser | model | cloud */
+    cloud: { vendor: '', apiKey: '' },
     presets: cloneDefaults('zh')
   };
   let roleTab = 'deaf';
@@ -667,7 +1087,14 @@
       play:   '<path d="M8 5v14l11-7z"/>',
       close:  '<path d="M6 6l12 12M18 6L6 18"/>',
       plus:   '<path d="M12 5v14M5 12h14"/>',
-      check:  '<path d="M20 6L9 17l-5-5"/>'
+      check:  '<path d="M20 6L9 17l-5-5"/>',
+      copy:   '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+      heart:  '<path d="M12 21s-7-4.5-9.3-9C1.2 9 2.6 5.5 6 5.5c2 0 3.2 1 4 2.3.8-1.2 2-2.3 4-2.3 3.4 0 4.8 3.5 3.3 6.5C19 16.5 12 21 12 21z"/>',
+      paste:  '<rect x="8" y="4" width="8" height="4" rx="1"/><path d="M8 6H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3"/><path d="M12 11v6M9 14h6"/>',
+      gallery:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5-9 9"/>',
+      link:   '<path d="M10 14a4 4 0 0 0 6 .5l3-3a4 4 0 1 0-5.5-5.5l-1 1"/><path d="M14 10a4 4 0 0 0-6-.5l-3 3a4 4 0 1 0 5.5 5.5l1-1"/>',
+      trash:  '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M9 7V4h6v3"/>',
+      up:     '<path d="M12 5v14M5 12l7-7 7 7"/>'
     };
     const attrs = ' fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"';
     return '<svg viewBox="0 0 24 24" width="' + s + '" height="' + s + '"' + attrs + '>' + P[name] + '</svg>';
@@ -744,24 +1171,243 @@
     $('whoLine').textContent = t('whoLineA') + t('whoLineB');
 
     chatEl.innerHTML = state.messages.length
-      ? state.messages.map((m, i) => `
-          <div class="msg ${m.by}" data-i="${i}">
-            <div class="row">
-              <span class="who">${t(m.by === 'deaf' ? 'roleDeaf' : 'roleVol')} · ${m.time || ''}</span>
-              <div class="bubrow">
-                <button class="play" data-i="${i}" title="${t('autoRead')}">${ic('play', 18)}</button>
-                <div class="bubble">${escapeHtml(m.text)}</div>
-              </div>
-            </div>
-          </div>`).join('')
+      ? state.messages.map((m, i) => msgMarkup(m, i)).join('')
       : `<div class="empty">${t('empty')}</div>`;
 
     chatEl.scrollTop = chatEl.scrollHeight;
+    hydrateImages();
     save();
+  }
+
+  /* 收藏状态内存缓存（render 同步驱动实心/空心，跨渲染保持） */
+  let favCache = {};   /* k -> true */
+  function favKeyOf(m) { return (m.by||'') + '|' + (m.text===undefined ? '' : m.text) + '|' + m.time; }
+
+  /* 消息气泡标记：引用块 + 文本 + 图片 + 录音条 */
+  function msgMarkup(m, i) {
+    const isFav = !!favCache[favKeyOf(m)];
+    let inner = '';
+    if (m.quote) {
+      inner += '<div class="quote" data-q="' + escapeHtml(m.quote.id||'') + '">'
+        + '<span class="q-ic">' + ic('link', 13) + '</span>'
+        + '<span class="q-txt">' + escapeHtml(m.quote.text || '') + '</span></div>';
+    }
+    if (m.imgId) {
+      inner += '<img class="bubimg" data-img="' + escapeHtml(m.imgId) + '" alt="" />';
+    }
+    if (m.text !== undefined && m.text) {
+      inner += '<span class="bubtext">' + escapeHtml(m.text) + '</span>';
+    }
+    inner += audioBarMarkup(m, i);
+    return `
+      <div class="msg ${m.by}" data-i="${i}">
+        <div class="row">
+          <span class="who">${t(m.by === 'deaf' ? 'roleDeaf' : 'roleVol')} · ${m.time || ''}</span>
+          <div class="bubrow">
+            <div class="bbtns">
+              <button class="play" data-i="${i}" title="${t('autoRead')}">${ic('play', 13)}</button>
+              <button class="act copyb" data-i="${i}" title="${t('copyMsg')}">${ic('copy', 15)}</button>
+              <button class="act favb ${isFav ? 'on' : ''}" data-i="${i}" title="${t('fav')}">${ic('heart', 15)}</button>
+            </div>
+            <div class="bubble">${inner}</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  /* 渲染时按 imgId 异步填充 objectURL（不阻塞 render 同步） */
+  let imgUrlCache = {};   /* imgId -> objectURL，复用避免泄漏 */
+  function hydrateImages() {
+    state.messages.forEach((m) => {
+      if (!m || !m.imgId) return;
+      const imgEl = chatEl.querySelector('.bubimg[data-img="' + m.imgId + '"]');
+      if (imgEl && !imgEl.src) {
+        const cached = imgUrlCache[m.imgId];
+        if (cached) { imgEl.src = cached; imgEl.style.display = 'block'; return; }
+        getImage(m.imgId).then(rec => {
+          if (!rec || !rec.blob) return;
+          const url = URL.createObjectURL(rec.blob);
+          imgUrlCache[m.imgId] = url;
+          const el = chatEl.querySelector('.bubimg[data-img="' + m.imgId + '"]');
+          if (el) { el.src = url; el.style.display = 'block'; }
+        }).catch(() => {});
+      }
+    });
   }
 
   function escapeHtml(s) {
     return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  /* ============ 语音识别录音条：点按播放 / 长按换引擎 ============ */
+  function engineShortName(engine) {
+    return ({ browser: t('engBrowser'), model: t('engModel'), cloud: t('engCloud') })[engine] || '';
+  }
+  function fmtAudioMs(ms) {
+    ms = Math.max(0, Math.round(ms || 0));
+    if (!ms) return '';
+    const s = Math.round(ms / 1000);
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+  function audioBarMarkup(m, i) {
+    if (!m.audioId) return '';
+    const eng = (m.asr && m.asr.engine) ? engineShortName(m.asr.engine) : '';
+    const dur = (m.asr && m.asr.ms) ? fmtAudioMs(m.asr.ms) : '';
+    return '<div class="audiobar" data-i="' + i + '" data-audio="' + escapeHtml(m.audioId) + '" title="' + escapeHtml(t('audioTapPlay')) + '">'
+      + '<span class="ab-play">' + ic('play', 12) + '</span>'
+      + (eng ? '<span class="ab-eng">' + escapeHtml(eng) + '</span>' : '')
+      + (dur ? '<span class="ab-dur">' + escapeHtml(dur) + '</span>' : '')
+      + '</div>';
+  }
+
+  let audioPlayer = null;   /* { el, url, index, stopped } */
+  function stopAudioPlayback() {
+    if (!audioPlayer) return;
+    try { audioPlayer.el.pause(); audioPlayer.el.src = ''; } catch (e) {}
+    try { URL.revokeObjectURL(audioPlayer.url); } catch (e) {}
+    audioPlayer = null;
+  }
+  function setAudioBarPlaying(i, on) {
+    const bar = chatEl.querySelector('.audiobar[data-i="' + i + '"]');
+    if (bar) bar.classList.toggle('playing', on);
+  }
+  function toggleAudioPlay(i) {
+    const m = state.messages[i];
+    if (!m || !m.audioId) return;
+    if (audioPlayer && audioPlayer.index === i && !audioPlayer.stopped) {
+      stopAudioPlayback(); setAudioBarPlaying(i, false); return;
+    }
+    stopAudioPlayback();
+    setAudioBarPlaying(i, true);
+    getAudio(m.audioId).then(rec => {
+      if (!rec || !rec.blob) { setAudioBarPlaying(i, false); toast(t('audioPlayFail')); return; }
+      const url = URL.createObjectURL(rec.blob);
+      const el = new Audio(url);
+      const done = () => {
+        setAudioBarPlaying(i, false);
+        if (audioPlayer && audioPlayer.el === el) audioPlayer.stopped = true;
+      };
+      el.onended = done;
+      el.onerror = () => { setAudioBarPlaying(i, false); toast(t('audioPlayFail')); };
+      audioPlayer = { el: el, url: url, index: i, stopped: false };
+      el.play().catch(() => { setAudioBarPlaying(i, false); toast(t('audioPlayFail')); });
+    }).catch(() => { setAudioBarPlaying(i, false); toast(t('audioPlayFail')); });
+  }
+
+  /* 长按录音条 → 弹出“重新识别” */
+  let lpTimer = null, lpStartX = 0, lpStartY = 0, lpSuppressClick = false, lpBar = null;
+  function clearLongPress() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }
+  function longPressStart(bar, x, y) {
+    lpBar = bar; lpStartX = x; lpStartY = y; lpSuppressClick = false;
+    clearLongPress();
+    lpTimer = setTimeout(() => {
+      lpTimer = null; lpSuppressClick = true;
+      if (lpBar) openReRecognize(+lpBar.dataset.i);
+    }, 500);
+  }
+  function longPressMove(x, y) {
+    if (lpTimer && (Math.abs(x - lpStartX) > 12 || Math.abs(y - lpStartY) > 12)) { clearLongPress(); lpBar = null; }
+  }
+  function longPressFire(bar) {
+    clearLongPress(); lpBar = null;
+  }
+
+  /* 重新识别弹层 */
+  let reIndex = -1;
+  function openReRecognize(i) {
+    const m = state.messages[i];
+    if (!m || !m.audioId) return;
+    reIndex = i;
+    renderReEngineList(i);
+    $('asrReOverlay').classList.add('show');
+  }
+  function closeReRecognize() { $('asrReOverlay').classList.remove('show'); reIndex = -1; }
+  function renderReEngineList(i) {
+    const m = state.messages[i];
+    const cur = (m.asr && m.asr.engine) || '';
+    const box = $('asrReList');
+    box.innerHTML = '';
+    const push = (which, enabled, reason) => {
+      const meta = ENGINE_META[which] || ENGINE_META.model;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'engine-opt' + (enabled ? '' : ' disabled');
+      btn.dataset.eng = which;
+      btn.innerHTML = '<span class="eo-name"><span class="eo-dot" style="background:' + meta.dot + '"></span>' + meta.name() + '</span>'
+        + '<span class="eo-desc">' + meta.desc() + '</span>'
+        + (reason ? '<span class="eo-reason">' + escapeHtml(reason) + '</span>' : '');
+      btn.onclick = () => { if (enabled) { closeReRecognize(); runReRecognize(which, i); } };
+      box.appendChild(btn);
+    };
+
+    /* 除当前引擎外的方案；不可用仍显示但置灰。
+       云端识别当前整体隐藏（CLOUD_ASR_ENABLED=false）：
+       代码先作为第三选项写全，这里用开关隐藏，日后一并开放。 */
+    if (cur !== 'browser' && EnvDetect.supportsBrowser()) {
+      const ok = typeof NativeAsr !== 'undefined' && NativeAsr.isSupported();
+      push('browser', ok, ok ? '' : t('asrNoBrowser'));
+    }
+    if (cur !== 'model') {
+      const ready = typeof SenseVoiceAsr !== 'undefined' && SenseVoiceAsr.getReady && SenseVoiceAsr.getReady();
+      push('model', ready, ready ? '' : t('asrNeedModel'));
+    }
+    /* 云端第三选项：代码先写上并注释掉；当前 CLOUD_ASR_ENABLED=false 时不会显示，日后一起开放。 */
+    if (cur !== 'cloud' && CLOUD_ASR_ENABLED) {
+      const cfg = !!(state.cloud.vendor && state.cloud.apiKey);
+      push('cloud', cfg, cfg ? '' : t('asrNeedCloud'));
+    }
+    if (!box.children.length) {
+      box.innerHTML = '<div class="empty-voices">' + escapeHtml(t('asrNoEngine')) + '</div>';
+    }
+  }
+
+  /* 用已保存的录音重新识别：成功 → 覆盖替换文本与 asr，写回 IndexedDB（旧文本丢弃） */
+  function runReRecognize(engine, i) {
+    const m = state.messages[i];
+    if (!m || !m.audioId) return;
+    toast(t('asrReRunning'));
+    const apply = (text) => {
+      text = (text || '').trim();
+      if (!text) { toast(t('asrReEmpty')); return; }
+      m.text = text;
+      m.asr = { engine: engine, text: text, time: Date.now(), ms: (m.asr && m.asr.ms) || null };
+      render();          /* render 内部会 save() → persistSession() 把新文本写回 IndexedDB */
+      toast(t('asrReDone'));
+    };
+    getAudio(m.audioId).then(rec => {
+      if (!rec || !rec.blob) { toast(t('asrReFail')); return; }
+      if (engine === 'model') {
+        if (typeof SenseVoiceAsr === 'undefined') { toast(t('asrReFail')); return; }
+        SenseVoiceAsr.ensureLoaded()
+          .then(() => SenseVoiceAsr.recognizeBlob(rec.blob))
+          .then(apply)
+          .catch(() => toast(t('asrReFail')));
+      } else if (engine === 'browser') {
+        replayAudioForBrowser(rec.blob, apply);
+      } else {
+        /* cloud 第三选项：真实云端识别另行接入；本期不执行 */
+        toast(t('asrCloudNeed'));
+      }
+    }).catch(() => toast(t('asrReFail')));
+  }
+
+  /* 浏览器识别无法直接吃音频：回放录音同时跑 Web Speech API 拾音识别 */
+  function replayAudioForBrowser(blob, apply) {
+    if (typeof NativeAsr === 'undefined' || !NativeAsr.isSupported()) { toast(t('asrReFail')); return; }
+    const url = URL.createObjectURL(blob);
+    const el = new Audio(url);
+    let active = true;
+    const finish = (text) => {
+      if (!active) return;
+      active = false;
+      try { el.pause(); } catch (e) {}
+      URL.revokeObjectURL(url);
+      apply(text);
+    };
+    NativeAsr.start(finish, () => finish(null)).then(() => {
+      el.play().catch(() => finish(null));
+    }).catch(() => finish(null));
+    el.onended = () => finish(null);
   }
 
   /* ============ 快捷用语 ============ */
@@ -792,16 +1438,42 @@
   }
 
   /* ============ 发送 ============ */
-  function doSend(text) {
-    state.messages.push({ by: state.identity, text: text, time: now() });
+  let quoteTarget = null;   /* { i, text, id } 引用原消息；发完即清 */
+  let pendingImages = [];   /* [ { blob, meta } ] 待发送图片 */
+
+  function doSend(text, opts) {
+    const o = opts || {};
+    const msg = { id: genId(), by: state.identity, text: text, time: now() };
+    if (o.quote) msg.quote = o.quote;
+    if (o.imgId) msg.imgId = o.imgId;
+    state.messages.push(msg);
     render();
-    if (state.tts) speak(text);
+    hydrateImages();
+    if (state.tts && text) speak(text);
   }
+
+  /* 发送全部待发图片（可多张） */
+  function sendPendingImages() {
+    if (!pendingImages.length) return;
+    const list = pendingImages.slice();
+    pendingImages = [];
+    renderPendingShots();
+    list.forEach((item, idx) => {
+      putImage(item.blob, { name: item.name || ('img'+idx), type: (item.blob.type)||'image/jpeg', size: item.blob.size, nameRaw: item.nameRaw })
+        .then(imgId => doSend('', { imgId: imgId }))
+        .catch(() => toast(t('sendImgFail')));
+    });
+  }
+
   function send() {
     const v = $('text').value.trim();
-    if (!v) return;
+    if (!v && !pendingImages.length) return;
+    if (!v && pendingImages.length) { sendPendingImages(); return; }
     $('text').value = '';
-    doSend(v);
+    const q = quoteTarget ? { id: String(quoteTarget.id || quoteTarget.i), text: String(quoteTarget.text || ''), by: quoteTarget.by } : null;
+    clearQuote();
+    doSend(v, q ? { quote: q } : undefined);
+    sendPendingImages();
   }
 
   /* ============ 朗读 ============ */
@@ -866,6 +1538,214 @@
     row.querySelector('.vname').textContent = name;
     row.onclick = () => { state.voiceURI = v ? v.voiceURI : ''; renderVoicePane(); };
     return row;
+  }
+
+  /* ============ 识别引擎选择 / 环境检测 ============ */
+  /* 规则（已确认）：
+       地域：浏览器语言 zh + 时区 UTC+8 附近 → 国内；否则国外。
+       平台：ios / macos / android / harmony / windows / other。
+       矩阵：
+         · 国外：一律三个（browser/model/cloud）
+         · 国内：iOS、macOS、other → 三个；android、harmony、windows → model+cloud（去 browser）
+     浏览器识别后端（展示用）：
+         · iOS → Apple（Safari 内核）
+         · android/harmony → Chrome→Google / Edge→Microsoft
+         · windows → Chrome→Google / Edge→Microsoft
+         · macOS/server → Safari→Apple / Chrome→Google / Edge→Microsoft   */
+  /* 云端识别（③）暂未开放：设 false 时隐藏云端选项、隐藏设置里的云端区块（保代码，日后改回 true 即可开启） */
+  const CLOUD_ASR_ENABLED = false;
+  const EnvDetect = (function () {
+    const ua = navigator.userAgent || '';        // 先解析，再用 navigator.platform 补
+    const plt = (navigator.platform || '').toLowerCase();
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || (plt === 'macintel' && navigator.maxTouchPoints > 1);
+    const isMac = !isIOS && /mac/i.test(plt);
+    const isAndroid = !isIOS && /android/i.test(ua);
+    const isHarmony = !isIOS && (/harmony|harmonyos|ohos/i.test(ua + ' ' + (navigator.vendor || '')));
+    const isWindows = /win/i.test(plt);
+    let platform = 'other';
+    if (isIOS) platform = 'ios';
+    else if (isHarmony) platform = 'harmony';
+    else if (isAndroid) platform = 'android';
+    else if (isMac) platform = 'macos';
+    else if (isWindows) platform = 'windows';
+
+    // 浏览器：优先按 UA 具体标记（iOS 上 CriOS=Chrome / FxiOS=Firefox / EdgiOS=Edge，实际都是 Safari 内核）
+    let browser = 'other';
+    if (/edg/i.test(ua)) browser = 'edge';
+    else if (/fxios|firefox/i.test(ua)) browser = 'firefox';
+    else if (/(crios|chromium|chrome)\//i.test(ua) || /criOS/i.test(ua)) browser = 'chrome';
+    else if (/safari|applewebkit/i.test(ua)) browser = 'safari';
+    else if (navigator.vendor && /apple/i.test(navigator.vendor)) browser = 'safari';
+
+    // 地域：语言含 zh 且时区偏 UTC+8 认为国内
+    const lang = (navigator.language || '');
+    const tzOff = -new Date().getTimezoneOffset() / 60;   // +8 表示 UTC+8
+    const region = (/^zh/i.test(lang) && tzOff >= 7 && tzOff <= 9) ? 'china' : 'overseas';
+
+    function engineName() {   // 浏览器识别背后的提供方
+      if (platform === 'ios') return 'apple';
+      if (platform === 'macos') return browser === 'chrome' ? 'google' : (browser === 'edge' ? 'microsoft' : 'apple');
+      return browser === 'edge' ? 'microsoft' : 'google';   // android/harmony/windows/other
+    }
+    function brName() {
+      const map = { safari: 'Safari', chrome: 'Chrome', edge: 'Edge', firefox: 'Firefox', other: 'Browser' };
+      return map[browser] || 'Browser';
+    }
+    function available() {   // 返回可见引擎数组
+      let list;
+      if (region === 'overseas') list = ['browser', 'model', 'cloud'];
+      else if (platform === 'android' || platform === 'harmony' || platform === 'windows') list = ['model', 'cloud'];
+      else list = ['browser', 'model', 'cloud'];
+      // 云端识别暂未开放：从可选列表中去掉（保代码，日后改回 true 即可开启）
+      if (!CLOUD_ASR_ENABLED) list = list.filter(e => e !== 'cloud');
+      return list;
+    }
+    function supportsBrowser() {   // 平台/地域矩阵是否含 browser（长按重识别用）
+      if (region === 'overseas') return true;
+      return platform !== 'android' && platform !== 'harmony' && platform !== 'windows';
+    }
+    return { platform, browser, region, engineName, brName, available, supportsBrowser,
+      regionLabel: () => region === 'china' ? 'china' : 'overseas' };
+  })();
+
+  const ENGINE_META = {
+    browser: { name: () => t('engBrowser'), dot: '#3b82f6',
+      desc: () => t('engBrowserDesc').replace('{br}', EnvDetect.brName()).replace('{engine}', ({
+        apple: t('engineApple'), google: t('engineGoogle'), microsoft: t('engineMicrosoft')
+      })[EnvDetect.engineName()] || EnvDetect.brName()) },
+    model: { name: () => t('engModel'), dot: '#22c55e', desc: () => t('engModelDesc') },
+    cloud: { name: () => t('engCloud'), dot: '#a855f7', desc: () => t('engCloudDesc') }
+  };
+
+  /* 生成可见引擎列表（settings 里可编辑，chooser 首次选择用同一份） */
+  function currentEngine() {
+    if (state.asrEngine !== 'auto') return state.asrEngine;   // 手动指定就直接用它
+    const av = EnvDetect.available();
+    return av[0] || 'model';   // auto 默认取第一个（国外/iOS/mac 默认 browser；国内受限默认 model）
+  }
+  function engineDesc(which) {
+    return (ENGINE_META[which] && ENGINE_META[which].desc()) || '';
+  }
+  function engineMarkup(which, on) {
+    const meta = ENGINE_META[which] || ENGINE_META.model;
+    return '<button type="button" class="engine-opt' + (on ? ' on' : '') + '" data-eng="' + which + '">' +
+      '<span class="eo-name"><span class="eo-dot" style="background:' + meta.dot + '"></span>' + meta.name() + '</span>' +
+      '<span class="eo-desc">' + meta.desc() + '</span></button>';
+  }
+  function renderEngineList(containerId, onSelect, current) {
+    const box = $(containerId);
+    box.innerHTML = EnvDetect.available().map(e => engineMarkup(e, current === e)).join('');
+    const opts = box.querySelectorAll('.engine-opt');
+    opts.forEach(btn => btn.onclick = () => {
+      const which = btn.dataset.eng;
+      box.querySelectorAll('.engine-opt').forEach(b => b.classList.toggle('on', b === btn));
+      if (onSelect) onSelect(which);
+    });
+  }
+
+  /* 设置·语音识别 tab */
+  function renderAsrPane() {
+    const cur = state.asrEngine === 'auto' ? '' : state.asrEngine;
+    renderEngineList('asrEngineList', (which) => { state.asrEngine = which; save(); renderAsrPane(); }, cur);
+    // 线下模型状态
+    const lk = $('asrLocalStatus');
+    const btn = $('asrDownloadBtn');
+    const bar = $('asrLocalBar');
+    const ready = typeof SenseVoiceAsr !== 'undefined' && SenseVoiceAsr.getReady && SenseVoiceAsr.getReady();
+    if (ready) {
+      lk.innerHTML = '<span class="asr-label">' + t('asrModelReady') + '</span><span class="asr-val"> ✓</span>';
+      bar.hidden = true;
+      btn.hidden = true;
+    } else {
+      if (_asrDownloading) {
+        lk.innerHTML = '<span class="asr-label">' + t('asrDownloading') + '</span><span class="asr-val">' + (_asrDownloadPct + '%') + '</span>';
+        bar.hidden = false;
+        const i = bar.querySelector('i'); if (i) i.style.width = _asrDownloadPct + '%';
+        btn.hidden = false;
+        btn.disabled = true;
+        btn.textContent = t('asrDownloading') + ' ' + _asrDownloadPct + '%';
+      } else {
+        lk.innerHTML = '<span class="asr-label">' + t('asrModelNotFound') + '</span><span class="asr-val">' + t('asrModelSize') + '</span>';
+        bar.hidden = true;
+        btn.hidden = false;
+        btn.disabled = false;
+        btn.textContent = t('asrModelDownload');
+      }
+    }
+    // 云端（暂未开放：隐藏区块，保留填充逻辑）
+    const cloudWrap = $('asrCloudWrap');
+    if (cloudWrap) cloudWrap.hidden = !CLOUD_ASR_ENABLED;
+    if (CLOUD_ASR_ENABLED) {
+      const cv = $('cloudVendor');
+      if (!cv.options.length) {
+        const vendors = ['', 'azure', 'aliyun', 'iflytek', 'baidu', 'tencent'];
+        const names = { '': '—', azure: 'Microsoft Azure', aliyun: '阿里云', iflytek: '科大讯飞', baidu: '百度', tencent: '腾讯云' };
+        vendors.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = names[v]; cv.appendChild(o); });
+      }
+      cv.value = state.cloud.vendor || '';
+      $('cloudApiKey').value = state.cloud.apiKey || '';
+    }
+  }
+  let _asrDownloading = false;
+  let _asrDownloadPct = 0;
+  function startAsrDownload() {
+    if (typeof SenseVoiceAsr === 'undefined' || _asrDownloading) return;
+    _asrDownloading = true;
+    _asrDownloadPct = 0;
+    renderAsrPane();
+    SenseVoiceAsr.ensureLoaded((p) => {
+      /* p 可能是文字说明（如'加载识别引擎…'）或 0~1 进度 */
+      if (typeof p === 'number') {
+        _asrDownloadPct = Math.min(100, Math.round(p * 100));
+        const lk2 = $('asrLocalStatus'); const b2 = $('asrDownloadBtn');
+        if (lk2) lk2.querySelector('.asr-val') && (lk2.querySelector('.asr-val').textContent = _asrDownloadPct + '%');
+        if (b2) b2.textContent = t('asrDownloading') + ' ' + _asrDownloadPct + '%';
+        const bar2 = $('asrLocalBar');
+        if (bar2 && !bar2.hidden) { const i = bar2.querySelector('i'); if (i) i.style.width = _asrDownloadPct + '%'; }
+      }
+    })
+      .then(() => {
+        _asrDownloading = false;
+        renderAsrPane();
+        toast(t('asrModelReady'));
+      })
+      .catch((e) => {
+        _asrDownloading = false;
+        renderAsrPane();
+        toast(t('micFail') + (e && e.message || e));
+      });
+  }
+
+  /* 首次点麦克风：弹出引擎选择 */
+  let asrChooseCallback = null;   // 用户点“确定”后回调，参数为选中引擎
+  let asrChooseDefault = 'model';
+  function openAsrChooser(onConfirm, defaultEng) {
+    asrChooseCallback = onConfirm;
+    asrChooseDefault = defaultEng || 'model';
+    // legend：显示当前环境
+    $('asrChooseLegend').textContent = t('asrDidAuto') + (state.uiLang === 'en'
+      ? (EnvDetect.regionLabel() === 'china' ? 'China' : 'Overseas') + ' · ' + EnvDetect.brName()
+      : (EnvDetect.regionLabel() === 'china' ? '中国' : '国外') + ' · ' + EnvDetect.brName());
+    const box = $('asrChooseList');
+    box.innerHTML = EnvDetect.available().map(e => engineMarkup(e, false)).join('');
+    box.querySelectorAll('.engine-opt').forEach(b => {
+      b.classList.toggle('on', b.dataset.eng === asrChooseDefault);
+      b.onclick = () => {
+        box.querySelectorAll('.engine-opt').forEach(x => x.classList.toggle('on', x === b));
+        showAsrDetail(b.dataset.eng);
+      };
+    });
+    $('asrChooseDetail').hidden = true;
+    $('asrChooseOverlay').classList.add('show');
+    showAsrDetail(asrChooseDefault);
+  }
+  function showAsrDetail(which) {
+    const d = $('asrChooseDetail');
+    d.innerHTML = '<span class="ed-tag">' + (ENGINE_META[which] ? ENGINE_META[which].name() : t('engModel')) + '</span> ' + engineDesc(which);
+    d.hidden = false;
+  }
+  function closeAsrChooser() {
+    $('asrChooseOverlay').classList.remove('show');
   }
 
   /* ============ 设置：预设管理 ============ */
@@ -979,6 +1859,13 @@
         if (s.hc) state.hc = s.hc;
         if (s.voiceLang) state.voiceLang = s.voiceLang;
         if (s.voiceURI) state.voiceURI = s.voiceURI;
+        if (s.asrEngine && ['auto','browser','model','cloud'].indexOf(s.asrEngine) > -1) state.asrEngine = s.asrEngine;
+        if (s.cloud) {
+          state.cloud = {
+            vendor: (s.cloud.vendor || ''),
+            apiKey: (s.cloud.apiKey || '')
+          };
+        }
         if (s.presetEdited) state.presetEdited = true;
         if (s.identity === 'deaf' || s.identity === 'vol') state.identity = s.identity;
         if (state.presetEdited && s.presets && s.presets.deaf && s.presets.vol) {
@@ -992,20 +1879,97 @@
   }
 
   /* ============ IndexedDB 会话历史 ============ */
-  const IDB_NAME = 'zitan', IDB_STORE = 'sessions';
+  const IDB_NAME = 'zitan', IDB_STORE = 'sessions', IDB_AUDIO = 'audio', IDB_IMG = 'images', IDB_FAV = 'favorites';
   let idb = null;
   function openIDB() {
     return new Promise((resolve, reject) => {
       if (idb) return resolve(idb);
       if (!('indexedDB' in window)) return reject(new Error('no indexedDB'));
-      const req = indexedDB.open(IDB_NAME, 1);
+      const req = indexedDB.open(IDB_NAME, 3);
       req.onupgradeneeded = e => {
         const d = e.target.result;
-        if (!d.objectStoreNames.contains(IDB_STORE)) d.createObjectStore(IDB_STORE, { keyPath: 'id' });
+        const ensure = (n, o) => { if (!d.objectStoreNames.contains(n)) d.createObjectStore(n, o); };
+        ensure(IDB_STORE, { keyPath: 'id' });
+        ensure(IDB_AUDIO, { keyPath: 'id' });
+        ensure(IDB_IMG, { keyPath: 'id' });
+        ensure(IDB_FAV, { keyPath: 'id' });
       };
       req.onsuccess = e => { idb = e.target.result; resolve(idb); };
       req.onerror = e => reject(e);
     });
+  }
+  /* —— images store —— */
+  const idbPut = (store, value) => new Promise((resolve, reject) => {
+    openIDB().then(db => new Promise((res2, rej2) => {
+      const tx = db.transaction(store, 'readwrite');
+      const st = tx.objectStore(store);
+      tx.oncomplete = () => res2(value);
+      tx.onerror = () => rej2(tx.error);
+      st.put(value);
+    })).then(resolve).catch(reject);
+  });
+  const idbGetAllMap = (store) => openIDB().then(db => new Promise((resolve, reject) => {
+    const req = db.transaction(store, 'readonly').objectStore(store).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  }));
+  const idbDel = (store, id) => openIDB().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  }));
+  function genId() { return Date.now() + '-' + Math.random().toString(36).slice(2, 8); }
+  /* 图片：存 Blob + 元信息；返回 id */
+  function putImage(blob, meta) {
+    const id = genId();
+    return idbPut(IDB_IMG, Object.assign({ id: id, blob: blob, created: Date.now() }, meta || {}))
+      .then(() => id).catch(() => { throw new Error('putImage fail'); });
+  }
+  function getImage(id) {
+    return openIDB().then(db => new Promise((resolve, reject) => {
+      const req = db.transaction(IDB_IMG, 'readonly').objectStore(IDB_IMG).get(id);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    }));
+  }
+  function allImages() { return idbGetAllMap(IDB_IMG); }
+  function deleteImage(id) { return idbDel(IDB_IMG, id); }
+  /* —— favorites store —— */
+  function favKey(by, text, time) { return ((by||'') + '|' + (text===undefined?'':text) + '|' + time); }
+  function allFavorites() {
+    return idbGetAllMap(IDB_FAV).then(list => list.slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
+  }
+  function isFavorite(m) {
+    if (!m || !m.by || m.text === undefined) return false;
+    return allFavorites().then(list => list.some(f => f.by === m.by && f.k === favKey(m.by, m.text, m.time)));
+  }
+  /* 收藏快照：文本/图片/录音 */
+  function addFavorite(m) {
+    if (!m || !m.by) return Promise.resolve();
+    const hasText = (m.text !== undefined && m.text !== '');
+    const hasMedia = !!(m.imgId || m.audioId);
+    if (!hasText && !hasMedia) return Promise.resolve();   /* 空消息不可收藏 */
+    const k = favKey(m.by, m.text||'', m.time);
+    return allFavorites().then(list => list.some(f => f.k === k)).then(exists => {
+      if (exists) return false;   /* 幂等：已存在则不重复 */
+      const snap = {
+        id: genId(), k: k, by: m.by, text: m.text||'', time: m.time,
+        type: m.imgId ? 'img' : (m.audioId ? 'audio' : 'text'),
+        imgId: m.imgId, audioId: m.audioId, sessionId: state.sessionId, createdAt: Date.now()
+      };
+      return idbPut(IDB_FAV, snap).then(() => true);
+    });
+  }
+  function removeFavorite(k) {
+    return allFavorites().then(list => {
+      const f = (list || []).find(x => x.k === k);
+      if (f) return idbDel(IDB_FAV, f.id);
+      return Promise.resolve();
+    });
+  }
+  function clearFavorites() {
+    return allFavorites().then(list => Promise.all((list || []).map(f => idbDel(IDB_FAV, f.id))));
   }
   function persistSession() {
     if (!('indexedDB' in window)) return;
@@ -1023,27 +1987,378 @@
       req.onerror = () => reject(req.error);
     }));
   }
+
+  function putAudio(rec) {
+    if (!('indexedDB' in window)) return Promise.reject(new Error('no indexedDB'));
+    return openIDB().then(db => new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_AUDIO, 'readwrite');
+      const store = tx.objectStore(IDB_AUDIO);
+      const id = Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+      tx.oncomplete = () => resolve(id);
+      tx.onerror = () => reject(tx.error);
+      store.put({
+        id: id,
+        type: rec.type || 'audio/webm',
+        duration: rec.duration || 0,
+        size: rec.blob ? rec.blob.size : 0,
+        created: rec.created || Date.now(),
+        engine: rec.engine || '',
+        blob: rec.blob
+      });
+    }));
+  }
+  function getAudio(id) {
+    if (!('indexedDB' in window)) return Promise.reject(new Error('no indexedDB'));
+    return openIDB().then(db => new Promise((resolve, reject) => {
+      const req = db.transaction(IDB_AUDIO, 'readonly').objectStore(IDB_AUDIO).get(id);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    }));
+  }
+
+  /* ============ 020 · 消息增强（复制/收藏/引用/粘贴/相册发图） ============ */
+  /* —— 引用占位 —— */
+  function clearQuote() {
+    quoteTarget = null;
+    $('quoteBar').hidden = true;
+    $('quoteBarText').textContent = '';
+  }
+  function setQuote(m, i) {
+    quoteTarget = { i: i, id: (m && (m.id !== undefined ? m.id : i)), text: popMsgText(m), by: m.by };
+    const label = (quoteTarget.text ? t('quoteHint').replace('{q}', truncate(quoteTarget.text, 22)) : t('quote'));
+    $('quoteBarText').textContent = label;
+    $('quoteBar').hidden = false;
+    $('text').focus();
+  }
+  function truncate(s, n) {
+    s = String(s || '');
+    return (s.length > n) ? s.slice(0, n) + '…' : s;
+  }
+  /* 取气泡用于摘要的文字 */
+  function popMsgText(m) { return (m && m.text !== undefined && m.text) ? m.text : ''; }
+
+  /* —— 复制 —— */
+  function copyMessage(i) {
+    const m = state.messages[i];
+    if (!m) return;
+    if (m.imgId && !m.text) {
+      /* 纯图片：尝试复制图片 */
+      getImage(m.imgId).then(rec => {
+        if (!rec || !rec.blob) throw new Error('noimg');
+        return navigator.clipboard.write([new ClipboardItem({ [rec.blob.type || 'image/png']: rec.blob })]).then(() => toast(t('copied')));
+      }).catch(() => toast(t('copyImgFail')));
+      return;
+    }
+    const text = popMsgText(m);
+    if (!text) return;
+    const done = () => toast(t('copied'));
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(() => { fallbackCopy(text); done(); });
+    } else { fallbackCopy(text); done(); }
+  }
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  /* —— 收藏 —— */
+  function toggleFavorite(i, btn) {
+    const m = state.messages[i];
+    if (!m) return;
+    const k = favKeyOf(m);
+    const was = !!favCache[k];
+    if (was) {
+      removeFavorite(k).then(() => {
+        favCache[k] = false;
+        const el = (btn || chatEl.querySelector('.favb[data-i="' + i + '"]'));
+        if (el) el.classList.remove('on');
+        toast(t('unfaved'));
+      }).catch(() => toast(t('exportFail')));
+    } else {
+      addFavorite(m).then(() => {
+        favCache[k] = true;
+        const el = (btn || chatEl.querySelector('.favb[data-i="' + i + '"]'));
+        if (el) el.classList.add('on');
+        toast(t('faved'));
+      }).catch(() => toast(t('exportFail')));
+    }
+  }
+  /* 首次进入时预载收藏状态到 favCache */
+  function primeFavCache() {
+    allFavorites().then(list => {
+      favCache = {};
+      (list || []).forEach(f => { favCache[(f.by||'') + '|' + (f.text===undefined?'':f.text) + '|' + f.time] = true; });
+      /* 重渲染当前消息以反映收藏状态 */
+      chatEl.querySelectorAll('.favb').forEach(btn => {
+        const i = +btn.dataset.i; if (!state.messages[i]) return;
+        btn.classList.toggle('on', !!favCache[favKeyOf(state.messages[i])]);
+      });
+    }).catch(() => {});
+  }
+
+  /* —— 图片压缩与待发送 —— */
+  function readFile(file) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+  }
+  function dataURLtoBlob(dataUrl) {
+    const arr = dataUrl.split(','); const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]); const n = bstr.length; const u8 = new Uint8Array(n);
+    for (let i = 0; i < n; i++) u8[i] = bstr.charCodeAt(i);
+    return new Blob([u8], { type: mime });
+  }
+  function loadImage(dataUrl) {
+    return new Promise((resolve, reject) => {
+      const im = new Image();
+      im.onload = () => resolve(im);
+      im.onerror = reject;
+      im.src = dataUrl;
+    });
+  }
+  function compressImage(file) {
+    return readFile(file).then(dataUrl => loadImage(dataUrl).then(im => {
+      const maxSide = 1280;
+      let { width, height } = im;
+      if (Math.max(width, height) > maxSide) {
+        const k = maxSide / Math.max(width, height);
+        width = Math.round(width * k); height = Math.round(height * k);
+      }
+      const cvs = document.createElement('canvas');
+      cvs.width = width; cvs.height = height;
+      const ctx = cvs.getContext('2d');
+      ctx.drawImage(im, 0, 0, width, height);
+      const outType = 'image/jpeg';
+      const out = cvs.toDataURL(outType, 0.82);
+      const blob = dataURLtoBlob(out);
+      return { blob, name: file.name, nameRaw: file.name, type: outType, w: width, h: height, origSize: file.size };
+    }));
+  }
+  function addPendingImages(list) {
+    const jobs = (list || []).map(f => compressImage(f).catch(() => null));
+    Promise.all(jobs).then(results => {
+      const ok = results.filter(Boolean);
+      if (ok.length !== list.length) toast(t('imgTooBig'));
+      pendingImages = pendingImages.concat(ok);
+      renderPendingShots();
+    });
+  }
+  let pendingShotUrls = [];   /* 待发图缩略图 objectURL，回收用 */
+  function renderPendingShots() {
+    const box = $('pendingShots');
+    pendingShotUrls.forEach(u => { try { URL.revokeObjectURL(u); } catch (e) {} });
+    pendingShotUrls = [];
+    if (!pendingImages.length) { box.hidden = true; box.innerHTML = ''; return; }
+    box.hidden = false;
+    box.innerHTML = pendingImages.map((item, idx) => {
+      const url = URL.createObjectURL(item.blob);
+      pendingShotUrls[idx] = url;
+      return '<div class="shot"><img src="' + url + '"/><button class="shotX" data-idx="' + idx + '" title="' + t('del') + '">&times;</button></div>';
+    }).join('');
+  }
+
+  /* —— 收藏页 · 相册页绑定用 —— */
+  function renderFavList() {
+    const box = $('favList');
+    allFavorites().then(list => {
+      if (!list.length) { box.innerHTML = '<div class="empty-voices">' + t('favEmpty') + '</div>'; return; }
+      box.innerHTML = list.map(f => {
+        const typeLabel = f.type === 'img' ? t('favImg') : (f.type === 'audio' ? t('favAudio') : t('favText'));
+        return '<div class="fav-row" data-k="' + escapeHtml(f.k) + '">'
+          + '<div class="fav-main"><div class="fav-type">' + typeLabel + '</div>'
+          + '<div class="fav-txt">' + escapeHtml(truncate(f.text || '', 60)) + '</div>'
+          + '<div class="fav-src">' + escapeHtml(t('favBack')) + ' · ' + escapeHtml(f.time || '') + '</div></div>'
+          + '<button class="fav-btn" data-k="' + escapeHtml(f.k) + '">' + ic('close', 15) + '</button>'
+          + '</div>';
+      }).join('');
+      box.querySelectorAll('.fav-row').forEach(row => {
+        const k = row.dataset.k;
+        row.onclick = () => locateFavorite(k);
+        row.querySelector('.fav-btn').onclick = e => {
+          e.stopPropagation();
+          if (!confirm(t('unFav'))) return;
+          removeFavorite(k).then(() => { renderFavList(); primeFavCache(); });
+        };
+      });
+    });
+  }
+  function locateFavorite(k) {
+    allFavorites().then(favs => {
+      const f = (favs || []).find(x => x.k === k);
+      if (!f) { toast(t('quoteMissing')); return; }
+      /* 先在当前会话找 */
+      const inCur = state.messages.findIndex(m => m.text === f.text && m.time === f.time && m.by === f.by);
+      if (inCur >= 0) {
+        $('settingsOverlay').classList.remove('show');
+        flashMsg(inCur);
+        return;
+      }
+      /* 再找对应保存的会话并加载 */
+      allSessions().then(sessions => {
+        const s = (sessions || []).find(sx => String(sx.id) === String(f.sessionId) && sx.messages
+          && sx.messages.some(m => m.text === f.text && m.time === f.time && m.by === f.by));
+        if (s) loadSession(s);
+        $('settingsOverlay').classList.remove('show');
+        const idx = state.messages.findIndex(m => m.text === f.text && m.time === f.time && m.by === f.by);
+        if (idx >= 0) flashMsg(idx); else toast(t('quoteMissing'));
+      });
+    });
+  }
+  function flashMsg(i) {
+    const row = chatEl.querySelector('.msg[data-i="' + i + '"]');
+    if (!row) return;
+    row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    row.classList.add('qflash');
+    setTimeout(() => row.classList.remove('qflash'), 1000);
+  }
+
+  /* —— 相册页 —— */
+  function renderGallery() {
+    const box = $('galleryGrid');
+    allImages().then(list => {
+      if (!list.length) { box.innerHTML = '<div class="empty-voices">' + t('galleryEmpty') + '</div>'; return; }
+      box.innerHTML = list.map(it => {
+        return '<div class="gcell" data-id="' + escapeHtml(it.id) + '">'
+          + '<button class="g-del" data-id="' + escapeHtml(it.id) + '" title="' + t('delImg') + '">&times;</button>'
+          + '<button class="gbtn" data-id="' + escapeHtml(it.id) + '">' + ic('up', 12) + ' ' + t('sendToChat') + '</button>'
+          + '</div>';
+      }).join('');
+      list.forEach(it => {
+        const cell = box.querySelector('.gcell[data-id="' + it.id + '"]');
+        if (cell) {
+          let url = imgUrlCache[it.id];
+          if (!url) { url = URL.createObjectURL(it.blob); imgUrlCache[it.id] = url; }
+          const img = document.createElement('img');
+          img.src = url; img.alt = '';
+          cell.insertBefore(img, cell.firstChild);
+          cell.onclick = () => { $('imgViewMain').src = url; $('imgViewer').classList.add('show'); };
+          cell.querySelector('.gbtn').onclick = e => {
+            e.stopPropagation();
+            pendingImages.push({
+              blob: it.blob, name: it.nameRaw || it.name || 'img', nameRaw: it.nameRaw || it.name, type: it.type || (it.blob.type||'image/jpeg')
+            });
+            renderPendingShots();
+            $('settingsOverlay').classList.remove('show');
+            setTimeout(() => sendPendingImages(), 50);
+          };
+          cell.querySelector('.g-del').onclick = e => {
+            e.stopPropagation();
+            if (!confirm(t('confirmDelImg'))) return;
+            deleteImage(it.id).then(() => renderGallery());
+          };
+        }
+      });
+    }).catch(() => {});
+  }
+
+  /* —— 选图发送（内置相册多选 → 发到当前会话）—— */
+  let gpSelected = {};   /* id -> true */
+  function renderGalleryPick() {
+    const box = $('gpGrid');
+    allImages().then(list => {
+      if (!list.length) {
+        box.innerHTML = '<div class="empty-voices">' + t('pickEmpty') + '</div>';
+        updateGpSend();
+        return;
+      }
+      box.innerHTML = list.map(it => {
+        const on = !!gpSelected[it.id];
+        return '<div class="gpcell' + (on ? ' on' : '') + '" data-id="' + escapeHtml(it.id) + '">'
+          + '<span class="gpck">' + (on ? ic('check', 13) : '') + '</span>'
+          + '</div>';
+      }).join('');
+      list.forEach(it => {
+        const cell = box.querySelector('.gpcell[data-id="' + it.id + '"]');
+        if (!cell) return;
+        const url = imgUrlCache[it.id] || (imgUrlCache[it.id] = URL.createObjectURL(it.blob));
+        const img = document.createElement('img');
+        img.src = url; img.alt = '';
+        cell.insertBefore(img, cell.firstChild);
+        cell.onclick = () => {
+          if (gpSelected[it.id]) delete gpSelected[it.id];
+          else gpSelected[it.id] = true;
+          renderGalleryPick();
+        };
+      });
+      updateGpSend();
+    }).catch(() => {});
+  }
+  function updateGpSend() {
+    const n = Object.keys(gpSelected).length;
+    const btn = $('gpSendBtn');
+    btn.disabled = !n;
+    btn.textContent = t('sendSelected').replace('{n}', n);
+  }
+  function openGalleryPick() {
+    gpSelected = {};
+    $('plusOverlay').classList.remove('show');
+    $('galleryPickOverlay').classList.add('show');
+    renderGalleryPick();
+  }
+  function closeGalleryPick() { $('galleryPickOverlay').classList.remove('show'); gpSelected = {}; }
+  function sendGalleryPick() {
+    const ids = Object.keys(gpSelected);
+    closeGalleryPick();
+    if (!ids.length) return;
+    ids.forEach(id => {
+      getImage(id).then(rec => {
+        if (!rec || !rec.blob) return;
+        putImage(rec.blob, { name: rec.nameRaw || rec.name, type: rec.blob.type, size: rec.blob.size })
+          .then(imgId => doSend('', { imgId: imgId }))
+          .catch(() => toast(t('sendImgFail')));
+      });
+    });
+  }
+
   function exportChat() {
     allSessions().then(sessions => {
-      const payload = {
-        app: 'zitan', exportedAt: new Date().toISOString(), sessionCount: sessions.length,
-        sessions: sessions
-          .map(s => ({
-            sessionId: s.id,
-            start: new Date(s.start).toISOString(),
-            end: s.end ? new Date(s.end).toISOString() : null,
-            messageCount: s.messages.length,
-            messages: s.messages
-          }))
-          .sort((a, b) => (a.start < b.start ? -1 : 1))
+      const blobToB64 = (b) => new Promise((res) => {
+        if (!b) return res(null);
+        const r = new FileReader();
+        r.onload = () => res(r.result); r.onerror = () => res(null);
+        r.readAsDataURL(b);
+      });
+      const build = () => {
+        const payload = {
+          app: 'zitan', exportedAt: new Date().toISOString(), sessionCount: sessions.length,
+          sessions: sessions
+            .map(s => ({
+              sessionId: s.id,
+              start: new Date(s.start).toISOString(),
+              end: s.end ? new Date(s.end).toISOString() : null,
+              messageCount: s.messages.length,
+              messages: s.messages
+            }))
+            .sort((a, b) => (a.start < b.start ? -1 : 1)),
+          favorites: []
+        };
+        return allFavorites().then(favs => {
+          payload.favorites = favs || [];
+          return allImages();
+        }).then(imgs => {
+          payload.images = (imgs || []).map(it => ({ id: it.id, name: it.nameRaw || it.name, data: (it.blob ? '_IMG_' + it.id : null) }));
+          return Promise.all((imgs || []).map(it => blobToB64(it.blob)));
+        }).then(b64s => {
+          const imgs = payload.images;
+          if (b64s) b64s.forEach((d, i) => { if (d && imgs[i]) imgs[i].data = d; });
+          return payload;
+        });
       };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'zitan-chat-export.json';
-      a.click();
-      URL.revokeObjectURL(url);
-      toast(t('exportDone'));
+      build().then(payload => {
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'zitan-chat-export.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        toast(t('exportDone'));
+      }).catch(() => toast(t('exportFail')));
     }).catch(() => toast(t('exportFail')));
   }
 
@@ -1132,6 +2447,7 @@
     renderQuick();
     renderPresetList();
     if (!$('voicePane').hidden) renderVoicePane();
+    if (!$('asrPane').hidden) renderAsrPane();
   }
   function setUiLang(lang) {
     if (state.uiLang === lang) return;
@@ -1148,6 +2464,143 @@
     $('whoVol').onclick  = () => { state.identity = 'vol';  render(); renderQuick(); };
     $('send').onclick = send;
     $('text').addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+
+    /* 语音输入：点麦克风 → 识别 → 录音随识别结果一起入消息 */
+    const micBtn = $('micBtn');
+    let asrCurrentEngine = 'model';           // 本轮识别实际使用的引擎（写入 asr.engine）
+    let activeBrowserRecorder = null;         // 浏览器识别时的同步录音（MediaRecorder）
+
+    /* 浏览器识别：Web Speech API 拿不到音频，需要同时开一个 MediaRecorder 录音 */
+    function beginBrowserRecording() {
+      if (typeof MediaRecorder === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return Promise.resolve(null);
+      return navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null).then(stream => {
+        if (!stream) return null;
+        let mime = '';
+        ['audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'].forEach(m => { if (!mime && MediaRecorder.isTypeSupported(m)) mime = m; });
+        const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+        const chunks = [];
+        rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+        const started = Date.now();
+        let finished = false;
+        const stopped = new Promise(resolve => {
+          rec.onstop = () => {
+            if (!finished) {
+              finished = true;
+              stream.getTracks().forEach(t => t.stop());
+              resolve(chunks.length ? new Blob(chunks, { type: rec.mimeType || mime || 'audio/webm' }) : null);
+            }
+          };
+        });
+        rec.start();
+        return { rec, started, stop: () => { if (!finished) { try { rec.stop(); } catch (e) { stream.getTracks().forEach(t => t.stop()); } } return stopped; } };
+      });
+    }
+    function stopBrowserRecording() {
+      const r = activeBrowserRecorder; activeBrowserRecorder = null;
+      if (!r) return Promise.resolve(null);
+      return r.stop().then(blob => blob ? { blob: blob, type: (blob.type || 'audio/webm'), ms: Math.max(0, Date.now() - r.started) } : null);
+    }
+
+    /* 识别结果 + 录音一起写入消息（自动发送，不经过输入框） */
+    function sendAsrMessage(text, recording) {
+      const eng = asrCurrentEngine || 'model';
+      const commit = (audioId) => {
+        state.messages.push({
+          id: genId(),
+          by: state.identity,
+          text: text,
+          time: now(),
+          audioId: audioId || undefined,
+          asr: { engine: eng, text: text, time: Date.now(), ms: (recording && recording.ms) || null }
+        });
+        render();
+        if (state.tts) speak(text);
+        toast(text);
+      };
+      if (recording && recording.blob) {
+        putAudio({ type: recording.type || recording.blob.type || 'audio/webm', duration: recording.ms || 0, created: Date.now(), engine: eng, blob: recording.blob })
+          .then(id => commit(id)).catch(() => commit(null));
+      } else {
+        commit(null);
+      }
+    }
+
+    const finishMic = (text, recording) => {
+      micBtn.classList.remove('rec'); micBtn.disabled = false;
+      stopBrowserRecording();
+      if (text) sendAsrMessage(text, recording);
+      else toast(t('micNoSpeech'));
+    };
+    const stopMic = () => { NativeAsr.stop(); SenseVoiceAsr.stop(); stopBrowserRecording(); micBtn.classList.remove('rec'); };
+    const startLocal = (finish) => {
+      asrCurrentEngine = 'model';
+      SenseVoiceAsr.ensureLoaded((p) => toast(typeof p === 'string' ? p : t('micLoading')))
+        .then(() => { micBtn.classList.add('rec'); toast(t('micListening') || '请说话'); SenseVoiceAsr.start(finish); })
+        .catch((e) => { micBtn.classList.remove('rec'); micBtn.disabled = false; toast(t('micFail') + (e.message || e)); });
+    };
+    const startBrowser = (finish) => {
+      let active = 'native';
+      asrCurrentEngine = 'browser';
+      const wrapFinish = (text) => { if (active === 'native') stopBrowserRecording().then(rec => finish(text, rec)); };
+      const fallbackToLocal = () => {
+        if (active !== 'native') return;
+        active = 'local';
+        stopBrowserRecording();
+        toast(t('micNativeFallback'));
+        startLocal(finish);
+      };
+      beginBrowserRecording().then(recorder => {
+        activeBrowserRecorder = recorder;
+        if (active !== 'native') return;
+        if (NativeAsr.isSupported()) {
+          NativeAsr.start(wrapFinish, (err) => {
+            if (active !== 'native') return;
+            if (NativeAsr.CAN_FALLBACK.includes(err.code)) fallbackToLocal();
+            else if (err.code === 'not-allowed') { stopBrowserRecording(); micBtn.classList.remove('rec'); micBtn.disabled = false; toast(t('micNoPermission')); }
+            else if (err.code === 'timeout') { stopBrowserRecording(); micBtn.classList.remove('rec'); micBtn.disabled = false; toast(t('micTimeout')); }
+            else wrapFinish(null);
+          }).then(() => { if (active === 'native') { micBtn.classList.add('rec'); toast(t('micNative')); } })
+            .catch(() => { if (active === 'native') fallbackToLocal(); });
+        } else {
+          fallbackToLocal();
+        }
+      });
+    };
+    const runEngine = (which) => {
+      if (which === 'browser') startBrowser(finishMic);
+      else if (which === 'model') startLocal(finishMic);
+      else {   // cloud
+        asrCurrentEngine = 'cloud';
+        if (!CLOUD_ASR_ENABLED) {            /* 云端未开放：降级到本地 */
+          toast(t('asrCloudNeed'));
+          startLocal(finishMic);
+        } else if (!state.cloud.vendor || !state.cloud.apiKey) {
+          micBtn.classList.remove('rec'); micBtn.disabled = false;
+          toast(t('asrCloudNeed'));
+        } else {
+          toast(t('asrCloudNeed'));   /* 云端真识别本轮未接入：提示后回退本地 */
+          startLocal(finishMic);
+        }
+      }
+    };
+    /* 首次：若从未手动选过 → 弹引擎选择；否则直接用已选/自动引擎 */
+    let asrAsked = !!localStorage.getItem('zitanAsrAsked');
+    micBtn.onclick = () => {
+      if (micBtn.classList.contains('rec')) { stopMic(); return; }
+      if (!asrAsked) {
+        asrAsked = true;
+        localStorage.setItem('zitanAsrAsked', '1');
+        const def = currentEngine();
+        openAsrChooser((which) => {
+          state.asrEngine = which;
+          save();
+          runEngine(which);
+        }, def);
+        return;
+      }
+      const eng = state.asrEngine === 'auto' ? currentEngine() : state.asrEngine;
+      runEngine(eng);
+    };
 
     $('btnPlus').onclick  = () => { state.fs = Math.min(2.2, +(state.fs + 0.15).toFixed(2)); render(); };
     $('btnMinus').onclick = () => { state.fs = Math.max(0.6, +(state.fs - 0.15).toFixed(2)); render(); };
@@ -1167,6 +2620,104 @@
     $('settingsOverlay').addEventListener('click', e => { if (e.target === $('settingsOverlay')) $('settingsOverlay').classList.remove('show'); });
     $('sTabPreset').onclick = () => showSettingsPane('preset');
     $('sTabVoice').onclick  = () => showSettingsPane('voice');
+    $('sTabAsr').onclick    = () => showSettingsPane('asr');
+    $('sTabFav').onclick    = () => showSettingsPane('fav');
+    $('sTabGallery').onclick= () => showSettingsPane('gallery');
+
+    /* 020 消息增强事件 */
+    /* 加号：选择图片来源 */
+    $('plusBtn').onclick = () => $('plusOverlay').classList.add('show');
+    $('plusX').onclick = () => $('plusOverlay').classList.remove('show');
+    $('plusCancel').onclick = () => $('plusOverlay').classList.remove('show');
+    $('plusOverlay').addEventListener('click', e => { if (e.target === $('plusOverlay')) $('plusOverlay').classList.remove('show'); });
+    /* 内置相册：跳到设置→相册 */
+    $('srcGallery').onclick = () => {
+      $('plusOverlay').classList.remove('show');
+      $('settingsOverlay').classList.add('show');
+      showSettingsPane('gallery');
+    };
+    /* 手机相册 */
+    $('srcPhone').onclick = () => { $('phoneFile').click(); };
+    $('phoneFile').addEventListener('change', e => {
+      const files = Array.prototype.slice.call(e.target.files || []);
+      if (files.length) addPendingImages(files);
+      $('plusOverlay').classList.remove('show');
+      e.target.value = '';
+    });
+    /* 粘贴 */
+    $('pasteBtn').onclick = () => {
+      const done = (txt) => {
+        if (txt) {
+          const inp = $('text');
+          const s = inp.selectionStart || inp.value.length, e2 = inp.selectionEnd || inp.value.length;
+          inp.value = inp.value.slice(0, s) + txt + inp.value.slice(e2);
+          inp.focus();
+          inp.selectionStart = inp.selectionEnd = s + txt.length;
+          toast(t('pasted'));
+        }
+      };
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        navigator.clipboard.readText().then(done).catch(() => {
+          try { document.execCommand('paste'); } catch (err) { toast(t('pasteNeedPerm')); }
+        });
+      } else {
+        try { document.execCommand('paste'); } catch (err) { toast(t('pasteNeedPerm')); }
+      }
+    };
+    /* 引用占位栏 */
+    $('quoteBarX').onclick = () => clearQuote();
+    /* 待发送缩略图：删除 */
+    $('pendingShots').addEventListener('click', e => {
+      const x = e.target.closest('.shotX');
+      if (!x) return;
+      const idx = +x.dataset.idx;
+      pendingImages.splice(idx, 1);
+      renderPendingShots();
+    });
+    /* 图片大图查看 */
+    $('imgViewX').onclick = () => $('imgViewer').classList.remove('show');
+    $('imgViewer').addEventListener('click', e => { if (e.target === $('imgViewer')) $('imgViewer').classList.remove('show'); });
+    /* 收藏页：清空 */
+    $('favClearBtn').onclick = () => {
+      if (!confirm(t('confirmClearFav'))) return;
+      clearFavorites().then(() => { renderFavList(); primeFavCache(); });
+    };
+    /* 相册页：导入 */
+    $('galleryImportBtn').onclick = () => $('galleryFile').click();
+    $('galleryFile').addEventListener('change', e => {
+      const files = Array.prototype.slice.call(e.target.files || []);
+      if (files.length) {
+        Promise.all(files.map(f => compressImage(f).catch(() => null))).then(rs => {
+          (rs.filter(Boolean)).forEach(img => {
+            putImage(img.blob, { name: img.nameRaw || img.name, type: img.blob.type, size: img.blob.size })
+              .catch(() => {});
+          });
+          setTimeout(renderGallery, 60);
+        });
+      }
+      e.target.value = '';
+    });
+    /* 初始化加载收藏状态 */
+    primeFavCache();
+
+    /* 识别引擎：设置面板选择 */
+    $('cloudVendor').onchange = (e) => { state.cloud.vendor = e.target.value; save(); };
+    $('cloudApiKey').oninput = (e) => { state.cloud.apiKey = e.target.value; save(); };
+    $('asrDownloadBtn').onclick = startAsrDownload;
+
+    /* 识别引擎选择弹层 */
+    $('asrChooseDone').onclick = () => {
+      const sel = $('asrChooseList').querySelector('.engine-opt.on');
+      closeAsrChooser();
+      if (asrChooseCallback) asrChooseCallback(sel ? sel.dataset.eng : 'model');
+    };
+    $('asrChooseX').onclick = () => closeAsrChooser();
+    $('asrChooseOverlay').addEventListener('click', e => { if (e.target === $('asrChooseOverlay')) closeAsrChooser(); });
+
+      /* 长按录音条：重新识别弹层 */
+      $('asrReX').onclick = () => closeReRecognize();
+      $('asrReCancel').onclick = () => closeReRecognize();
+      $('asrReOverlay').addEventListener('click', e => { if (e.target === $('asrReOverlay')) closeReRecognize(); });
 
     $('tabDeaf').onclick = () => { roleTab = 'deaf'; $('tabDeaf').classList.add('on'); $('tabVol').classList.remove('on'); renderPresetList(); };
     $('tabVol').onclick  = () => { roleTab = 'vol';  $('tabVol').classList.add('on'); $('tabDeaf').classList.remove('on'); renderPresetList(); };
@@ -1202,16 +2753,101 @@
     $('helpX').onclick = () => $('helpOverlay').classList.remove('show');
     $('helpOverlay').addEventListener('click', e => { if (e.target === $('helpOverlay')) $('helpOverlay').classList.remove('show'); });
 
-    /* 聊天区：播放 / 大字展示 */
+    /* 聊天区：播放 / 录音条点按播放、长按换引擎 / 大字展示 */
     chatEl.addEventListener('click', e => {
+      const bar = e.target.closest('.audiobar');
+      if (bar) {
+        const i = +bar.dataset.i;
+        if (lpSuppressClick) { lpSuppressClick = false; return; }
+        toggleAudioPlay(i);
+        return;
+      }
       const play = e.target.closest('.play');
       if (play) { playMsg(+play.dataset.i, play); return; }
+      const copyb = e.target.closest('.copyb');
+      if (copyb) { copyMessage(+copyb.dataset.i); return; }
+      const favb = e.target.closest('.favb');
+      if (favb) { toggleFavorite(+favb.dataset.i, favb); return; }
+      const quoteEl = e.target.closest('.quote');
+      if (quoteEl) {
+        const qid = quoteEl.dataset.q;
+        const byId = state.messages.findIndex(m => m.id !== undefined && String(m.id) === String(qid));
+        const idx = (byId >= 0) ? byId : Number(qid);
+        if (idx >= 0 && idx < state.messages.length) { flashMsg(idx); }
+        return;
+      }
+      const imgEl = e.target.closest('.bubimg');
+      if (imgEl) {
+        const imgId = imgEl.dataset.img;
+        const cached = imgUrlCache[imgId];
+        if (cached) { $('imgViewMain').src = cached; $('imgViewer').classList.add('show'); return; }
+        getImage(imgId).then(rec => {
+          if (rec && rec.blob) {
+            const url = URL.createObjectURL(rec.blob);
+            imgUrlCache[imgId] = url;
+            $('imgViewMain').src = url;
+            $('imgViewer').classList.add('show');
+          }
+        });
+        return;
+      }
       const bubble = e.target.closest('.bubble');
-      if (bubble) {
+      if (bubble && !e.target.closest('.bubimg')) {
         const row = bubble.closest('.msg');
         if (row) openPresenter(+row.dataset.i);
       }
     });
+
+    /* 长按：录音条→重新识别；气泡(非按钮/非录音条)→引用 */
+    let lpTgt = null;   /* 'audio' | 'quote' */
+    function longPressStartAny(el, x, y) {
+      lpStartX = x; lpStartY = y; lpSuppressClick = false;
+      clearLongPress();
+      lpTgt = el.dataset.kind || '';
+      lpTimer = setTimeout(() => {
+        lpTimer = null; lpSuppressClick = true;
+        if (lpTgt === 'audio') { if (lpBar) openReRecognize(+lpBar.dataset.i); }
+        else if (lpBar && lpTgt === 'quote' && state.messages[+lpBar.dataset.i]) {
+          setQuote(state.messages[+lpBar.dataset.i], +lpBar.dataset.i);
+          toast(t('quote'));
+          lpBar = null;
+        }
+      }, 500);
+    }
+    chatEl.addEventListener('touchstart', e => {
+      const bar = e.target.closest('.audiobar');
+      if (bar) { lpBar = bar; longPressStartAny(bar, e.touches[0].clientX, e.touches[0].clientY); return; }
+      /* 气泡区域（排除播放/操作按钮与图片）：长按 → 引用 */
+      const t = e.target.closest('.bubble');
+      if (t && !e.target.closest('.play') && !e.target.closest('.act') && !e.target.closest('.bubimg')) {
+        const msgEl = t.closest('.msg');
+        if (msgEl) { lpBar = msgEl; lpBar.dataset.kind = 'quote'; longPressStartAny(msgEl, e.touches[0].clientX, e.touches[0].clientY); }
+      }
+    }, { passive: true });
+    chatEl.addEventListener('touchmove', e => {
+      if (e.touches.length) longPressMove(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+    chatEl.addEventListener('touchend', e => {
+      const bar = e.target.closest('.audiobar');
+      if (bar) longPressFire(bar); else clearLongPress();
+      lpTgt = null;
+    }, { passive: true });
+    chatEl.addEventListener('mousedown', e => {
+      const bar = e.target.closest('.audiobar');
+      if (bar) { lpBar = bar; lpBar.dataset.kind = 'audio'; longPressStartAny(bar, e.clientX, e.clientY); return; }
+      const t = e.target.closest('.bubble');
+      if (t && !e.target.closest('.play') && !e.target.closest('.act') && !e.target.closest('.bubimg')) {
+        const msgEl = t.closest('.msg');
+        if (msgEl) { lpBar = msgEl; lpBar.dataset.kind = 'quote'; longPressStartAny(msgEl, e.clientX, e.clientY); }
+      }
+    });
+    chatEl.addEventListener('mousemove', e => longPressMove(e.clientX, e.clientY));
+    chatEl.addEventListener('mouseup', e => {
+      const bar = e.target.closest('.audiobar');
+      if (bar) longPressFire(bar); else clearLongPress();
+      lpTgt = null;
+    });
+    chatEl.addEventListener('mouseleave', () => clearLongPress());
 
     /* 大字展示控件 */
     $('btnPresent').onclick = () => {
@@ -1252,14 +2888,27 @@
 
   function showSettingsPane(which) {
     const presetOn = (which === 'preset');
+    const voiceOn  = (which === 'voice');
+    const asrOn    = (which === 'asr');
+    const favOn    = (which === 'fav');
+    const galOn    = (which === 'gallery');
     $('sTabPreset').classList.toggle('on', presetOn);
-    $('sTabVoice').classList.toggle('on', !presetOn);
+    $('sTabVoice').classList.toggle('on', voiceOn);
+    $('sTabAsr').classList.toggle('on', asrOn);
+    $('sTabFav').classList.toggle('on', favOn);
+    $('sTabGallery').classList.toggle('on', galOn);
     $('presetPane').hidden = !presetOn;
-    $('voicePane').hidden = presetOn;
-    if (!presetOn) {
+    $('voicePane').hidden  = !voiceOn;
+    $('asrPane').hidden    = !asrOn;
+    $('favPane').hidden    = !favOn;
+    $('galleryPane').hidden = !galOn;
+    if (!presetOn && !favOn && !galOn) {
       if (!voices.length) voicesKicked = false;  /* 用户手势：允许重新触发一次语音加载 */
       renderVoicePane();
     }
+    if (asrOn) renderAsrPane();
+    if (favOn) renderFavList();
+    if (galOn) renderGallery();
   }
 
   init();
