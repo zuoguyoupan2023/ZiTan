@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>字谈 · 网络测速（诊断用）</title>
+<style>
+  body { font-family: -apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif; background:#f5f6fa; color:#222; margin:0; padding:16px; }
+  .card { background:#fff; border-radius:14px; padding:18px 20px; box-shadow:0 1px 6px rgba(0,0,0,.08); max-width:680px; margin:0 auto 14px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  h1 small { font-size:12px; color:#888; font-weight:400; }
+  .note { font-size:12px; color:#888; line-height:1.6; }
+  button { border:none; background:#2563eb; color:#fff; font-size:16px; font-weight:600; padding:12px 22px; border-radius:10px; cursor:pointer; }
+  button:disabled { opacity:.5; }
+  .row { display:flex; justify-content:space-between; padding:9px 2px; border-bottom:1px solid #f0f0f0; flex-wrap:wrap; gap:4px; }
+  .row:last-child { border-bottom:none; }
+  .lbl { color:#555; }
+  .val { font-weight:600; }
+  .val.good { color:#16a34a; } .val.mid { color:#d97706; } .val.bad { color:#dc2626; }
+  .bar { height:8px; background:#eaeeff; border-radius:99px; margin:4px 0 2px; overflow:hidden; }
+  .bar i { display:block; height:100%; background:#2563eb; width:0; }
+  .sep { font-size:12px; color:#999; margin-top:10px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th,td { text-align:left; padding:6px 4px; border-bottom:1px solid #f0f0f0; }
+  th { color:#777; font-weight:600; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>字谈 · 网络测速 <small>诊断用 · 真实到 CDN 的下载速度</small></h1>
+    <p class="note">
+      说明：此页面从<b>你的浏览器你的网络</b>真实发起请求并统计字节，测的是"你 → Cloudflare (model 资源所在) "的真实下行速度。
+      电信/联通/移动<b>无法伪造</b>此结果（字节真实到达本机）。它反映你到本站/CDN 的链路，不等于你到其它网站都快。<br>
+      测试会下载模型文件的一部分（约 8MB），不会拉满 228MB。请在<b>当前网速较慢的那台设备/WiFi</b>上打开本页测试。
+    </p>
+    <p><button id="go">开始测速</button></p>
+    <div id="out"></div>
+  </div>
+
+<script>
+  const $=id=>document.getElementById(id);
+  let off;
+  const fmtMBps=n=>(n/1024/1024).toFixed(2);
+  const mbps=n=>(fmtMBps(n)*8).toFixed(1);
+  const grade=s=> s>=3000?'good':(s>=800?'mid':'bad');  // KB/s
+  const speedLine=(desc, bytes, ms)=>{
+    const kb=bytes/1024, secs=ms/1000;
+    const kbps=secs>0?kb/secs:0;
+    return {desc,kbps,bytes,ms};
+  };
+  async function downloadPart(url, maxBytes){
+    const t0=performance.now();
+    const res=await fetch(url,{headers:{Range:`bytes=0-${maxBytes-1}`},cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const reader=res.body.getReader();
+    let got=0; const chunks=[];
+    for(;;){const r=await reader.read(); if(r.done)break; chunks.push(r.value); got+=r.value.length;}
+    const ms=performance.now()-t0;
+    return {bytes:got, ms};
+  }
+  async function rtt(url){
+    const t0=performance.now();
+    // 用一次小 Range 请求估 RTT（无需真实内容）
+    await fetch(url,{headers:{Range:'bytes=0-0'},cache:'no-store'});
+    return performance.now()-t0;
+  }
+  async function run(){
+    $('go').disabled=true; $('out').innerHTML='';
+    const base=location.origin;
+    const modelUrl=base+'/sensevoice/model.int8.onnx';
+    const htmlUrl=base+'/index.html';
+    const out=$('out');
+    const add=(h)=>out.insertAdjacentHTML('beforeend',h);
+    add(`<div class="sep">第一步 · RTT 延迟（两次取样）</div><table id="rtttbl"><tr><th>目标</th><th>RTT</th></tr></table>`);
+    for(const [name,url] of [['index.html',htmlUrl],['model.int8.onnx',modelUrl]]){
+      let ms=NaN,ok=false;
+      try{ ms=await rtt(url); ok=true; }catch(e){}
+      document.querySelector('#rtttbl').insertAdjacentHTML('beforeend',
+        `<tr><td>${name}</td><td>${ok?ms.toFixed(1)+' ms':'失败'}</td></tr>`);
+    }
+    add(`<div class="sep">第二步 · 下载速度（Range 取前 8MB，避免拉满 228MB）</div><table id="dl"><tr><th>目标</th><th>下载</th><th>速度(KB/s)</th><th>≈(Mbps)</th></tr></table>`);
+    for(const [name,url,size] of [['index.html',htmlUrl,2*1024*1024],['model.int8.onnx',modelUrl,8*1024*1024]]){
+      try{
+        const {bytes, ms}=await downloadPart(url,size);
+        const kb=bytes/1024, sec=ms/1000, kbps=sec>0?kb/sec:0;
+        document.querySelector('#dl').insertAdjacentHTML('beforeend',
+          `<tr><td>${name}</td><td>${fmtMBps(bytes)} MB</td><td class="val ${grade(kbps)}">${kbps.toFixed(0)}</td><td class="val ${grade(kbps)}">${mbps(kbps)}</td></tr>`);
+      }catch(e){
+        document.querySelector('#dl').insertAdjacentHTML('beforeend',
+          `<tr><td>${name}</td><td colspan="3" style="color:#dc2626">请求失败（${e.message}；非 HTTPS 可能失败，需将本页放在 HTTPS 域名下）</td></tr>`);
+      }
+    }
+    add(`<div class="sep">粗略评估</div>
+      <div class="row"><span class="lbl">228MB 模型按当前速度大约用时</span><span class="val" id="eta">—</span></div>`);
+    const dl=document.querySelector('#dl');
+    const modelRow=dl.rows[1];
+    if(modelRow){
+      const kbpsText=modelRow.cells[2].textContent;
+      const kbps=parseFloat(kbpsText);
+      if(kbps>0){ const s=228*1024/kbps; const mm=Math.floor(s/60), ss=Math.round(s%60);
+        $('eta').textContent=`约 ${mm} 分 ${ss} 秒`; }
+    }
+    add(`<p class="note">提示：下载越快说明你与 Cloudflare 边缘节点链路越好。若这里慢而手机热点快，通常是家宽到 CDN 的运营商出口慢，可在路由/WiFi 或换运营商侧排查，非代码问题。</p>`);
+    $('go').disabled=false;
+  }
+  $('go').onclick=run;
+</script>
+</body>
+</html>
