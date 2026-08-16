@@ -49,8 +49,8 @@
    * 下载完成后写入 Cache API（zitan-asr），下次走到缓存直接秒开，无需重新下载。 */
   const ASR_CACHE = 'zitan-asr';
   function asrCache() {
-    if (typeof caches === 'undefined') return null;
-    try { return caches.open(ASR_CACHE); } catch (e) { return null; }
+    if (typeof caches === 'undefined') return Promise.resolve(null);
+    try { return caches.open(ASR_CACHE).catch(() => null); } catch (e) { return Promise.resolve(null); }
   }
   async function cacheFetch(url, onProgress) {
     // 1) 先查 Cache API

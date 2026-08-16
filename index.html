@@ -1589,12 +1589,16 @@
   /* ============ 识别引擎选择 / 环境检测 ============ */
   /* 规则（已确认）：
        地域：浏览器语言 zh + 时区 UTC+8 附近 → 国内；否则国外。
-       平台：ios / macos / android / harmony / windows / other。
-       矩阵：
-         · 国外：一律三个（browser/model/cloud）
-         · 国内：iOS、macOS、other → 三个；android、harmony、windows → model+cloud（去 browser）
+       平台：ipad / ios(iPhone) / macos / android / harmony / windows / other。
+       矩阵（2026-08 调整）：
+         · 电脑端(macos/windows/other/ipad)：本地模型 + 浏览器识别
+         · 手机(iPhone/安卓/鸿蒙)：不显示本地模型（算力不够）
+             - iPhone：浏览器识别（国内/国外）
+             - 安卓/鸿蒙 国外：浏览器识别
+             - 安卓/鸿蒙 国内：只云端识别
+         · 云端识别当前以 CLOUD_ASR_ENABLED=false 隐藏，开方后按上表出现
      浏览器识别后端（展示用）：
-         · iOS → Apple（Safari 内核）
+         · iPad/iOS → Apple（Safari 内核）；iOS 上 chrome/edge 实际都是 Safari 内核
          · android/harmony → Chrome→Google / Edge→Microsoft
          · windows → Chrome→Google / Edge→Microsoft
          · macOS/server → Safari→Apple / Chrome→Google / Edge→Microsoft   */
@@ -1603,13 +1607,18 @@
   const EnvDetect = (function () {
     const ua = navigator.userAgent || '';        // 先解析，再用 navigator.platform 补
     const plt = (navigator.platform || '').toLowerCase();
-    const isIOS = /iPad|iPhone|iPod/.test(ua) || (plt === 'macintel' && navigator.maxTouchPoints > 1);
+    /* iPad 优先于 iPhone 判定：iPad 算力足够，支持本地模型，不归类为“手机” */
+    const isIPad = /iPad/.test(ua) || (plt === 'macintel' && /iPad|Macintosh/.test(ua) && navigator.maxTouchPoints > 1 && /Safari/.test(ua) && !/CriOS/.test(ua));
+    const isIPhone = !isIPad && /iPhone|iPod/.test(ua);
+    /* 桌面触屏（MacBook/二合一）不能被误判成 iPad：仅当真正 iOS/macOS 触屏且是 Safari 才认 iPad */
+    const isIOS = isIPad || isIPhone || (plt === 'macintel' && navigator.maxTouchPoints > 1);
     const isMac = !isIOS && /mac/i.test(plt);
     const isAndroid = !isIOS && /android/i.test(ua);
     const isHarmony = !isIOS && (/harmony|harmonyos|ohos/i.test(ua + ' ' + (navigator.vendor || '')));
     const isWindows = /win/i.test(plt);
     let platform = 'other';
-    if (isIOS) platform = 'ios';
+    if (isIPad) platform = 'ipad';
+    else if (isIPhone) platform = 'ios';
     else if (isHarmony) platform = 'harmony';
     else if (isAndroid) platform = 'android';
     else if (isMac) platform = 'macos';
@@ -1718,6 +1727,13 @@
     const lk = $('asrLocalStatus');
     const btn = $('asrDownloadBtn');
     const bar = $('asrLocalBar');
+    if (isMobilePane) {
+      /* 手机端算力不够：线下模型整个区块隐藏，不填充任何状态 */
+      if (lk) lk.hidden = true;
+      if (btn) btn.hidden = true;
+      if (bar) bar.hidden = true;
+      return;
+    }
     const ready = typeof SenseVoiceAsr !== 'undefined' && SenseVoiceAsr.getReady && SenseVoiceAsr.getReady();
     if (ready) {
       lk.innerHTML = '<span class="asr-label">' + t('asrModelReady') + '</span><span class="asr-val"> ✓</span>';
