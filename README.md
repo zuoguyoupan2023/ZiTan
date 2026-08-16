@@ -28,6 +28,7 @@ python3 -m http.server 8000
 | `sensevoice-ort-test.html` | onnxruntime-web（推荐） | 模型加载 ~1s，识别 ~500ms，支持自动演示/上传/麦克风 |
 | `sensevoice-test.html` | sherpa-onnx WASM | 017 原方案，模型打包在 .data |
 | `speech-native-test.html` | **原生 Web Speech API（联网）** | 三大浏览器原生语音识别：检测 + 真人测试按钮，调研见 `018` |
+| `cloud-asr-test.html` | **云端 API（第三条腿）** | 录音 → Worker 代理 → 讯飞/百度/Azure 云端识别，真人测试见 `019` |
 
 模型文件在 `sensevoice/`（228MB `model.int8.onnx` + `tokens.txt` + `ort/` 运行时），首次访问自动加载。
 
@@ -38,19 +39,25 @@ python3 -m http.server 8000
 ### 架构
 
 ```
-用户浏览器 ──▶ Cloudflare Pages（HTML/JS/CSS，<1MB，秒开）
-            └▶ Cloudflare R2（model.int8.onnx 228MB + ort wasm，大资产）
+用户浏览器 ──▶ Cloudflare Pages（HTML/JS/CSS + Functions，<1MB 代码秒开）
+            │     ├─ /sensevoice/* 由 Pages Function 拦截
+            │     └─ env.MODELS（R2 binding）↘
+            │                              ▼
+            └▶ Cloudflare R2 bucket「wewalkworld-models」（model 228MB + ort wasm）
 ```
 
-- **为什么拆**：Cloudflare Pages 单文件上限约 **25MB**，模型/引擎放不下 → 大资产全部放 **R2 对象存储**（无此限制，且支持 Range 断点续传）。
-- **推荐只部署 onnxruntime-web 路线**：首载 ≈ 240MB（模型 228 + ort wasm 12），比 sherpa 路线省 231MB（.data 不用）。
+- **为什么拆**：Cloudflare Pages 单文件上限约 **25MB**，模型/引擎放不下 → 大资产放 **R2 对象存储**（无上限，支持 Range 断点续传）。
+- **只部署 onnxruntime-web 路线**（README 主应用即此路线）：首载 ≈ 240MB（模型 228 + ort wasm），sherpa 路线已归档至 `archive/sherpa-sensevoice/`，不进部署。
+- **前端 JS 与模型分离**：`native-asr.js`、`sensevoice-asr.js` 是**前端代码**，放 `js/` 目录、走 Pages 静态；**只有模型二进制**（`model.int8.onnx`、`tokens.txt`、`meta.json`、`ort/*`）走 R2。`/sensevoice/*` 被 Pages Function 拦截从 R2 读取，而 `/js/*` 由 Pages 静态目录正常提供（**不要把前端 JS 放 `/sensevoice/`，会被 Function 误拦截导致 500**）。
 
 ### 部署步骤（概要）
 
-1. **Pages**：仓库连 Cloudflare Pages（纯静态，无构建），自定义域名。
-2. **R2**：建 bucket → 传 `model.int8.onnx`、`tokens.txt`、`ort/*.wasm` → 开 Public Access / 绑自定义域名 → 设 `Cache-Control: public, max-age=31536000, immutable` → 配 **CORS**（允许站点域名）。
-3. **前端**：把模型 URL / `ort.env.wasm.wasmPaths` 指到 R2 域名（可用 `config.js` 注入）。
-4. （可选）**Worker 中转**：R2 binding + Cache API + 限流 + 统一域名，代码见 `006`。
+1. **Pages**：仓库连 Cloudflare Pages（纯静态 + Functions，无需构建），自定义域名。前端 JS 在 `js/`（git 管，走静态）。
+2. **R2**：建 bucket **`wewalkworld-models`** → 传 `sensevoice/` 下：`model.int8.onnx`、`tokens.txt`、`meta.json`、`ort/*`（6 个运行时文件）。桶内对象 key 带 `sensevoice/` 前缀（Function 也兼容平铺）。
+3. **Pages 绑定 R2**：在 Cloudflare 控制台 → Pages 项目 → Settings → Bindings → 添加 **R2**，变量名 `MODELS`，选 bucket `wewalkworld-models`。
+4. （前端脚本已走 `/js/`，模型请求 `/sensevoice/...` 由 Function 代理回源，支持 Range 断点续传 + long 缓存）
+
+> `functions/sensevoice/[[path]].js` 已包含：R2 key 前缀/平铺兜底、Range(206 分片)、CORS、`Cache-Control: public,max-age=31536000,immutable`。
 
 ### 首次加载（~240MB）的用户体验
 
@@ -94,6 +101,8 @@ python3 -m http.server 8000
 | `007` | 方法论（浏览器跑大模型的经验） |
 | `017` | 浏览器版 SenseVoice 实现方案（初稿） |
 | `018` | 调研：三大浏览器（Safari/Edge/Chrome）原生语音识别 API |
+| `019` | 方案：接入云端语音识别 API（第三条腿）与真人测试 |
+| `020` | 需求：消息增强（复制/缩播放键/收藏）、引用、粘贴、图片相册 |
 
 ## 许可与第三方资源
 
