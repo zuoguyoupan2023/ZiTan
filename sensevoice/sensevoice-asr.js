@@ -248,5 +248,8 @@
   /* 调试钩子：直接识别一段 16k 样本（供验证/测试用） */
   function debugRecognize(samples) { return recognizeSamples(samples); }
 
-  global.SenseVoiceAsr = { ensureLoaded, start, stop, debugRecognize };
+  /* 模型是否已加载就绪（供设置页展示“线下模型”状态） */
+  function getReady() { return !!session; }
+
+  global.SenseVoiceAsr = { ensureLoaded, start, stop, debugRecognize, getReady };
 })(window);

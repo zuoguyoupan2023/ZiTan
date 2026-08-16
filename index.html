@@ -321,6 +321,46 @@
     font-size: 14px; z-index: 120; display: none; max-width: 90%;
   }
 
+  /* ===== 识别引擎选择 ===== */
+  .engine-opt {
+    display: flex; flex-direction: column; gap: 4px; text-align: left;
+    width: 100%; border: 1.5px solid transparent; background: var(--bg); color: var(--ink);
+    border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; cursor: pointer;
+  }
+  .engine-opt.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .engine-opt .eo-name { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .engine-opt .eo-name .eo-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .engine-opt .eo-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .engine-detail {
+    margin-top: 10px; padding: 12px 14px; background: var(--bg); border-radius: 12px;
+    font-size: 13px; line-height: 1.7; color: var(--ink);
+  }
+  .engine-detail .ed-tag { font-weight: 700; }
+  .engine-legend { font-size: 12px; color: var(--muted); margin: 4px 0 10px; }
+
+  /* 设置·语音识别区块 */
+  .asr-status {
+    display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--bg);
+    border-radius: 10px; margin-bottom: 8px; font-size: 14px;
+  }
+  .asr-status .asr-label { flex: none; color: var(--muted); }
+  .asr-status .asr-val { font-weight: 600; }
+  .asr-progress { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; margin: 6px 0; }
+  .asr-progress > i { display: block; height: 100%; width: 0%; background: var(--accent); transition: width .3s; }
+  .asr-cloud-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .asr-cloud-row select, .asr-cloud-row input {
+    flex: 1; min-width: 0; border: 1.5px solid var(--line); border-radius: 10px;
+    background: var(--panel); color: var(--ink); padding: 9px 10px; font-size: 14px;
+  }
+  .asr-choice-row {
+    display: flex; gap: 8px; margin: 8px 0 4px; flex-wrap: wrap;
+  }
+  .asr-choice-row button {
+    flex: 1; min-width: 90px; padding: 9px; border: 1.5px solid var(--line); border-radius: 10px;
+    background: var(--panel); color: var(--ink); font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .asr-choice-row button.on { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+
   /* 手机端：屏幕矮，垂直间距比桌面更宝贵，再压缩一档 */
   @media (max-width: 600px) {
     main { padding: 10px 10px 6px; }
@@ -425,6 +465,7 @@
       <div class="tabs2">
         <button id="sTabPreset" class="on" data-i18n="presets">预设</button>
         <button id="sTabVoice" data-i18n="voice">语音</button>
+        <button id="sTabAsr" data-i18n="asrTitle">语音识别</button>
       </div>
 
       <!-- 预设 -->
@@ -456,6 +497,26 @@
         </button>
       </div>
 
+      <!-- 语音识别 -->
+      <div id="asrPane" hidden>
+        <div class="sec-title" data-i18n="asrEngine">识别引擎</div>
+        <div id="asrEngineDesc" class="engine-legend" data-i18n="asrLegend">按当前设备/地区自动给出可用识别方式</div>
+        <div id="asrEngineList"></div>
+
+        <div class="sec-title" data-i18n="asrLocal">线下模型</div>
+        <div id="asrLocalStatus" class="asr-status"></div>
+        <div class="asr-progress" id="asrLocalBar"><i></i></div>
+
+        <div class="sec-title" data-i18n="asrCloud">云端识别</div>
+        <div class="asr-cloud-row">
+          <select id="cloudVendor"></select>
+        </div>
+        <div class="asr-cloud-row">
+          <input id="cloudApiKey" type="password" placeholder="" data-i18n-ph="cloudKeyPh">
+        </div>
+        <p class="hint" data-i18n="cloudHint">云端识别会把音频发送到对应厂商服务器。未配置时，点麦克风选择云端会提醒你去填写。</p>
+      </div>
+
       <div class="sec-title" data-i18n="others">其他</div>
       <div class="minirow" id="openHelpRow" data-i18n="howTo">使用说明</div>
       <div class="minirow" id="historyRow" data-i18n="history">对话历史</div>
@@ -463,6 +524,20 @@
 
       <button class="done" id="settingsClose" data-i18n="done">完成</button>
       <p class="credit"><span data-i18n="creditFrom">由</span><a href="https://wewalk.world/" target="_blank" rel="noopener">左顾右盼</a><span data-i18n="creditTag">开发</span></p>
+    </div>
+  </div>
+
+  <!-- 识别引擎选择（首次点麦克风弹出） -->
+  <div class="overlay" id="asrChooseOverlay">
+    <div class="card">
+      <button class="x" id="asrChooseX" title="关闭">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <h2 data-i18n="asrChooseTitle">选择语音识别方式</h2>
+      <p class="engine-legend" id="asrChooseLegend"></p>
+      <div id="asrChooseList"></div>
+      <div class="engine-detail" id="asrChooseDetail" hidden></div>
+      <button class="done" id="asrChooseDone" data-i18n="confirm">确定</button>
     </div>
   </div>
 
@@ -544,7 +619,25 @@
       ttsOnShort: '开', ttsOffShort: '关',
       noTts: '此浏览器不支持朗读', noMessages: '还没有消息', confirmClear: '清空当前窗口内容？',
       empty: '还没有消息', autoVoice: '自动',
-      noVoice: '部分手机无法显示列表，试听有默认音频', noVoiceLang: '该语言下暂无可用语音，可切换其他语言试试'
+      noVoice: '部分手机无法显示列表，试听有默认音频', noVoiceLang: '该语言下暂无可用语音，可切换其他语言试试',
+      asrTitle: '语音识别', asrEngine: '识别引擎', asrLegend: '按当前设备 / 地区自动给出可用的识别方式',
+      asrLocal: '线下模型', asrCloud: '云端识别', asrModelDownload: '下载模型', asrModelDownloaded: '模型已就绪',
+      asrEngineHeader: '点击选择识别方式', asrChooseTitle: '选择语音识别方式', confirm: '确定',
+      asrBack: '自动（推荐）', asrBackDesc: '按设备自动选择最优识别方式',
+      engBrowser: '浏览器识别', engModel: '模型识别', engCloud: '云端识别',
+      engBrowserDesc: '当前使用的是{br}浏览器识别，用{engine}的内部识别能力，音频会上传到它的官方服务器识别。',
+      engineApple: 'Apple', engineGoogle: 'Google', engineMicrosoft: 'Microsoft',
+      engModelDesc: '隐私优先。当前模式需要下载 SenseVoice 模型，下载完成后可用；进度可在「设置 → 语音识别 → 线下模型」看到。优点是保护隐私、无网络也能用；缺点是对设备有一定要求，且需下载模型（约 300MB）。',
+      engCloudDesc: '当前支持自己填写 微软 / 阿里云 / 科大讯飞 等。需要在「设置 → 语音识别 → 云端识别」选择供应商并填写 API Key 等信息。',
+      cloudKeyPh: '填入商家提供的 API Key / Secret',
+      cloudHint: '云端识别会把音频发送到对应厂商服务器。未配置时，点麦克风选择云端会提醒你去填写。',
+      asrCloudNeed: '提醒：使用云端识别请在「设置 → 语音识别 → 云端识别」里选择供应商并填写 API Key。',
+      asrRegionAuto: '自动', asrRegionChina: '中国', asrRegionOverseas: '国外',
+      asrDidAuto: '已自动识别为：', asrPlatform: '设备', asrBrowser: '浏览器',
+      asrModelNotFound: '未下载', asrModelSize: '约 300MB', asrCloudNotConfig: '（未配置）',
+      asrUsing: '当前识别方式：', asrUnconfigured: '尚未设置',
+      asrDownloadStart: '开始下载模型…', asrDownloading: '下载中', asrModelReady: '模型已就绪',
+      asrNoEngine: '当前设备没有可用的识别方式', asrCancel: '取消'
     },
     en: {
       settings: 'Settings', fontDown: 'Smaller font', fontUp: 'Larger font',
@@ -580,7 +673,25 @@
       ttsOnShort: 'On', ttsOffShort: 'Off',
       noTts: 'TTS not supported in this browser', noMessages: 'No messages', confirmClear: 'Clear the current window?',
       empty: 'No messages', autoVoice: 'Auto',
-      noVoice: 'Some phones can\'t show the voice list — Preview reads with the default voice.', noVoiceLang: 'No voices for this language — try another'
+      noVoice: 'Some phones can\'t show the voice list — Preview reads with the default voice.', noVoiceLang: 'No voices for this language — try another',
+      asrTitle: 'Speech recognition', asrEngine: 'Recognition engine', asrLegend: 'Available options depend on your device / region',
+      asrLocal: 'Local model', asrCloud: 'Cloud recognition', asrModelDownload: 'Download model', asrModelDownloaded: 'Model ready',
+      asrEngineHeader: 'Choose recognition method', asrChooseTitle: 'Choose speech recognition', confirm: 'Confirm',
+      asrBack: 'Auto (recommended)', asrBackDesc: 'Picks the best engine for your device automatically',
+      engBrowser: 'Browser recognition', engModel: 'Local model', engCloud: 'Cloud recognition',
+      engBrowserDesc: 'Uses {br} native recognition ({engine}), which uploads audio to its official servers.',
+      engineApple: 'Apple', engineGoogle: 'Google', engineMicrosoft: 'Microsoft',
+      engModelDesc: 'Privacy first. Downloads SenseVoice; usable offline. Progress is shown in Settings → Speech → Local model. Requires ~300 MB download and a capable device.',
+      engCloudDesc: 'Bring your own vendor (Microsoft / Aliyun / iFlytek...). Choose a provider and enter an API Key in Settings → Speech → Cloud.',
+      cloudKeyPh: 'Enter your API Key / Secret',
+      cloudHint: 'Cloud recognition sends audio to the vendor\'s servers. If unconfigured, choosing Cloud will remind you to fill it in.',
+      asrCloudNeed: 'Reminder: to use cloud recognition, choose a provider and enter your API Key in Settings → Speech recognition → Cloud.',
+      asrRegionAuto: 'Auto', asrRegionChina: 'China', asrRegionOverseas: 'Overseas',
+      asrDidAuto: 'Detected as: ', asrPlatform: 'Device', asrBrowser: 'Browser',
+      asrModelNotFound: 'Not downloaded', asrModelSize: '~300 MB', asrCloudNotConfig: '(not configured)',
+      asrUsing: 'Current engine: ', asrUnconfigured: 'not set yet',
+      asrDownloadStart: 'Starting download…', asrDownloading: 'Downloading', asrModelReady: 'Model ready',
+      asrNoEngine: 'No recognition method available on this device', asrCancel: 'Cancel'
     }
   };
   let L = I18N.zh;
@@ -672,6 +783,8 @@
     voiceLang: 'zh-CN',
     voiceURI: '',
     presetEdited: false,
+    asrEngine: 'auto',        /* auto | browser | model | cloud */
+    cloud: { vendor: '', apiKey: '' },
     presets: cloneDefaults('zh')
   };
   let roleTab = 'deaf';
@@ -890,6 +1003,155 @@
     return row;
   }
 
+  /* ============ 识别引擎选择 / 环境检测 ============ */
+  /* 规则（已确认）：
+       地域：浏览器语言 zh + 时区 UTC+8 附近 → 国内；否则国外。
+       平台：ios / macos / android / harmony / windows / other。
+       矩阵：
+         · 国外：一律三个（browser/model/cloud）
+         · 国内：iOS、macOS、other → 三个；android、harmony、windows → model+cloud（去 browser）
+     浏览器识别后端（展示用）：
+         · iOS → Apple（Safari 内核）
+         · android/harmony → Chrome→Google / Edge→Microsoft
+         · windows → Chrome→Google / Edge→Microsoft
+         · macOS/server → Safari→Apple / Chrome→Google / Edge→Microsoft   */
+  const EnvDetect = (function () {
+    const ua = navigator.userAgent || '';        // 先解析，再用 navigator.platform 补
+    const plt = (navigator.platform || '').toLowerCase();
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || (plt === 'macintel' && navigator.maxTouchPoints > 1);
+    const isMac = !isIOS && /mac/i.test(plt);
+    const isAndroid = !isIOS && /android/i.test(ua);
+    const isHarmony = !isIOS && (/harmony|harmonyos|ohos/i.test(ua + ' ' + (navigator.vendor || '')));
+    const isWindows = /win/i.test(plt);
+    let platform = 'other';
+    if (isIOS) platform = 'ios';
+    else if (isHarmony) platform = 'harmony';
+    else if (isAndroid) platform = 'android';
+    else if (isMac) platform = 'macos';
+    else if (isWindows) platform = 'windows';
+
+    // 浏览器：优先按 UA 具体标记（iOS 上 CriOS=Chrome / FxiOS=Firefox / EdgiOS=Edge，实际都是 Safari 内核）
+    let browser = 'other';
+    if (/edg/i.test(ua)) browser = 'edge';
+    else if (/fxios|firefox/i.test(ua)) browser = 'firefox';
+    else if (/(crios|chromium|chrome)\//i.test(ua) || /criOS/i.test(ua)) browser = 'chrome';
+    else if (/safari|applewebkit/i.test(ua)) browser = 'safari';
+    else if (navigator.vendor && /apple/i.test(navigator.vendor)) browser = 'safari';
+
+    // 地域：语言含 zh 且时区偏 UTC+8 认为国内
+    const lang = (navigator.language || '');
+    const tzOff = -new Date().getTimezoneOffset() / 60;   // +8 表示 UTC+8
+    const region = (/^zh/i.test(lang) && tzOff >= 7 && tzOff <= 9) ? 'china' : 'overseas';
+
+    function engineName() {   // 浏览器识别背后的提供方
+      if (platform === 'ios') return 'apple';
+      if (platform === 'macos') return browser === 'chrome' ? 'google' : (browser === 'edge' ? 'microsoft' : 'apple');
+      return browser === 'edge' ? 'microsoft' : 'google';   // android/harmony/windows/other
+    }
+    function brName() {
+      const map = { safari: 'Safari', chrome: 'Chrome', edge: 'Edge', firefox: 'Firefox', other: 'Browser' };
+      return map[browser] || 'Browser';
+    }
+    function available() {   // 返回可见引擎数组
+      if (region === 'overseas') return ['browser', 'model', 'cloud'];
+      if (platform === 'android' || platform === 'harmony' || platform === 'windows') return ['model', 'cloud'];
+      return ['browser', 'model', 'cloud'];
+    }
+    return { platform, browser, region, engineName, brName, available,
+      regionLabel: () => region === 'china' ? 'china' : 'overseas' };
+  })();
+
+  const ENGINE_META = {
+    browser: { name: () => t('engBrowser'), dot: '#3b82f6',
+      desc: () => t('engBrowserDesc').replace('{br}', EnvDetect.brName()).replace('{engine}', ({
+        apple: t('engineApple'), google: t('engineGoogle'), microsoft: t('engineMicrosoft')
+      })[EnvDetect.engineName()] || EnvDetect.brName()) },
+    model: { name: () => t('engModel'), dot: '#22c55e', desc: () => t('engModelDesc') },
+    cloud: { name: () => t('engCloud'), dot: '#a855f7', desc: () => t('engCloudDesc') }
+  };
+
+  /* 生成可见引擎列表（settings 里可编辑，chooser 首次选择用同一份） */
+  function currentEngine() {
+    if (state.asrEngine !== 'auto') return state.asrEngine;   // 手动指定就直接用它
+    const av = EnvDetect.available();
+    return av[0] || 'model';   // auto 默认取第一个（国外/iOS/mac 默认 browser；国内受限默认 model）
+  }
+  function engineDesc(which) {
+    return (ENGINE_META[which] && ENGINE_META[which].desc()) || '';
+  }
+  function engineMarkup(which, on) {
+    const meta = ENGINE_META[which] || ENGINE_META.model;
+    return '<button type="button" class="engine-opt' + (on ? ' on' : '') + '" data-eng="' + which + '">' +
+      '<span class="eo-name"><span class="eo-dot" style="background:' + meta.dot + '"></span>' + meta.name() + '</span>' +
+      '<span class="eo-desc">' + meta.desc() + '</span></button>';
+  }
+  function renderEngineList(containerId, onSelect, current) {
+    const box = $(containerId);
+    box.innerHTML = EnvDetect.available().map(e => engineMarkup(e, current === e)).join('');
+    const opts = box.querySelectorAll('.engine-opt');
+    opts.forEach(btn => btn.onclick = () => {
+      const which = btn.dataset.eng;
+      box.querySelectorAll('.engine-opt').forEach(b => b.classList.toggle('on', b === btn));
+      if (onSelect) onSelect(which);
+    });
+  }
+
+  /* 设置·语音识别 tab */
+  function renderAsrPane() {
+    const cur = state.asrEngine === 'auto' ? '' : state.asrEngine;
+    renderEngineList('asrEngineList', (which) => { state.asrEngine = which; save(); renderAsrPane(); }, cur);
+    // 线下模型状态
+    const lk = $('asrLocalStatus');
+    if (typeof SenseVoiceAsr !== 'undefined' && SenseVoiceAsr.getReady && SenseVoiceAsr.getReady()) {
+      lk.innerHTML = '<span class="asr-label">' + t('asrModelReady') + '</span><span class="asr-val"> ✓</span>';
+      $('asrLocalBar').style.display = 'none';
+    } else {
+      lk.innerHTML = '<span class="asr-label">' + t('asrModelNotFound') + '</span><span class="asr-val">' + t('asrModelSize') + '</span>';
+      $('asrLocalBar').style.display = '';
+    }
+    // 云端
+    const cv = $('cloudVendor');
+    if (!cv.options.length) {
+      const vendors = ['', 'azure', 'aliyun', 'iflytek', 'baidu', 'tencent'];
+      const names = { '': '—', azure: 'Microsoft Azure', aliyun: '阿里云', iflytek: '科大讯飞', baidu: '百度', tencent: '腾讯云' };
+      vendors.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = names[v]; cv.appendChild(o); });
+    }
+    cv.value = state.cloud.vendor || '';
+    $('cloudApiKey').value = state.cloud.apiKey || '';
+  }
+
+  /* 首次点麦克风：弹出引擎选择 */
+  let asrChooseCallback = null;   // 用户点“确定”后回调，参数为选中引擎
+  let asrChooseDefault = 'model';
+  function openAsrChooser(onConfirm, defaultEng) {
+    asrChooseCallback = onConfirm;
+    asrChooseDefault = defaultEng || 'model';
+    // legend：显示当前环境
+    $('asrChooseLegend').textContent = t('asrDidAuto') + (state.uiLang === 'en'
+      ? (EnvDetect.regionLabel() === 'china' ? 'China' : 'Overseas') + ' · ' + EnvDetect.brName()
+      : (EnvDetect.regionLabel() === 'china' ? '中国' : '国外') + ' · ' + EnvDetect.brName());
+    const box = $('asrChooseList');
+    box.innerHTML = EnvDetect.available().map(e => engineMarkup(e, false)).join('');
+    box.querySelectorAll('.engine-opt').forEach(b => {
+      b.classList.toggle('on', b.dataset.eng === asrChooseDefault);
+      b.onclick = () => {
+        box.querySelectorAll('.engine-opt').forEach(x => x.classList.toggle('on', x === b));
+        showAsrDetail(b.dataset.eng);
+      };
+    });
+    $('asrChooseDetail').hidden = true;
+    $('asrChooseOverlay').classList.add('show');
+    showAsrDetail(asrChooseDefault);
+  }
+  function showAsrDetail(which) {
+    const d = $('asrChooseDetail');
+    d.innerHTML = '<span class="ed-tag">' + (ENGINE_META[which] ? ENGINE_META[which].name() : t('engModel')) + '</span> ' + engineDesc(which);
+    d.hidden = false;
+  }
+  function closeAsrChooser() {
+    $('asrChooseOverlay').classList.remove('show');
+  }
+
   /* ============ 设置：预设管理 ============ */
   function renderPresetList() {
     const list = $('presetList');
@@ -1001,6 +1263,13 @@
         if (s.hc) state.hc = s.hc;
         if (s.voiceLang) state.voiceLang = s.voiceLang;
         if (s.voiceURI) state.voiceURI = s.voiceURI;
+        if (s.asrEngine && ['auto','browser','model','cloud'].indexOf(s.asrEngine) > -1) state.asrEngine = s.asrEngine;
+        if (s.cloud) {
+          state.cloud = {
+            vendor: (s.cloud.vendor || ''),
+            apiKey: (s.cloud.apiKey || '')
+          };
+        }
         if (s.presetEdited) state.presetEdited = true;
         if (s.identity === 'deaf' || s.identity === 'vol') state.identity = s.identity;
         if (state.presetEdited && s.presets && s.presets.deaf && s.presets.vol) {
@@ -1154,6 +1423,7 @@
     renderQuick();
     renderPresetList();
     if (!$('voicePane').hidden) renderVoicePane();
+    if (!$('asrPane').hidden) renderAsrPane();
   }
   function setUiLang(lang) {
     if (state.uiLang === lang) return;
@@ -1171,8 +1441,9 @@
     $('send').onclick = send;
     $('text').addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 
-    /* 语音输入：点麦克风 → 说话 → 停顿自动识别并填入输入框
-       优先原生 Web Speech API（联网、零下载）；不支持/断网/出错时回退本地 SenseVoice */
+    /* 语音输入：点麦克风 → 选择/使用识别引擎 → 说话 → 自动转文字填入输入框
+       引擎：browser(原生) / model(本地 SenseVoice) / cloud(云端，本轮引导)。
+       首次未手动选择时自动默认；首次点麦克风弹出选择，设置里可随时改。 */
     const micBtn = $('micBtn');
     const finishMic = (text) => {
       micBtn.classList.remove('rec'); micBtn.disabled = false;
@@ -1185,34 +1456,57 @@
         .then(() => { micBtn.classList.add('rec'); toast(t('micListening') || '请说话'); SenseVoiceAsr.start(finish); })
         .catch((e) => { micBtn.classList.remove('rec'); micBtn.disabled = false; toast(t('micFail') + (e.message || e)); });
     };
-    micBtn.onclick = async () => {
-      if (micBtn.classList.contains('rec')) { stopMic(); return; }
-      micBtn.disabled = true;
-      let active = 'native';                       /* 防止原生 onend 回落时误复位本地状态 */
+    const startBrowser = (finish) => {
+      let active = 'native';
       const fallbackToLocal = () => {
         if (active !== 'native') return;
         active = 'local';
         toast(t('micNativeFallback'));
-        startLocal(finishMic);
+        startLocal(finish);
       };
       if (NativeAsr.isSupported()) {
-        try {
-          await NativeAsr.start(finishMic, (err) => {
-            if (active !== 'native') return;
-            if (NativeAsr.CAN_FALLBACK.includes(err.code)) fallbackToLocal();
-            else if (err.code === 'not-allowed') { micBtn.classList.remove('rec'); micBtn.disabled = false; toast(t('micNoPermission')); }
-            else if (err.code === 'timeout') { micBtn.classList.remove('rec'); micBtn.disabled = false; toast(t('micTimeout')); }
-            else finishMic(null);                  /* no-speech / end-no-result 等 */
-          });
-          micBtn.classList.add('rec');
-          toast(t('micNative'));
-        } catch (e) {
+        NativeAsr.start(finish, (err) => {
           if (active !== 'native') return;
-          fallbackToLocal();
-        }
+          if (NativeAsr.CAN_FALLBACK.includes(err.code)) fallbackToLocal();
+          else if (err.code === 'not-allowed') { micBtn.classList.remove('rec'); micBtn.disabled = false; toast(t('micNoPermission')); }
+          else if (err.code === 'timeout') { micBtn.classList.remove('rec'); micBtn.disabled = false; toast(t('micTimeout')); }
+          else finish(null);
+        }).then(() => { if (active === 'native') { micBtn.classList.add('rec'); toast(t('micNative')); } })
+          .catch(() => { if (active === 'native') fallbackToLocal(); });
       } else {
         fallbackToLocal();
       }
+    };
+    const runEngine = (which) => {
+      if (which === 'browser') startBrowser(finishMic);
+      else if (which === 'model') startLocal(finishMic);
+      else {   // cloud
+        if (!state.cloud.vendor || !state.cloud.apiKey) {
+          micBtn.classList.remove('rec'); micBtn.disabled = false;
+          toast(t('asrCloudNeed'));
+        } else {
+          toast(t('asrCloudNeed'));   /* 云端真识别本轮未接入：提示后回退本地 */
+          startLocal(finishMic);
+        }
+      }
+    };
+    /* 首次：若从未手动选过 → 弹引擎选择；否则直接用已选/自动引擎 */
+    let asrAsked = !!localStorage.getItem('zitanAsrAsked');
+    micBtn.onclick = () => {
+      if (micBtn.classList.contains('rec')) { stopMic(); return; }
+      if (!asrAsked) {
+        asrAsked = true;
+        localStorage.setItem('zitanAsrAsked', '1');
+        const def = currentEngine();
+        openAsrChooser((which) => {
+          state.asrEngine = which;
+          save();
+          runEngine(which);
+        }, def);
+        return;
+      }
+      const eng = state.asrEngine === 'auto' ? currentEngine() : state.asrEngine;
+      runEngine(eng);
     };
 
     $('btnPlus').onclick  = () => { state.fs = Math.min(2.2, +(state.fs + 0.15).toFixed(2)); render(); };
@@ -1233,6 +1527,20 @@
     $('settingsOverlay').addEventListener('click', e => { if (e.target === $('settingsOverlay')) $('settingsOverlay').classList.remove('show'); });
     $('sTabPreset').onclick = () => showSettingsPane('preset');
     $('sTabVoice').onclick  = () => showSettingsPane('voice');
+    $('sTabAsr').onclick    = () => showSettingsPane('asr');
+
+    /* 识别引擎：设置面板选择 */
+    $('cloudVendor').onchange = (e) => { state.cloud.vendor = e.target.value; save(); };
+    $('cloudApiKey').oninput = (e) => { state.cloud.apiKey = e.target.value; save(); };
+
+    /* 识别引擎选择弹层 */
+    $('asrChooseDone').onclick = () => {
+      const sel = $('asrChooseList').querySelector('.engine-opt.on');
+      closeAsrChooser();
+      if (asrChooseCallback) asrChooseCallback(sel ? sel.dataset.eng : 'model');
+    };
+    $('asrChooseX').onclick = () => closeAsrChooser();
+    $('asrChooseOverlay').addEventListener('click', e => { if (e.target === $('asrChooseOverlay')) closeAsrChooser(); });
 
     $('tabDeaf').onclick = () => { roleTab = 'deaf'; $('tabDeaf').classList.add('on'); $('tabVol').classList.remove('on'); renderPresetList(); };
     $('tabVol').onclick  = () => { roleTab = 'vol';  $('tabVol').classList.add('on'); $('tabDeaf').classList.remove('on'); renderPresetList(); };
@@ -1318,14 +1626,19 @@
 
   function showSettingsPane(which) {
     const presetOn = (which === 'preset');
+    const voiceOn  = (which === 'voice');
+    const asrOn    = (which === 'asr');
     $('sTabPreset').classList.toggle('on', presetOn);
-    $('sTabVoice').classList.toggle('on', !presetOn);
+    $('sTabVoice').classList.toggle('on', voiceOn);
+    $('sTabAsr').classList.toggle('on', asrOn);
     $('presetPane').hidden = !presetOn;
-    $('voicePane').hidden = presetOn;
+    $('voicePane').hidden  = !voiceOn;
+    $('asrPane').hidden    = !asrOn;
     if (!presetOn) {
       if (!voices.length) voicesKicked = false;  /* 用户手势：允许重新触发一次语音加载 */
       renderVoicePane();
     }
+    if (asrOn) renderAsrPane();
   }
 
   init();
