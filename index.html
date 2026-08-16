@@ -341,6 +341,25 @@
     font-size: 14px; z-index: 120; display: none; max-width: 90%;
   }
 
+  /* 模型加载/下载进度（对话界面居中浮层） */
+  .modelprog {
+    position: fixed; inset: 0; z-index: 110;
+    background: rgba(0,0,0,.45);
+    display: none; align-items: center; justify-content: center;
+  }
+  .modelprog:not([hidden]) { display: flex; }
+  .mp-card {
+    width: 80%; max-width: 320px; background: var(--panel); color: var(--ink);
+    border-radius: 16px; padding: 18px 18px 14px; box-shadow: 0 8px 30px rgba(0,0,0,.3);
+  }
+  .mp-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+  .mp-bar {
+    height: 8px; border-radius: 999px; background: var(--line); overflow: hidden;
+  }
+  .mp-bar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 999px; transition: width .2s; }
+  .mp-pct { font-size: 12px; color: var(--muted); margin-top: 6px; text-align: right; }
+
+
   /* ===== 识别引擎选择 ===== */
   .engine-opt {
     display: flex; flex-direction: column; gap: 4px; text-align: left;
@@ -842,6 +861,15 @@
 
   <div class="toast" id="toast"></div>
 
+  <!-- 模型加载/下载进度（对话界面） -->
+  <div class="modelprog" id="modelProg" hidden>
+    <div class="mp-card">
+      <div class="mp-title" id="mpTitle" data-i18n="asrModelLoading">正在加载语音模型…</div>
+      <div class="mp-bar"><i id="mpFill"></i></div>
+      <div class="mp-pct" id="mpPct"></div>
+    </div>
+  </div>
+
 <script src="/js/native-asr.js"></script>
 <script src="/js/sensevoice-asr.js"></script>
 <script>
@@ -903,7 +931,7 @@
       asrDidAuto: '已自动识别为：', asrPlatform: '设备', asrBrowser: '浏览器',
       asrModelNotFound: '未下载', asrModelSize: '约 300MB', asrCloudNotConfig: '（未配置）',
       asrUsing: '当前识别方式：', asrUnconfigured: '尚未设置',
-      asrDownloadStart: '开始下载模型…', asrDownloading: '下载中', asrModelReady: '模型已就绪',
+      asrDownloadStart: '开始下载模型…', asrDownloading: '下载中', asrModelReady: '模型已就绪', asrModelLoading: '正在加载语音模型…',
       asrNoEngine: '当前设备没有可用的识别方式', asrCancel: '取消',
       asrReTitle: '重新识别', asrReLegend: '用这条录音换一种方式识别。不可用的方式会灰色显示。',
       asrReDone: '重新识别完成', asrReFail: '重新识别失败', asrReRunning: '正在重新识别…',
@@ -975,7 +1003,7 @@
       asrDidAuto: 'Detected as: ', asrPlatform: 'Device', asrBrowser: 'Browser',
       asrModelNotFound: 'Not downloaded', asrModelSize: '~300 MB', asrCloudNotConfig: '(not configured)',
       asrUsing: 'Current engine: ', asrUnconfigured: 'not set yet',
-      asrDownloadStart: 'Starting download…', asrDownloading: 'Downloading', asrModelReady: 'Model ready',
+      asrDownloadStart: 'Starting download…', asrDownloading: 'Downloading', asrModelReady: 'Model ready', asrModelLoading: 'Loading speech model…',
       asrNoEngine: 'No recognition method available on this device', asrCancel: 'Cancel',
       asrReTitle: 'Re-recognize', asrReLegend: 'Use this recording with another engine. Unavailable options are greyed out.',
       asrReDone: 'Re-recognized', asrReFail: 'Re-recognition failed', asrReRunning: 'Recognizing again…',
@@ -1365,7 +1393,7 @@
       const ok = typeof NativeAsr !== 'undefined' && NativeAsr.isSupported();
       push('browser', ok, ok ? '' : t('asrNoBrowser'));
     }
-    if (cur !== 'model') {
+    if (cur !== 'model' && !EnvDetect.isMobile()) {   /* 手机端算力不够，不提供本地模型 */
       const ready = typeof SenseVoiceAsr !== 'undefined' && SenseVoiceAsr.getReady && SenseVoiceAsr.getReady();
       push('model', ready, ready ? '' : t('asrNeedModel'));
     }
@@ -1609,20 +1637,33 @@
       const map = { safari: 'Safari', chrome: 'Chrome', edge: 'Edge', firefox: 'Firefox', other: 'Browser' };
       return map[browser] || 'Browser';
     }
-    function available() {   // 返回可见引擎数组
+    function available() {   // 返回可见引擎数组（按设备/地域；手机端不显示本地模型）
+      const isMobile = (platform === 'ios' || platform === 'android' || platform === 'harmony');
       let list;
-      if (region === 'overseas') list = ['browser', 'model', 'cloud'];
-      else if (platform === 'android' || platform === 'harmony' || platform === 'windows') list = ['model', 'cloud'];
-      else list = ['browser', 'model', 'cloud'];
-      // 云端识别暂未开放：从可选列表中去掉（保代码，日后改回 true 即可开启）
+      if (!isMobile) {
+        /* 电脑端：本地模型 + 浏览器识别（本地模型在电脑上可用） */
+        list = ['model', 'browser'];
+      } else {
+        /* 手机端：不显示本地模型（算力不够） */
+        if (platform === 'ios') {
+          list = ['browser'];                       /* 苹果 国内/国外：浏览器 */
+        } else if (region === 'overseas') {
+          list = ['browser'];                       /* 安卓/鸿蒙 国外：浏览器 */
+        } else {
+          list = ['cloud'];                         /* 安卓/鸿蒙 国内：只云端 */
+        }
+      }
+      /* 云端识别暂未开放：从可选列表中去掉（保留在代码里，日后改回 true 即显示） */
       if (!CLOUD_ASR_ENABLED) list = list.filter(e => e !== 'cloud');
       return list;
     }
-    function supportsBrowser() {   // 平台/地域矩阵是否含 browser（长按重识别用）
-      if (region === 'overseas') return true;
-      return platform !== 'android' && platform !== 'harmony' && platform !== 'windows';
+    function supportsBrowser() {   // 平台矩阵是否含 browser（长按重识别 / 引擎列表用）
+      if (platform === 'ios') return true;                 // 苹果自带识别
+      if (platform !== 'android' && platform !== 'harmony') return true;  // 电脑端(macos/windows/other)
+      return region === 'overseas';                        // 安卓/鸿蒙：仅国外
     }
-    return { platform, browser, region, engineName, brName, available, supportsBrowser,
+    function isMobile() { return (platform === 'ios' || platform === 'android' || platform === 'harmony'); }
+    return { platform, browser, region, engineName, brName, available, supportsBrowser, isMobile,
       regionLabel: () => region === 'china' ? 'china' : 'overseas' };
   })();
 
@@ -1665,6 +1706,14 @@
   function renderAsrPane() {
     const cur = state.asrEngine === 'auto' ? '' : state.asrEngine;
     renderEngineList('asrEngineList', (which) => { state.asrEngine = which; save(); renderAsrPane(); }, cur);
+    /* 手机端算力不够：隐藏“线下模型”区块（标题/状态/下载按钮/进度条） */
+    const isMobilePane = EnvDetect.isMobile();
+    const localTitle = document.querySelector('[data-i18n="asrLocal"]');
+    if (localTitle) localTitle.hidden = isMobilePane;
+    const ls = $('asrLocalStatus'), lb = $('asrDownloadBtn'), lbb = $('asrLocalBar');
+    if (ls) ls.hidden = isMobilePane;
+    if (lb) lb.hidden = isMobilePane;
+    if (lbb) lbb.hidden = true;   /* 进度条默认隐藏 */
     // 线下模型状态
     const lk = $('asrLocalStatus');
     const btn = $('asrDownloadBtn');
@@ -2550,11 +2599,22 @@
       else toast(t('micNoSpeech'));
     };
     const stopMic = () => { NativeAsr.stop(); SenseVoiceAsr.stop(); stopBrowserRecording(); micBtn.classList.remove('rec'); };
+    /* 对话界面：模型加载/下载进度浮层 */
+    const openModelProgress = () => { $('modelProg').hidden = false; $('mpFill').style.width = '0%'; $('mpPct').textContent = ''; };
+    const closeModelProgress = () => { $('modelProg').hidden = true; };
+    const onModelProgress = (p) => {
+      if (typeof p === 'number') {
+        const pct = Math.min(100, Math.max(0, Math.round(p * 100)));
+        $('mpFill').style.width = pct + '%';
+        $('mpPct').textContent = pct + '%';
+      }
+    };
     const startLocal = (finish) => {
       asrCurrentEngine = 'model';
-      SenseVoiceAsr.ensureLoaded((p) => toast(typeof p === 'string' ? p : t('micLoading')))
-        .then(() => { micBtn.classList.add('rec'); toast(t('micListening') || '请说话'); SenseVoiceAsr.start(finish); })
-        .catch((e) => { micBtn.classList.remove('rec'); micBtn.disabled = false; toast(t('micFail') + (e.message || e)); });
+      openModelProgress();
+      SenseVoiceAsr.ensureLoaded((p) => { onModelProgress(p); if (typeof p === 'string') toast(p); })
+        .then(() => { closeModelProgress(); micBtn.classList.add('rec'); toast(t('micListening') || '请说话'); SenseVoiceAsr.start(finish); })
+        .catch((e) => { closeModelProgress(); micBtn.classList.remove('rec'); micBtn.disabled = false; toast(t('micFail') + (e.message || e)); });
     };
     const startBrowser = (finish) => {
       let active = 'native';
