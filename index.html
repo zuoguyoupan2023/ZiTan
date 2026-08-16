@@ -396,12 +396,8 @@
     .chip { padding: 3px 9px; }
   }
   /* ===== 020 消息增强 ===== */
-  /* 气泡操作区：收藏 + 播放 + 复制 横向一排，收藏在按钮排的最外端 */
-  .bbtns { display: flex; flex-direction: row; gap: 4px; flex: none; align-items: center; }
-  /* 绿色(deaf)：按钮在气泡左侧一排，收藏在最左 → bbtns 正向 */
-  .msg.deaf .bbtns { flex-direction: row; }
-  /* 蓝色(vol)：按钮在气泡右侧一排，收藏在最右 → bbtns 反向 */
-  .msg.vol .bbtns { flex-direction: row-reverse; }
+  /* 气泡操作区：收藏 + 播放 + 复制 竖向一列（不占横向宽度） */
+  .bbtns { display: flex; flex-direction: column; gap: 3px; flex: none; align-items: center; }
   .bbtns .play {
     width: 34px; height: 34px; border-radius: 50%;
     border: none; background: rgba(0,0,0,.07); color: var(--ink);
@@ -451,6 +447,20 @@
   }
   .icobtn:active { background: var(--accent); color: #fff; border-color: var(--accent); }
   .plusic { color: var(--accent); }
+
+  /* 输入区上方工具行：发图 + 粘贴文本（占一行） */
+  .toolrow {
+    display: flex; align-items: center; gap: 8px; padding: 0 12px 6px;
+  }
+  .tbtn {
+    display: inline-flex; align-items: center; gap: 5px;
+    border: 1.5px solid var(--line); background: var(--bg); color: var(--ink);
+    font-size: 13px; font-weight: 600; line-height: 1;
+    padding: 7px 11px; border-radius: 10px; cursor: pointer; flex: none;
+  }
+  .tbtn:active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tbtn#plusBtn { color: var(--accent); }
+  .tbtn#plusBtn:active { color: #fff; }
 
   /* 引用占位栏（默认隐藏，仅在出现引用时显示） */
   #quoteBar {
@@ -577,13 +587,17 @@
         <button id="whoVol"><span class="dot"></span><span data-i18n="roleVol">志愿者 / 路人</span></button>
       </div>
     </div>
-    <div class="inputrow">
-      <button id="plusBtn" class="icobtn plusic" title="发送图片" data-i18n-title="plusSend" aria-label="发送图片">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+    <div class="toolrow">
+      <button id="plusBtn" class="tbtn" title="发送图片" data-i18n-title="plusSend" aria-label="发送图片">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5-3 3-3-3-6 6"/></svg>
+        <span data-i18n="sendImg">发图</span>
       </button>
-      <button id="pasteBtn" class="icobtn" title="粘贴" data-i18n-title="paste" aria-label="粘贴">
+      <button id="pasteBtn" class="tbtn" title="粘贴文本" data-i18n-title="paste" aria-label="粘贴文本">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="4" width="8" height="4" rx="1"/><path d="M8 6H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3"/><path d="M12 11v6M9 14h6"/></svg>
+        <span data-i18n="pasteText">粘贴</span>
       </button>
+    </div>
+    <div class="inputrow">
       <button id="micBtn" class="micbtn" title="语音输入" data-i18n-title="micTitle" aria-label="语音输入">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v5"/></svg>
       </button>
@@ -903,8 +917,8 @@
       unFav: '取消收藏', favEmpty: '还没有收藏', favBack: '定位到消息',
       favText: '文本', favImg: '图片', favAudio: '录音',
       quote: '引用', quoteHint: '引用 “{q}”', quoteMissing: '原消息不可用',
-      paste: '粘贴', pasted: '已粘贴', pasteNeedPerm: '无剪贴板权限，请按 Ctrl/Cmd+V 手动粘贴',
-      plusSend: '发送', gallery: '相册', galleryEmpty: '相册里还没有图片', importImg: '导入图片',
+      paste: '粘贴', pasteText: '粘贴', pasted: '已粘贴', pasteNeedPerm: '无剪贴板权限，请按 Ctrl/Cmd+V 手动粘贴',
+      plusSend: '发送', sendImg: '发图', gallery: '相册', galleryEmpty: '相册里还没有图片', importImg: '导入图片',
       sendToChat: '发送到当前会话', delImg: '删除这张图片', confirmDelImg: '删除这张图片？',
       chooseFrom: '选择图片来源', builtinGallery: '内置相册', phoneGallery: '手机相册',
       favTitle: '收藏', galleryTitle: '相册', sendImgFail: '发送失败', imgTooBig: '图片太大，已压缩',
@@ -975,8 +989,8 @@
       unFav: 'Unfavorite', favEmpty: 'No favorites yet', favBack: 'Locate message',
       favText: 'Text', favImg: 'Image', favAudio: 'Voice',
       quote: 'Quote', quoteHint: 'Quote “{q}”', quoteMissing: 'Original message unavailable',
-      paste: 'Paste', pasted: 'Pasted', pasteNeedPerm: 'No clipboard permission — press Ctrl/Cmd+V to paste',
-      plusSend: 'Send', gallery: 'Gallery', galleryEmpty: 'No images in gallery yet', importImg: 'Import images',
+      paste: 'Paste', pasteText: 'Paste', pasted: 'Pasted', pasteNeedPerm: 'No clipboard permission — press Ctrl/Cmd+V to paste',
+      plusSend: 'Send', sendImg: 'Image', gallery: 'Gallery', galleryEmpty: 'No images in gallery yet', importImg: 'Import images',
       sendToChat: 'Send to chat', delImg: 'Delete this image', confirmDelImg: 'Delete this image?',
       chooseFrom: 'Choose image source', builtinGallery: 'Built-in gallery', phoneGallery: 'Phone gallery',
       favTitle: 'Favorites', galleryTitle: 'Gallery', sendImgFail: 'Send failed', imgTooBig: 'Image was large and has been compressed',
