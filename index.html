@@ -492,6 +492,18 @@
   }
   .fav-row .fav-btn:hover { color: var(--danger); }
   #galleryGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  /* 选图发送：多选网格 */
+  #gpGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .gpcell { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; cursor: pointer; background: var(--line); }
+  .gpcell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .gpcell .gpck {
+    position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%;
+    border: 2px solid #fff; background: rgba(0,0,0,.35); color: #fff; font-size: 14px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .gpcell.on { outline: 3px solid var(--accent); }
+  .gpcell.on .gpck { background: var(--accent); border-color: var(--accent); }
+
   .gcell { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; cursor: pointer; background: var(--line); }
   .gcell img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .gcell .gbtn {
@@ -756,6 +768,18 @@
     </div>
   </div>
 
+  <!-- 选图发送（内置相册多选） -->
+  <div class="overlay" id="galleryPickOverlay">
+    <div class="card">
+      <button class="x" id="gpX" title="关闭">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <h2 data-i18n="pickImages">选择要发送的图片</h2>
+      <div id="gpGrid"></div>
+      <button class="done" id="gpSendBtn" disabled>发送选中</button>
+    </div>
+  </div>
+
   <!-- 图片大图查看 -->
   <div class="overlay" id="imgViewer">
     <div class="imgv-inner">
@@ -879,7 +903,8 @@
       plusSend: '发送', gallery: '相册', galleryEmpty: '相册里还没有图片', importImg: '导入图片',
       sendToChat: '发送到当前会话', delImg: '删除这张图片', confirmDelImg: '删除这张图片？',
       chooseFrom: '选择图片来源', builtinGallery: '内置相册', phoneGallery: '手机相册',
-      favTitle: '收藏', galleryTitle: '相册', sendImgFail: '发送失败', imgTooBig: '图片太大，已压缩'
+      favTitle: '收藏', galleryTitle: '相册', sendImgFail: '发送失败', imgTooBig: '图片太大，已压缩',
+      pickImages: '选择要发送的图片', sendSelected: '发送选中（{n}）', pickEmpty: '相册里还没有图片，去“设置→相册”导入'
     },
     en: {
       settings: 'Settings', fontDown: 'Smaller font', fontUp: 'Larger font',
@@ -950,7 +975,8 @@
       plusSend: 'Send', gallery: 'Gallery', galleryEmpty: 'No images in gallery yet', importImg: 'Import images',
       sendToChat: 'Send to chat', delImg: 'Delete this image', confirmDelImg: 'Delete this image?',
       chooseFrom: 'Choose image source', builtinGallery: 'Built-in gallery', phoneGallery: 'Phone gallery',
-      favTitle: 'Favorites', galleryTitle: 'Gallery', sendImgFail: 'Send failed', imgTooBig: 'Image was large and has been compressed'
+      favTitle: 'Favorites', galleryTitle: 'Gallery', sendImgFail: 'Send failed', imgTooBig: 'Image was large and has been compressed',
+      pickImages: 'Pick images to send', sendSelected: 'Send selected ({n})', pickEmpty: 'No images in gallery yet — import via Settings → Gallery'
     }
   };
   let L = I18N.zh;
@@ -2229,6 +2255,65 @@
         }
       });
     }).catch(() => {});
+  }
+
+  /* —— 选图发送（内置相册多选 → 发到当前会话）—— */
+  let gpSelected = {};   /* id -> true */
+  function renderGalleryPick() {
+    const box = $('gpGrid');
+    allImages().then(list => {
+      if (!list.length) {
+        box.innerHTML = '<div class="empty-voices">' + t('pickEmpty') + '</div>';
+        updateGpSend();
+        return;
+      }
+      box.innerHTML = list.map(it => {
+        const on = !!gpSelected[it.id];
+        return '<div class="gpcell' + (on ? ' on' : '') + '" data-id="' + escapeHtml(it.id) + '">'
+          + '<span class="gpck">' + (on ? ic('check', 13) : '') + '</span>'
+          + '</div>';
+      }).join('');
+      list.forEach(it => {
+        const cell = box.querySelector('.gpcell[data-id="' + it.id + '"]');
+        if (!cell) return;
+        const url = imgUrlCache[it.id] || (imgUrlCache[it.id] = URL.createObjectURL(it.blob));
+        const img = document.createElement('img');
+        img.src = url; img.alt = '';
+        cell.insertBefore(img, cell.firstChild);
+        cell.onclick = () => {
+          if (gpSelected[it.id]) delete gpSelected[it.id];
+          else gpSelected[it.id] = true;
+          renderGalleryPick();
+        };
+      });
+      updateGpSend();
+    }).catch(() => {});
+  }
+  function updateGpSend() {
+    const n = Object.keys(gpSelected).length;
+    const btn = $('gpSendBtn');
+    btn.disabled = !n;
+    btn.textContent = t('sendSelected').replace('{n}', n);
+  }
+  function openGalleryPick() {
+    gpSelected = {};
+    $('plusOverlay').classList.remove('show');
+    $('galleryPickOverlay').classList.add('show');
+    renderGalleryPick();
+  }
+  function closeGalleryPick() { $('galleryPickOverlay').classList.remove('show'); gpSelected = {}; }
+  function sendGalleryPick() {
+    const ids = Object.keys(gpSelected);
+    closeGalleryPick();
+    if (!ids.length) return;
+    ids.forEach(id => {
+      getImage(id).then(rec => {
+        if (!rec || !rec.blob) return;
+        putImage(rec.blob, { name: rec.nameRaw || rec.name, type: rec.blob.type, size: rec.blob.size })
+          .then(imgId => doSend('', { imgId: imgId }))
+          .catch(() => toast(t('sendImgFail')));
+      });
+    });
   }
 
   function exportChat() {
