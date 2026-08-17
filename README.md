@@ -75,9 +75,10 @@ python3 -m http.server 8000
 
 ### 模型缓存逻辑
 
-- 模型内容寻址（文件名带版本号）→ 缓存可长期 immutable，升级改 URL。
-- 浏览器 HTTP 缓存 + Service Worker 预缓存 + IndexedDB 分片（断点续传）。
-- 模型不变：`Cache-Control: max-age=31536000, immutable`。
+- **主存储：IndexedDB 分片**（库 `zitan-asr`，8MB/片）——刷新/重启 Safari 都不丢；`js/sensevoice-asr.js` 落盘，设置页显示「模型已下载 / 加载模型」。
+- 浏览器 HTTP 缓存兜底：模型资产 `Cache-Control: max-age=31536000, immutable`；**页面 JS 必须 `no-cache` + `?v=N` 版本参数**（immutable 会让旧设备一年不更新逻辑）。
+- 模型内容寻址（文件名带版本号）→ 升级模型改 URL，旧缓存自然失效。
+- 曾用 Cache API 存模型，iOS 无 SW 时刷新即丢，已废弃（记录见 `006` §三）。
 
 ### 注意事项
 

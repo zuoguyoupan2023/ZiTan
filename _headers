@@ -2,9 +2,20 @@
 /index.html
   Cache-Control: no-cache
 
-# 语音模型/词表等静态资源：长缓存（配合 Cache API 双保险，防止每次重新下载 228MB 模型）
-/sensevoice/*
-  Cache-Control: public, max-age=31536000, immutable
+# 页面 JS：代码每次重新校验（配合 index.html 里 ?v=N 版本参数强制换新，
+# 避免 immutable 缓存导致改了 JS 旧设备一年不更新 —— 2026-08 模型持久化踩坑记录）
+/js/native-asr.js
+  Cache-Control: no-cache
 /js/sensevoice-asr.js
+  Cache-Control: no-cache
+
+# 语音模型/词表等静态资产：长缓存（资源内容寻址，改动时改文件名/版本路径）
+/sensevoice/meta.json
+  Cache-Control: public, max-age=31536000, immutable
+/sensevoice/tokens.txt
+  Cache-Control: public, max-age=31536000, immutable
+/sensevoice/model.int8.onnx
+  Cache-Control: public, max-age=31536000, immutable
+/sensevoice/ort/*
   Cache-Control: public, max-age=31536000, immutable
 

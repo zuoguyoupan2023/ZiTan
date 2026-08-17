@@ -871,7 +871,7 @@
   </div>
 
 <script src="/js/native-asr.js"></script>
-<script src="/js/sensevoice-asr.js"></script>
+<script src="/js/sensevoice-asr.js?v=3"></script>
 <script>
 (function () {
   'use strict';
@@ -917,7 +917,7 @@
       noVoice: '部分手机无法显示列表，试听有默认音频', noVoiceLang: '该语言下暂无可用语音，可切换其他语言试试',
       asrTitle: '语音识别', asrEngine: '识别引擎', asrLegend: '按当前设备 / 地区自动给出可用的识别方式',
       asrLocal: '线下模型', asrCloud: '云端识别', asrModelDownload: '下载模型', asrModelDownloaded: '模型已就绪',
-      asrModelCached: '已缓存本地模型', asrModelLoad: '加载模型', asrCheckCache: '检查本地缓存…',
+      asrModelCached: '模型已下载', asrModelLoad: '加载模型', asrCheckCache: '检查本地缓存…',
       asrEngineHeader: '点击选择识别方式', asrChooseTitle: '选择语音识别方式', confirm: '确定',
       asrBack: '自动（推荐）', asrBackDesc: '按设备自动选择最优识别方式',
       engBrowser: '浏览器识别', engModel: '模型识别', engCloud: '云端识别',
@@ -3001,8 +3001,9 @@
     }
 
     /* 暂不启用离线 Service Worker（页面始终联网拉最新）。
-       注意：不要清空 caches() —— 语音模型的 Cache API 缓存（zitan-asr）就在这里，
-       清空会导致模型下次刷新后必须重新下载。 */
+       语音模型现存储于 IndexedDB（库 zitan-asr，8MB 分片，见 js/sensevoice-asr.js），
+       归浏览器存储管理，SW 激活/清理都碰不到它；刷新、重启 Safari 都不会丢。
+       旧版 Cache API 缓存名 zitan-asr 已由 sw.js 白名单保护，勿删除。 */
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(function (regs) { regs.forEach(function (r) { r.unregister(); }); });
     }
