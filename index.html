@@ -917,6 +917,7 @@
       noVoice: '部分手机无法显示列表，试听有默认音频', noVoiceLang: '该语言下暂无可用语音，可切换其他语言试试',
       asrTitle: '语音识别', asrEngine: '识别引擎', asrLegend: '按当前设备 / 地区自动给出可用的识别方式',
       asrLocal: '线下模型', asrCloud: '云端识别', asrModelDownload: '下载模型', asrModelDownloaded: '模型已就绪',
+      asrModelCached: '已缓存本地模型', asrModelLoad: '加载模型', asrCheckCache: '检查本地缓存…',
       asrEngineHeader: '点击选择识别方式', asrChooseTitle: '选择语音识别方式', confirm: '确定',
       asrBack: '自动（推荐）', asrBackDesc: '按设备自动选择最优识别方式',
       engBrowser: '浏览器识别', engModel: '模型识别', engCloud: '云端识别',
@@ -989,6 +990,7 @@
       noVoice: 'Some phones can\'t show the voice list — Preview reads with the default voice.', noVoiceLang: 'No voices for this language — try another',
       asrTitle: 'Speech recognition', asrEngine: 'Recognition engine', asrLegend: 'Available options depend on your device / region',
       asrLocal: 'Local model', asrCloud: 'Cloud recognition', asrModelDownload: 'Download model', asrModelDownloaded: 'Model ready',
+      asrModelCached: 'Local model cached', asrModelLoad: 'Load model', asrCheckCache: 'Checking local cache…',
       asrEngineHeader: 'Choose recognition method', asrChooseTitle: 'Choose speech recognition', confirm: 'Confirm',
       asrBack: 'Auto (recommended)', asrBackDesc: 'Picks the best engine for your device automatically',
       engBrowser: 'Browser recognition', engModel: 'Local model', engCloud: 'Cloud recognition',
@@ -1739,21 +1741,24 @@
       lk.innerHTML = '<span class="asr-label">' + t('asrModelReady') + '</span><span class="asr-val"> ✓</span>';
       bar.hidden = true;
       btn.hidden = true;
+    } else if (_asrDownloading) {
+      lk.innerHTML = '<span class="asr-label">' + t('asrDownloading') + '</span><span class="asr-val">' + (_asrDownloadPct + '%') + '</span>';
+      bar.hidden = false;
+      const i = bar.querySelector('i'); if (i) i.style.width = _asrDownloadPct + '%';
+      btn.hidden = false;
+      btn.disabled = true;
+      btn.textContent = t('asrDownloading') + ' ' + _asrDownloadPct + '%';
+    } else if (typeof SenseVoiceAsr !== 'undefined' && SenseVoiceAsr.hasStoredModel) {
+      /* 先显示检查中，再异步刷新成「已缓存本地模型 / 未下载」——避免刷新后误报未下载 */
+      lk.innerHTML = '<span class="asr-label">' + t('asrCheckCache') + '</span>';
+      btn.hidden = true;
+      refreshAsrStatus();
     } else {
-      if (_asrDownloading) {
-        lk.innerHTML = '<span class="asr-label">' + t('asrDownloading') + '</span><span class="asr-val">' + (_asrDownloadPct + '%') + '</span>';
-        bar.hidden = false;
-        const i = bar.querySelector('i'); if (i) i.style.width = _asrDownloadPct + '%';
-        btn.hidden = false;
-        btn.disabled = true;
-        btn.textContent = t('asrDownloading') + ' ' + _asrDownloadPct + '%';
-      } else {
-        lk.innerHTML = '<span class="asr-label">' + t('asrModelNotFound') + '</span><span class="asr-val">' + t('asrModelSize') + '</span>';
-        bar.hidden = true;
-        btn.hidden = false;
-        btn.disabled = false;
-        btn.textContent = t('asrModelDownload');
-      }
+      lk.innerHTML = '<span class="asr-label">' + t('asrModelNotFound') + '</span><span class="asr-val">' + t('asrModelSize') + '</span>';
+      bar.hidden = true;
+      btn.hidden = false;
+      btn.disabled = false;
+      btn.textContent = t('asrModelDownload');
     }
     // 云端（暂未开放：隐藏区块，保留填充逻辑）
     const cloudWrap = $('asrCloudWrap');
@@ -1768,6 +1773,29 @@
       cv.value = state.cloud.vendor || '';
       $('cloudApiKey').value = state.cloud.apiKey || '';
     }
+  }
+  /* 异步查询本地是否已存完整模型，把「检查中」刷新成「已缓存本地模型 / 未下载」 */
+  let _asrStatusBusy = false;
+  function refreshAsrStatus() {
+    if (_asrStatusBusy) return;
+    if (typeof SenseVoiceAsr === 'undefined' || !SenseVoiceAsr.hasStoredModel || _asrDownloading) return;
+    _asrStatusBusy = true;
+    SenseVoiceAsr.hasStoredModel()
+      .then((cached) => {
+        const lk = $('asrLocalStatus'), btn = $('asrDownloadBtn'), bar = $('asrLocalBar');
+        if (!lk || lk.hidden || _asrDownloading) return;    /* 手机端隐藏区块/正在下载时不动 */
+        if (cached) {
+          lk.innerHTML = '<span class="asr-label">' + t('asrModelCached') + '</span><span class="asr-val"> 本地</span>';
+          if (btn) { btn.hidden = false; btn.disabled = false; btn.textContent = t('asrModelLoad'); }
+          if (bar) bar.hidden = true;
+        } else {
+          lk.innerHTML = '<span class="asr-label">' + t('asrModelNotFound') + '</span><span class="asr-val">' + t('asrModelSize') + '</span>';
+          if (btn) { btn.hidden = false; btn.disabled = false; btn.textContent = t('asrModelDownload'); }
+          if (bar) bar.hidden = true;
+        }
+      })
+      .catch(() => {})
+      .then(() => { _asrStatusBusy = false; });
   }
   let _asrDownloading = false;
   let _asrDownloadPct = 0;

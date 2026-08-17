@@ -45,47 +45,137 @@
       document.head.appendChild(s);
     });
   }
-  /* 带进度地下载模型文件（供 228MB 大模型 / 设置页进度条用）。
-   * 下载完成后写入 Cache API（zitan-asr），下次走到缓存直接秒开，无需重新下载。 */
-  const ASR_CACHE = 'zitan-asr';
-  function asrCache() {
-    if (typeof caches === 'undefined') return Promise.resolve(null);
-    try { return caches.open(ASR_CACHE).catch(() => null); } catch (e) { return Promise.resolve(null); }
+  /* —— 模型本地持久化：IndexedDB 分片存储 ——
+   * 之前用 Cache API（zitan-asr）。iOS Safari（iPad）在未注册 Service Worker 时
+   * Cache API 不落盘、刷新即丢 → 228MB 白白重下。IndexedDB 是标准持久化，且
+   * 只归浏览器存储管理（SW 激活清理不到它），刷新/重启都还在。
+   * 结构（库 zitan-asr，store kv，keyPath k）：
+   *   'meta.json' / 'tokens.txt'            → 字符串整存
+   *   'model.int8.onnx:meta'                → { totalBytes, chunkSize, chunkCount }
+   *   'model.int8.onnx:0..N-1'              → 每片 ArrayBuffer（8MB，iOS 单条限制安全）
+   * 完整性靠「meta 最后写入 + 读回时总长校验」：片缺/损坏 → 返回 null → 回归网络下载。 */
+  const ASR_IDB = 'zitan-asr', ASR_IDB_STORE = 'kv';
+  const MODEL_KEY = 'model.int8.onnx';
+  const CHUNK_SIZE = 8 * 1024 * 1024;   /* 8MB/片 */
+  function asrIdbOpen() {
+    return new Promise((resolve, reject) => {
+      if (!('indexedDB' in window)) return reject(new Error('no indexedDB'));
+      const req = indexedDB.open(ASR_IDB, 1);
+      req.onupgradeneeded = e => {
+        const d = e.target.result;
+        if (!d.objectStoreNames.contains(ASR_IDB_STORE)) d.createObjectStore(ASR_IDB_STORE, { keyPath: 'k' });
+      };
+      req.onsuccess = e => resolve(e.target.result);
+      req.onerror = e => reject(e.target.error || new Error('idb open fail'));
+    });
   }
-  async function cacheFetch(url, onProgress) {
-    // 1) 先查 Cache API
-    const c = await asrCache();
-    if (c) {
-      const hit = await c.match(url).catch(() => null);
-      if (hit && hit.ok) {
-        if (onProgress) onProgress(1);
-        return new Uint8Array(await hit.arrayBuffer());
+  function idbKvGet(k) {
+    return asrIdbOpen().then(db => new Promise((resolve, reject) => {
+      const rq = db.transaction(ASR_IDB_STORE, 'readonly').objectStore(ASR_IDB_STORE).get(k);
+      rq.onsuccess = () => resolve(rq.result ? rq.result.v : null);
+      rq.onerror = () => reject(rq.error);
+    })).catch(() => null);
+  }
+  function idbKvSet(k, v) {
+    return asrIdbOpen().then(db => new Promise((resolve, reject) => {
+      const tx = db.transaction(ASR_IDB_STORE, 'readwrite');
+      tx.objectStore(ASR_IDB_STORE).put({ k, v });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    })).catch(() => { /* 写失败（配额/IO）不致命：本次仍可用，下次重下 */ });
+  }
+  /* 删除所有以 prefix 开头的 key（重下前清旧片） */
+  function idbKvDelPrefix(prefix) {
+    return asrIdbOpen().then(db => new Promise((resolve) => {
+      const tx = db.transaction(ASR_IDB_STORE, 'readwrite');
+      const st = tx.objectStore(ASR_IDB_STORE);
+      const rq = st.openCursor(IDBKeyRange.bound(prefix, prefix + '\uffff'));
+      rq.onsuccess = () => {
+        const cur = rq.result;
+        if (cur) { st.delete(cur.key); cur.continue(); }
+      };
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    })).catch(() => {});
+  }
+  /* 读回模型全量字节；片缺/损坏/长度不符 → null（调用方回归网络下载） */
+  async function modelLoad(onProgress) {
+    try {
+      const meta = await idbKvGet(MODEL_KEY + ':meta');
+      if (!meta || !(meta.chunkCount > 0) || !(meta.totalBytes > 0)) return null;
+      const n = meta.chunkCount, out = new Uint8Array(meta.totalBytes);
+      let off = 0;
+      for (let i = 0; i < n; i++) {
+        const slice = await idbKvGet(MODEL_KEY + ':' + i);
+        if (!(slice instanceof ArrayBuffer) && !ArrayBuffer.isView(slice)) return null;
+        const bytes = new Uint8Array(slice);
+        if (off + bytes.length > meta.totalBytes) return null;   /* 长度溢出 = 元数据不匹配 */
+        out.set(bytes, off); off += bytes.length;
+        if (onProgress) onProgress((i + 1) / n);
       }
+      if (off !== meta.totalBytes) return null;   /* 总长校验 */
+      return out;
+    } catch (e) { return null; }
+  }
+  /* 分片写入：先清旧片，chunks 逐个写，最后写 meta（meta 在 = 写完整） */
+  async function modelSave(buf) {
+    const totalBytes = buf.length;
+    const chunkCount = Math.ceil(totalBytes / CHUNK_SIZE);
+    await idbKvDelPrefix(MODEL_KEY + ':');
+    for (let i = 0; i < chunkCount; i++) {
+      const slice = buf.subarray(i * CHUNK_SIZE, Math.min((i + 1) * CHUNK_SIZE, totalBytes));
+      await idbKvSet(MODEL_KEY + ':' + i, slice.slice().buffer);
     }
-    // 2) 未命中：网络下载（带进度），并写入缓存
+    await idbKvSet(MODEL_KEY + ':meta', { totalBytes, chunkSize: CHUNK_SIZE, chunkCount });
+  }
+  /* 供设置页：本地是否已存完整模型（轻查 meta，不读回 228MB） */
+  async function hasStoredModel() {
+    try { return !!(await idbKvGet(MODEL_KEY + ':meta')); } catch (e) { return false; }
+  }
+
+  /* 带进度地获取模型文件：IDB 命中直接读回（秒开），未命中网络下载并落盘。
+   * 返回类型：'meta.json'/'tokens.txt' → 字符串；'model.int8.onnx' → Uint8Array。 */
+  async function fetchCached(url, onProgress) {
+    const name = url.slice(url.lastIndexOf('/') + 1);
+    /* 小文件：字符串整存 */
+    if (name === 'meta.json' || name === 'tokens.txt') {
+      let t = await idbKvGet(name);
+      if (t != null) { if (onProgress) onProgress(1); return t; }
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      t = await res.text();
+      await idbKvSet(name, t);
+      if (onProgress) onProgress(1);
+      return t;
+    }
+    /* 大模型：IDB 分片 */
+    if (name === MODEL_KEY) {
+      const hit = await modelLoad(onProgress);
+      if (hit) { if (onProgress) onProgress(1); return hit; }
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const total = parseInt(res.headers.get('Content-Length') || '0', 10) || 0;
+      const reader = res.body.getReader();
+      const chunks = []; let got = 0;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value); got += value.length;
+        if (onProgress && total) onProgress(got / total);
+      }
+      const len = chunks.reduce((a, b) => a + b.length, 0);
+      if (total && len !== total) throw new Error('下载不完整（' + len + '/' + total + '）');
+      const buf = new Uint8Array(len);
+      let off = 0;
+      for (const cc of chunks) { buf.set(cc, off); off += cc.length; }
+      await modelSave(buf).catch(() => {});   /* 落盘失败不影响本次使用 */
+      if (onProgress) onProgress(1);
+      return buf;
+    }
+    /* 其它（如 ort 的独立脚本由 loadScript 加载）：直接网络取 */
     const res = await fetch(url);
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    const total = parseInt(res.headers.get('Content-Length') || '0', 10) || 0;
-    const reader = res.body.getReader();
-    const chunks = [];
-    let got = 0;
-    const pump = () => reader.read().then(({ done, value }) => {
-      if (done) {
-        if (onProgress) onProgress(1);
-        const len = chunks.reduce((a, b) => a + b.length, 0);
-        const buf = new Uint8Array(len);
-        let off = 0;
-        for (const cc of chunks) { buf.set(cc, off); off += cc.length; }
-        // 写缓存（响应副本），失败不影响本次使用
-        if (c) c.put(url, new Response(buf.slice().buffer, { headers: { 'content-type': res.headers.get('content-type') || 'application/octet-stream' } })).catch(() => {});
-        return buf;
-      }
-      chunks.push(value);
-      got += value.length;
-      if (onProgress && total) onProgress(got / total);
-      return pump();
-    });
-    return pump();
+    return new Uint8Array(await res.arrayBuffer());
   }
 
   function ensureLoaded(progressCb) {
@@ -99,11 +189,11 @@
       global.ort.env.wasm.wasmPaths = BASE + '/ort/';
       if (navigator.hardwareConcurrency > 1) global.ort.env.wasm.numThreads = 1;
       if (progressCb) progressCb('加载模型参数…');
-      meta = JSON.parse(new TextDecoder().decode(await cacheFetch(BASE + '/meta.json')));
-      tokensTable = parseTokens(new TextDecoder().decode(await cacheFetch(BASE + '/tokens.txt')));
+      meta = JSON.parse(await fetchCached(BASE + '/meta.json'));
+      tokensTable = parseTokens(await fetchCached(BASE + '/tokens.txt'));
       if (progressCb) progressCb('下载语音模型（约 228MB）…');
-      // 带进度下载模型进内存（缓存命中秒开），再交给 onnxruntime
-      const modelBuf = await cacheFetch(BASE + '/model.int8.onnx', (p) => {
+      // 带进度获取模型（IDB 命中秒开；未命中则下载并落盘），再交给 onnxruntime
+      const modelBuf = await fetchCached(BASE + '/model.int8.onnx', (p) => {
         if (progressCb) progressCb(p);      // 数值进度 0..1
       });
       if (progressCb) progressCb(1);
@@ -330,5 +420,5 @@
   /* 模型是否已加载就绪（供设置页展示“线下模型”状态） */
   function getReady() { return !!session; }
 
-  global.SenseVoiceAsr = { ensureLoaded, start, stop, debugRecognize, recognizeBlob, getReady };
+  global.SenseVoiceAsr = { ensureLoaded, start, stop, debugRecognize, recognizeBlob, getReady, hasStoredModel };
 })(window);
