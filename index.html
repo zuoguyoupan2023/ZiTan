@@ -422,10 +422,10 @@
     .chip { padding: 3px 9px; }
   }
   /* ===== 020 消息增强 ===== */
-  /* 气泡操作区：收藏 + 播放 + 复制 竖向一列（不占横向宽度） */
-  .bbtns { display: flex; flex-direction: column; gap: 3px; flex: none; align-items: center; }
+  /* 气泡操作区：收藏 + 播放 + 复制 + 翻译 两列显示（少占高度，列间距收紧） */
+  .bbtns { display: grid; grid-template-columns: repeat(2, 30px); gap: 3px 4px; flex: none; }
   .bbtns .play {
-    width: 34px; height: 34px; border-radius: 50%;
+    width: 30px; height: 30px; border-radius: 50%;
     border: none; background: rgba(0,0,0,.07); color: var(--ink);
     display: flex; align-items: center; justify-content: center; cursor: pointer; flex: none;
   }
@@ -475,14 +475,20 @@
   .msg.deaf .trcard { background: rgba(0,0,0,.10); color: var(--deaf-ink); }
   .trcard .tr-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
   .trcard .tr-lang { font-size: calc(10px * var(--fs)); font-weight: 700; opacity: .75; letter-spacing: .3px; }
-  .trcard .tr-del {
+  .trcard .tr-acts { display: flex; align-items: center; gap: 2px; }
+  .trcard .tr-del, .trcard .tr-play {
     flex: none; width: 22px; height: 22px; border: none; border-radius: 6px;
     background: transparent; color: inherit; opacity: .6; cursor: pointer;
     display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1;
   }
-  .trcard .tr-del:active { background: rgba(0,0,0,.15); }
-  /* 混合模式下气泡倒置时，翻译卡片删除按钮反向转回正置 */
-  body.dir-mixed .msg.deaf .bubble .trcard .tr-del { transform: rotate(180deg); }
+  .trcard .tr-play svg { width: 12px; height: 12px; fill: currentColor; }
+  .trcard .tr-play.playing { color: var(--accent); opacity: 1; }
+  .trcard .tr-del:active, .trcard .tr-play:active { background: rgba(0,0,0,.15); }
+  /* 混合模式下气泡倒置时，翻译卡片操作按钮反向转回正置 */
+  body.dir-mixed .msg.deaf .bubble .trcard .tr-del, body.dir-mixed .msg.deaf .bubble .trcard .tr-play { transform: rotate(180deg); }
+  /* 通用设置里的角色标签 */
+  .role-lbl { flex: none; min-width: 52px; font-size: 13px; color: var(--muted); display: flex; align-items: center; }
+  .role-tag { font-weight: 700; color: var(--ink); }
   .msg.qflash .bubble { animation: qf .9s ease-out; }
   @keyframes qf { 0%,40% { box-shadow: 0 0 0 3px var(--accent); } 100% { box-shadow: none; } }
   .bubimg {
@@ -703,6 +709,7 @@
         <button id="sTabAsr" data-i18n="asrTitle">语音识别</button>
         <button id="sTabFav" data-i18n="favTitle">收藏</button>
         <button id="sTabGallery" data-i18n="galleryTitle">相册</button>
+        <button id="sTabGeneral" data-i18n="general">通用</button>
       </div>
 
       <!-- 预设 -->
@@ -780,43 +787,56 @@
         <div id="galleryGrid"></div>
       </div>
 
-      <!-- 021 文本方向 -->
-      <div class="sec-title" data-i18n="textDirTitle">文本方向</div>
-      <div class="seg" id="textDirRow">
-        <button id="dirUpright" data-dir="upright" data-i18n="textDirUpright">正置</button>
-        <button id="dirMixed" data-dir="mixed" data-i18n="textDirMixed">倒置 · 正置混合</button>
-      </div>
-      <p class="hint" data-i18n="textDirHint">倒置·正置混合：听障朋友发出的文字会 180° 旋转（不是镜像），站在对面的朋友无需颠倒手机即可正读；操作按钮保持正置。</p>
+      <!-- 通用 -->
+      <div id="generalPane" hidden>
+        <!-- 身份名称 -->
+        <div class="sec-title" data-i18n="roleNames">身份名称</div>
+        <div class="asr-cloud-row"><label class="role-lbl" for="nameDeaf" data-i18n="roleDeaf">听障朋友</label><input id="nameDeaf" type="text" data-i18n-ph="roleNamePh"></div>
+        <div class="asr-cloud-row"><label class="role-lbl" for="nameVol" data-i18n="roleVol">志愿者 / 路人</label><input id="nameVol" type="text" data-i18n-ph="roleNamePh"></div>
+        <p class="hint" data-i18n="roleNameHint">自定义两个身份的称呼，会用于顶部身份按钮和消息署名；留空则用默认名称。</p>
 
-      <!-- 021 翻译 -->
-      <div class="sec-title" data-i18n="transTitle">翻译</div>
-      <div class="sec-title sub" data-i18n="transEngineLbl">翻译引擎</div>
-      <div class="seg" id="transEngineRow">
-        <button id="engMyMemory" data-eng="mymemory" data-i18n="transMyMemory">MyMemory（免费）</button>
-        <button id="engAI" data-eng="ai" data-i18n="transAI">AI（DeepSeek，付费）</button>
-      </div>
-      <div class="sec-title sub" data-i18n="transSrc">源语言</div>
-      <div class="asr-cloud-row"><select id="transSrcSel"></select></div>
-      <div class="sec-title sub" data-i18n="transTarget">目标语言</div>
-      <div class="asr-cloud-row"><select id="transTargetSel"></select></div>
-      <div id="aiConfigWrap">
-        <div class="sec-title sub" data-i18n="transAI">AI 翻译配置</div>
-        <div class="sec-title sub2" data-i18n="aiProvider">AI 提供方</div>
-        <div class="asr-cloud-row"><select id="aiProviderSel"></select></div>
-        <div class="sec-title sub2" data-i18n="aiKeyLbl">API Key</div>
-        <div class="asr-cloud-row"><input id="aiKeyInput" type="password" placeholder="sk-…" data-i18n-ph="aiKeyPh"></div>
-        <div class="sec-title sub2" data-i18n="aiModelLbl">模型</div>
-        <div class="asr-cloud-row"><select id="aiModelSel"></select></div>
-        <div class="ai-keybar">
-          <button class="pvbtn" id="aiKeyClearBtn" data-i18n="aiKeyClear">清除 Key</button>
+        <!-- 021 文本方向 -->
+        <div class="sec-title" data-i18n="textDirTitle">文本方向</div>
+        <div class="seg" id="textDirRow">
+          <button id="dirUpright" data-dir="upright" data-i18n="textDirUpright">正置</button>
+          <button id="dirMixed" data-dir="mixed" data-i18n="textDirMixed">倒置 · 正置混合</button>
         </div>
-        <p class="hint" data-i18n="transAIHint">AI 翻译使用 DeepSeek / 智谱 GLM / Kimi API，按量付费，与免费的 MyMemory 不同。Key 仅存本机，可随时清除。未填 Key 时 AI 不可用。</p>
-      </div>
+        <p class="hint" data-i18n="textDirHint">倒置·正置混合：听障朋友发出的文字会 180° 旋转（不是镜像），站在对面的朋友无需颠倒手机即可正读；操作按钮保持正置。</p>
 
-      <div class="sec-title" data-i18n="others">其他</div>
-      <div class="minirow" id="openHelpRow" data-i18n="howTo">使用说明</div>
-      <div class="minirow" id="historyRow" data-i18n="history">对话历史</div>
-      <div class="minirow" id="exportRow" data-i18n="exportChat">导出聊天记录 (JSON)</div>
+        <!-- 021 翻译 -->
+        <div class="sec-title" data-i18n="transTitle">翻译</div>
+        <div class="sec-title sub" data-i18n="transEngineLbl">翻译引擎</div>
+        <div class="seg" id="transEngineRow">
+          <button id="engMyMemory" data-eng="mymemory" data-i18n="transMyMemory">MyMemory（免费）</button>
+          <button id="engAI" data-eng="ai" data-i18n="transAI">AI（DeepSeek，付费）</button>
+        </div>
+        <div class="sec-title sub" data-i18n="transByRole">按身份设置翻译</div>
+        <div class="sec-title sub2"><span class="role-tag" id="transRoleTagDeaf">听障身份</span></div>
+        <div class="asr-cloud-row"><span class="role-lbl" data-i18n="transSrc">源语言</span><select id="transSrcDeaf"></select></div>
+        <div class="asr-cloud-row"><span class="role-lbl" data-i18n="transTarget">目标语言</span><select id="transTgtDeaf"></select></div>
+        <div class="sec-title sub2"><span class="role-tag" id="transRoleTagVol">志愿者身份</span></div>
+        <div class="asr-cloud-row"><span class="role-lbl" data-i18n="transSrc">源语言</span><select id="transSrcVol"></select></div>
+        <div class="asr-cloud-row"><span class="role-lbl" data-i18n="transTarget">目标语言</span><select id="transTgtVol"></select></div>
+        <div id="aiConfigWrap">
+          <div class="sec-title sub" data-i18n="transAI">AI 翻译配置</div>
+          <div class="sec-title sub2" data-i18n="aiProvider">AI 提供方</div>
+          <div class="asr-cloud-row"><select id="aiProviderSel"></select></div>
+          <div class="sec-title sub2" data-i18n="aiKeyLbl">API Key</div>
+          <div class="asr-cloud-row"><input id="aiKeyInput" type="password" placeholder="sk-…" data-i18n-ph="aiKeyPh"></div>
+          <div class="sec-title sub2" data-i18n="aiModelLbl">模型</div>
+          <div class="asr-cloud-row"><select id="aiModelSel"></select></div>
+          <div class="ai-keybar">
+            <button class="pvbtn" id="aiKeySaveBtn" data-i18n="aiKeySave">保存</button>
+            <button class="pvbtn" id="aiKeyClearBtn" data-i18n="aiKeyClear">清除 Key</button>
+          </div>
+          <p class="hint" data-i18n="transAIHint">AI 翻译支持 DeepSeek / 智谱 GLM / 月之暗面 Kimi，按量付费，与免费的 MyMemory 不同。Key 仅存本机，可随时清除。未填 Key 时 AI 不可用。</p>
+        </div>
+
+        <div class="sec-title" data-i18n="others">其他</div>
+        <div class="minirow" id="openHelpRow" data-i18n="howTo">使用说明</div>
+        <div class="minirow" id="historyRow" data-i18n="history">对话历史</div>
+        <div class="minirow" id="exportRow" data-i18n="exportChat">导出聊天记录 (JSON)</div>
+      </div>
 
       <button class="done" id="settingsClose" data-i18n="done">完成</button>
       <p class="credit"><span data-i18n="creditFrom">由</span><a href="https://wewalk.world/" target="_blank" rel="noopener">左顾右盼</a><span data-i18n="creditTag">开发</span></p>
@@ -1023,14 +1043,20 @@
       /* 021 文本方向 */
       textDirTitle: '文本方向', textDirUpright: '正置', textDirMixed: '倒置 · 正置混合',
       textDirHint: '倒置·正置混合：听障朋友发出的文字会 180° 旋转（不是镜像），站在对面的朋友无需颠倒手机即可正读；操作按钮保持正置。',
+      /* 通用 */
+      general: '通用', roleNames: '身份名称',
+      roleNameHint: '自定义两个身份的称呼，会用于顶部身份按钮和消息署名；留空则用默认名称。',
+      roleNamePh: '自定义称呼（留空用默认）',
       /* 021 翻译 */
       transTitle: '翻译', transMyMemory: 'MyMemory（免费）', transAI: 'AI（DeepSeek，付费）',
-      transSrc: '源语言', transTarget: '目标语言', transEngineLbl: '翻译引擎',
-      aiKeyPh: '填入 API Key（sk-…）', aiKeyLbl: 'API Key', aiModelLbl: '模型', aiProvider: 'AI 提供方', aiKeyClear: '清除 Key',
+      transSrc: '源语言', transTarget: '目标语言', transEngineLbl: '翻译引擎', transByRole: '按身份设置翻译',
+      aiKeyPh: '填入 API Key（sk-…）', aiKeyLbl: 'API Key', aiModelLbl: '模型', aiProvider: 'AI 提供方',
+      aiKeySave: '保存', aiKeyClear: '清除 Key',
+      aiKeySaved: 'Key 密钥只保存在浏览器本地，请放心使用',
       transAIHint: 'AI 翻译支持 DeepSeek / 智谱 GLM / 月之暗面 Kimi，按量付费，与免费的 MyMemory 不同。各家的 Key 分别保存、仅存本机，可随时清除。未填 Key 时 AI 不可用。',
-      transBtn: '翻译', transLangEn: '英', transRun: '翻译中…', transFail: '翻译失败：',
-      transEmpty: '没有翻译到内容', transDel: '删除翻译', transNeedAIKey: '请先在 设置 → 翻译 填写 DeepSeek API Key',
-      transAIKeyInvalid: 'DeepSeek Key 无效，请检查后重试'
+      transBtn: '翻译', transRead: '朗读翻译', transLangEn: '英', transRun: '翻译中…', transFail: '翻译失败：',
+      transEmpty: '没有翻译到内容', transDel: '删除翻译', transNeedAIKey: '请先在 设置 → 通用 → 翻译 填写 API Key',
+      transAIKeyInvalid: 'API Key 无效，请检查后重试'
     },
     en: {
       settings: 'Settings', fontDown: 'Smaller font', fontUp: 'Larger font',
@@ -1107,14 +1133,20 @@
       /* 021 text direction */
       textDirTitle: 'Text direction', textDirUpright: 'Upright', textDirMixed: 'Inverted · mixed',
       textDirHint: 'Inverted · mixed: text sent by the Deaf person rotates 180° (not mirrored), so the friend opposite can read it without turning the phone; action buttons stay upright.',
+      /* general */
+      general: 'General', roleNames: 'Identity names',
+      roleNameHint: 'Customize each identity display name, used in the top identity buttons and message signatures; leave blank to use defaults.',
+      roleNamePh: 'Custom name (blank = default)',
       /* 021 translation */
       transTitle: 'Translation', transMyMemory: 'MyMemory (free)', transAI: 'AI (DeepSeek, paid)',
-      transSrc: 'Source language', transTarget: 'Target language', transEngineLbl: 'Translation engine',
-      aiKeyPh: 'Enter API Key (sk-…)', aiKeyLbl: 'API Key', aiModelLbl: 'Model', aiProvider: 'AI provider', aiKeyClear: 'Clear Key',
+      transSrc: 'Source language', transTarget: 'Target language', transEngineLbl: 'Translation engine', transByRole: 'Translation by identity',
+      aiKeyPh: 'Enter API Key (sk-…)', aiKeyLbl: 'API Key', aiModelLbl: 'Model', aiProvider: 'AI provider',
+      aiKeySave: 'Save', aiKeyClear: 'Clear Key',
+      aiKeySaved: 'Key is stored only in this browser, rest assured.',
       transAIHint: 'AI translation supports DeepSeek / Zhipu GLM / Moonshot Kimi and is billed by usage, unlike free MyMemory. Each provider Key is stored separately, on this device only, and can be cleared anytime. AI is unavailable without a Key.',
-      transBtn: 'Translate', transLangEn: 'EN', transRun: 'Translating…', transFail: 'Translation failed: ',
-      transEmpty: 'Nothing to translate', transDel: 'Delete translation', transNeedAIKey: 'Add a DeepSeek API Key in Settings → Translation first',
-      transAIKeyInvalid: 'DeepSeek Key invalid — please check and retry'
+      transBtn: 'Translate', transRead: 'Read translation', transLangEn: 'EN', transRun: 'Translating…', transFail: 'Translation failed: ',
+      transEmpty: 'Nothing to translate', transDel: 'Delete translation', transNeedAIKey: 'Add an API Key in Settings → General → Translation first',
+      transAIKeyInvalid: 'API Key invalid — please check and retry'
     }
   };
   let L = I18N.zh;
@@ -1202,8 +1234,11 @@
     hc: false,
     textDir: 'upright',        /* upright | mixed —— 文本方向：正置 / 倒置·正置混合 */
     transEngine: 'mymemory',   /* mymemory | ai —— 翻译引擎 */
-    transSrc: 'zh-CN',         /* 翻译源语言（MyMemory 用） */
-    transTarget: 'en',         /* 翻译目标语言 */
+    roleNames: { deaf: '', vol: '' },   /* 两种身份的自定义称呼；空 = 用默认名称 */
+    transDefs: {                /* 按身份的翻译源/目标语言 */
+      deaf: { src: 'zh-CN', tgt: 'en' },     /* 听障身份(身份1)：默认中→英 */
+      vol:  { src: 'en', tgt: 'zh-CN' }      /* 志愿者身份(身份2)：默认英→中 */
+    },
     ai: { provider: 'deepseek', deepseekKey: '', zhipuKey: '', moonshotKey: '', model: 'deepseek-v4-pro' },   /* AI 翻译（DeepSeek / 智谱 GLM / Kimi） */
     viewing: -1,
     sessionId: Date.now(),
@@ -1308,6 +1343,7 @@
     document.body.classList.toggle('dir-mixed', state.textDir === 'mixed');
     $('whoDeaf').classList.toggle('on', state.identity === 'deaf');
     $('whoVol').classList.toggle('on', state.identity === 'vol');
+    applyRoleNames();
     $('btnHc').classList.toggle('on', state.hc);
     $('dirUpright').classList.toggle('on', state.textDir === 'upright');
     $('dirMixed').classList.toggle('on', state.textDir === 'mixed');
@@ -1352,7 +1388,7 @@
     return `
       <div class="msg ${m.by}" data-i="${i}">
         <div class="row">
-          <span class="who">${t(m.by === 'deaf' ? 'roleDeaf' : 'roleVol')} · ${m.time || ''}</span>
+          <span class="who">${roleName(m.by)} · ${m.time || ''}</span>
           <div class="bubrow">
             <div class="bbtns">
               <button class="act favb ${isFav ? 'on' : ''}" data-i="${i}" title="${t('fav')}">${ic('heart', 16)}</button>
@@ -1373,12 +1409,15 @@
     return L[code] || (code || '').toUpperCase();
   }
   function translationCardMarkup(m, i) {
-    const tgt = transShortLabel(m.tr.tgt || state.transTarget);
+    const tgt = transShortLabel(m.tr.tgt || 'en');
     let eng = (m.tr.engine === 'ai') ? 'AI' : 'MyMemory';
     if (m.tr.engine === 'ai' && m.tr.prov && AI_PROVIDERS[m.tr.prov]) eng = AI_PROVIDERS[m.tr.prov].label;
     return '<div class="trcard" data-tri="' + i + '">'
       + '<div class="tr-head"><span class="tr-lang">' + escapeHtml(tgt + ' · ' + eng) + '</span>'
-      + '<button class="tr-del" data-i="' + i + '" title="' + t('transDel') + '">×</button></div>'
+      + '<div class="tr-acts">'
+      + '<button class="tr-play" data-i="' + i + '" title="' + t('transRead') + '">' + ic('play', 12) + '</button>'
+      + '<button class="tr-del" data-i="' + i + '" title="' + t('transDel') + '">×</button>'
+      + '</div></div>'
       + '<div class="tr-text">' + escapeHtml(m.tr.text) + '</div></div>';
   }
 
@@ -1671,6 +1710,44 @@
       return;
     }
     if (speak(m.text)) btn.classList.add('playing');
+  }
+
+  /* 按指定语言朗读（用于朗读翻译内容，用目标语言语音） */
+  function pickVoiceFor(langCode) {
+    refreshVoices();
+    const base = (langCode || '').toLowerCase().split('-')[0];
+    const list = voices.filter(v => (v.lang || '').toLowerCase().indexOf(base) === 0);
+    if (list.length) {
+      const fav = list.find(v => v.voiceURI === state.voiceURI) || list.find(v => (v.lang||'').toLowerCase().indexOf(langCode.toLowerCase()) === 0) || list[0];
+      return fav;
+    }
+    return pickVoice();
+  }
+  function speakLang(text, lang, onEnd) {
+    if (!('speechSynthesis' in window)) { toast(t('noTts')); return false; }
+    speechSynthesis.cancel();
+    clearPlay();
+    const u = new SpeechSynthesisUtterance(text);
+    const v = pickVoiceFor(lang);
+    if (v) { u.voice = v; u.lang = v.lang; }
+    u.rate = 1; u.pitch = 1.05;
+    const done = () => { clearPlay(); if (onEnd) onEnd(); };
+    u.onend = done;
+    u.onerror = done;
+    speechSynthesis.speak(u);
+    return true;
+  }
+  function playTranslation(i, btn) {
+    const m = state.messages[i];
+    if (!m || !m.tr || !m.tr.text) return;
+    if (btn && btn.classList.contains('playing')) {
+      if ('speechSynthesis' in window) speechSynthesis.cancel();
+      clearPlay();
+      return;
+    }
+    if (speakLang(m.tr.text, m.tr.tgt || 'en', () => { if (btn) btn.classList.remove('playing'); })) {
+      if (btn) btn.classList.add('playing');
+    }
   }
 
   /* ============ 设置：语音 ============ */
@@ -2089,8 +2166,16 @@
         if (s.hc) state.hc = s.hc;
         if (s.textDir === 'mixed' || s.textDir === 'upright') state.textDir = s.textDir;
         if (s.transEngine === 'ai' || s.transEngine === 'mymemory') state.transEngine = s.transEngine;
-        if (s.transSrc) state.transSrc = s.transSrc;
-        if (s.transTarget) state.transTarget = s.transTarget;
+        /* 按身份翻译配置；旧版全局 transSrc/transTarget 迁到 deaf 身份（中翻英） */
+        if (s.transDefs && s.transDefs.deaf && s.transDefs.vol) {
+          const pick = d => (d && typeof d.src === 'string' && typeof d.tgt === 'string') ? { src: d.src, tgt: d.tgt } : d;
+          state.transDefs = { deaf: pick(s.transDefs.deaf) || { src: 'zh-CN', tgt: 'en' }, vol: pick(s.transDefs.vol) || { src: 'en', tgt: 'zh-CN' } };
+        } else if (s.transSrc || s.transTarget) {
+          state.transDefs.deaf = { src: s.transSrc || 'zh-CN', tgt: s.transTarget || 'en' };
+        }
+        if (s.roleNames && typeof s.roleNames.deaf === 'string' && typeof s.roleNames.vol === 'string') {
+          state.roleNames = { deaf: s.roleNames.deaf, vol: s.roleNames.vol };
+        }
         if (s.ai) {
           const prov = (s.ai.provider && AI_PROVIDERS[s.ai.provider]) ? s.ai.provider : 'deepseek';
           state.ai = {
@@ -2338,8 +2423,10 @@
     if (!text) return;
     if (btn) btn.classList.add('loading');
     const engine = state.transEngine;
-    const src = state.transSrc || 'zh-CN';
-    const tgt = state.transTarget || 'en';
+    /* 按消息身份取翻译配置：听障=中翻英，志愿者=英翻中 */
+    const def = state.transDefs[(m && m.by)] || state.transDefs.deaf;
+    const src = (def && def.src) || 'zh-CN';
+    const tgt = (def && def.tgt) || 'en';
     const p = (engine === 'ai')
       ? aiTranslate(text, tgt, src)
       : mymemoryTranslate(text, src, tgt);
@@ -2362,13 +2449,32 @@
     save(); render();
   }
 
-  /* —— 设置里构建 源/目标语言 下拉 —— */
+  /* —— 身份称呼：自定义或用默认 —— */
+  function roleName(by) {
+    const n = state.roleNames && state.roleNames[by];
+    return (n && n.trim()) ? n.trim() : t(by === 'deaf' ? 'roleDeaf' : 'roleVol');
+  }
+  function applyRoleNames() {
+    if ($('whoDeaf')) $('whoDeaf').querySelector('span:last-child').textContent = roleName('deaf');
+    if ($('whoVol')) $('whoVol').querySelector('span:last-child').textContent = roleName('vol');
+    if ($('tabDeaf')) $('tabDeaf').textContent = roleName('deaf');
+    if ($('tabVol')) $('tabVol').textContent = roleName('vol');
+    if ($('transRoleTagDeaf')) $('transRoleTagDeaf').textContent = roleName('deaf');
+    if ($('transRoleTagVol')) $('transRoleTagVol').textContent = roleName('vol');
+  }
+
+  /* —— 设置里构建 按身份的 源/目标语言 下拉 —— */
   function buildTransSelects() {
     const mk = (sel, cur) => {
       sel.innerHTML = TRANS_LANGS.map(l => '<option value="' + l.v + '"' + (l.v === cur ? ' selected' : '') + '>' + escapeHtml(l.n) + '</option>').join('');
     };
-    mk($('transSrcSel'), state.transSrc);
-    mk($('transTargetSel'), state.transTarget);
+    mk($('transSrcDeaf'), state.transDefs.deaf.src);
+    mk($('transTgtDeaf'), state.transDefs.deaf.tgt);
+    mk($('transSrcVol'),  state.transDefs.vol.src);
+    mk($('transTgtVol'),  state.transDefs.vol.tgt);
+    $('nameDeaf').value = state.roleNames.deaf || '';
+    $('nameVol').value = state.roleNames.vol || '';
+    applyRoleNames();
   }
 
   /* —— AI 配置：提供方下拉 + 对应模型下拉 + 该提供方 Key —— */
@@ -2854,8 +2960,14 @@
       state.transEngine = eng;
       render(); save();
     });
-    $('transSrcSel').addEventListener('change', e => { state.transSrc = e.target.value; save(); });
-    $('transTargetSel').addEventListener('change', e => { state.transTarget = e.target.value; save(); });
+    /* 按身份的源/目标语言 */
+    $('transSrcDeaf').addEventListener('change', e => { state.transDefs.deaf.src = e.target.value; save(); });
+    $('transTgtDeaf').addEventListener('change', e => { state.transDefs.deaf.tgt = e.target.value; save(); });
+    $('transSrcVol').addEventListener('change', e => { state.transDefs.vol.src = e.target.value; save(); });
+    $('transTgtVol').addEventListener('change', e => { state.transDefs.vol.tgt = e.target.value; save(); });
+    /* 身份自定义称呼 */
+    $('nameDeaf').addEventListener('change', e => { state.roleNames.deaf = e.target.value.trim(); applyRoleNames(); render(); save(); });
+    $('nameVol').addEventListener('change', e => { state.roleNames.vol = e.target.value.trim(); applyRoleNames(); render(); save(); });
     $('aiProviderSel').addEventListener('change', e => {
       const prov = e.target.value;
       if (!AI_PROVIDERS[prov]) return;
@@ -2867,6 +2979,10 @@
     $('aiKeyInput').addEventListener('change', e => {
       state.ai[aiProvider().key] = e.target.value.trim(); save();
     });
+    $('aiKeySaveBtn').onclick = () => {
+      state.ai[aiProvider().key] = $('aiKeyInput').value.trim(); save();
+      toast(t('aiKeySaved'));
+    };
     $('aiKeyClearBtn').onclick = () => {
       state.ai[aiProvider().key] = ''; $('aiKeyInput').value = ''; save();
       toast(t('aiKeyClear'));
@@ -3044,6 +3160,7 @@
     $('sTabAsr').onclick    = () => showSettingsPane('asr');
     $('sTabFav').onclick    = () => showSettingsPane('fav');
     $('sTabGallery').onclick= () => showSettingsPane('gallery');
+    $('sTabGeneral').onclick= () => showSettingsPane('general');
 
     /* 020 消息增强事件 */
     /* 加号：选择图片来源 */
@@ -3189,6 +3306,8 @@
       if (copyb) { copyMessage(+copyb.dataset.i); return; }
       const trDel = e.target.closest('.tr-del');
       if (trDel) { deleteTranslation(+trDel.dataset.i); return; }
+      const trPlay = e.target.closest('.tr-play');
+      if (trPlay) { playTranslation(+trPlay.dataset.i, trPlay); return; }
       const transb = e.target.closest('.transb');
       if (transb) { translateMessage(+transb.dataset.i, transb); return; }
       const favb = e.target.closest('.favb');
@@ -3318,16 +3437,20 @@
     const asrOn    = (which === 'asr');
     const favOn    = (which === 'fav');
     const galOn    = (which === 'gallery');
+    const genOn    = (which === 'general');
     $('sTabPreset').classList.toggle('on', presetOn);
     $('sTabVoice').classList.toggle('on', voiceOn);
     $('sTabAsr').classList.toggle('on', asrOn);
     $('sTabFav').classList.toggle('on', favOn);
     $('sTabGallery').classList.toggle('on', galOn);
+    $('sTabGeneral').classList.toggle('on', genOn);
     $('presetPane').hidden = !presetOn;
     $('voicePane').hidden  = !voiceOn;
     $('asrPane').hidden    = !asrOn;
     $('favPane').hidden    = !favOn;
     $('galleryPane').hidden = !galOn;
+    $('generalPane').hidden = !genOn;
+    if (genOn) { buildTransSelects(); buildAIConfig(); applyRoleNames(); }
     if (!presetOn && !favOn && !galOn) {
       if (!voices.length) voicesKicked = false;  /* 用户手势：允许重新触发一次语音加载 */
       renderVoicePane();
