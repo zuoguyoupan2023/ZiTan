@@ -129,8 +129,8 @@
   /* 021 文本方向：倒置·正置混合 —— 听障人(deaf)发出的气泡内容整体 180° 旋转（非镜像），
      供站在对面的朋友正读；操作按钮列(.bbtns)保持正置，便于听障人自己点按。 */
   body.dir-mixed .msg.deaf .bubble { transform: rotate(180deg); }
-  /* 混合模式下：听障朋友发的图片在气泡内与全屏查看器里同样倒置 */
-  body.dir-mixed .msg.deaf .bubble .bubimg { transform: rotate(180deg); }
+  /* 混合模式下：图片随气泡整体倒置（气泡已 rotate180，图片无需再转，否则抵消变正）；
+     全屏查看器对听障朋友发的图同样倒置 */
   #imgViewer.flip img { transform: rotate(180deg); }
 
   .play {
@@ -268,18 +268,18 @@
   .card ol { padding-left: 20px; margin: 8px 0; }
   .card .done { width: 100%; margin-top: 16px; padding: 12px; border: none; border-radius: 12px; background: var(--accent); color: #fff; font-size: 16px; cursor: pointer; }
 
-  .tabs2 { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 14px; }
+  .tabs2 { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 14px; }
   .tabs2 button {
-    flex: 1 1 auto; min-width: max-content; padding: 10px; border: 1.5px solid var(--line); border-radius: 10px;
-    background: var(--panel); color: var(--ink); font-size: 15px; font-weight: 600; cursor: pointer;
+    flex: 0 1 auto; min-width: max-content; padding: 9px 12px; border: 1.5px solid var(--line); border-radius: 10px;
+    background: var(--panel); color: var(--ink); font-size: 16px; font-weight: 600; cursor: pointer;
   }
   .tabs2 button.on { background: var(--ink); color: var(--panel); border-color: var(--ink); }
 
-  /* 预设 */
-  .tabs3 { display: flex; gap: 8px; margin-bottom: 10px; }
+  /* 预设（二级标签：与一级标签之间用横线隔开；字号更小、间距随文本收紧） */
+  .tabs3 { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
   .tabs3 button {
-    flex: 1; padding: 9px; border: 1.5px solid var(--line); border-radius: 10px;
-    background: var(--panel); color: var(--ink); font-size: 14px; font-weight: 600; cursor: pointer;
+    flex: 0 1 auto; min-width: max-content; padding: 7px 11px; border: 1.5px solid var(--line); border-radius: 10px;
+    background: var(--panel); color: var(--ink); font-size: 13px; font-weight: 600; cursor: pointer;
   }
   .proll { display: flex; align-items: center; gap: 8px; background: var(--bg); border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; }
   .proll .ptext { flex: 1; font-size: 15px; word-break: break-word; cursor: text; }
@@ -438,6 +438,8 @@
     display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; flex: none;
   }
   .bbtns .act:active { background: rgba(0,0,0,.16); }
+  /* 收藏心形：未收藏固定白色（带深色描影，浅色背景也可见），已收藏红色 */
+  .bbtns .favb { color: #fff; filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.5)); }
   .bbtns .favb.on { color: #ef4444; }
   .bbtns .favb.on svg { fill: #ef4444; }
   body.hc .bbtns .play, body.hc .bbtns .act { background: rgba(255,255,255,.12); color: #fff; }
@@ -707,11 +709,11 @@
       </button>
       <h2 data-i18n="settings">设置</h2>
       <div class="tabs2">
+        <button id="sTabGeneral" data-i18n="general">通用</button>
         <button id="sTabPreset" class="on" data-i18n="presets">预设</button>
         <button id="sTabSound" data-i18n="voiceTab">语音</button>
         <button id="sTabFav" data-i18n="favTitle">收藏</button>
         <button id="sTabGallery" data-i18n="galleryTitle">相册</button>
-        <button id="sTabGeneral" data-i18n="general">通用</button>
       </div>
 
       <!-- 预设 -->
@@ -790,6 +792,7 @@
             <span data-i18n="favAll">清空收藏</span>
           </button>
         </div>
+        <p class="hint" data-i18n="favHint">点击主界面对话气泡左侧的心形图标收藏，收藏内容会显示在这里。</p>
         <div id="favList"></div>
       </div>
 
@@ -1049,6 +1052,7 @@
       /* 020 消息增强 */
       copyMsg: '复制', copied: '已复制', copyImgFail: '无法复制图片',
       fav: '收藏', faved: '已收藏', unfaved: '已取消收藏', favAll: '清空收藏', confirmClearFav: '清空全部收藏？',
+      favHint: '点击主界面对话气泡左侧的心形图标收藏，收藏内容会显示在这里。',
       unFav: '取消收藏', favEmpty: '还没有收藏', favBack: '定位到消息',
       favText: '文本', favImg: '图片', favAudio: '录音',
       quote: '引用', quoteHint: '引用 “{q}”', quoteMissing: '原消息不可用',
@@ -1158,6 +1162,7 @@
       /* 020 message enhancements */
       copyMsg: 'Copy', copied: 'Copied', copyImgFail: 'Could not copy image',
       fav: 'Favorite', faved: 'Added to favorites', unfaved: 'Removed from favorites', favAll: 'Clear all', confirmClearFav: 'Clear all favorites?',
+      favHint: 'Tap the heart on the left of a chat bubble to favorite it — favorites are listed here.',
       unFav: 'Unfavorite', favEmpty: 'No favorites yet', favBack: 'Locate message',
       favText: 'Text', favImg: 'Image', favAudio: 'Voice',
       quote: 'Quote', quoteHint: 'Quote “{q}”', quoteMissing: 'Original message unavailable',
@@ -1214,10 +1219,11 @@
       deaf: [
         { t: '您好，我想去', k: 'fill' },
         { t: '您好，请问', k: 'fill' },
-        { t: '您好，我是听障人，请打字告诉我', k: 'send' },
+        { t: '我是听障人，请说话，会自动转成文字', k: 'send' },
         { t: '您好，怎么去公交站台？', k: 'send' },
         { t: '您好，哪位，有什么事？', k: 'send' },
         { t: '您好，可以帮我一下吗？', k: 'send' },
+        { t: '您好，我是听障人，请打字告诉我', k: 'send' },
         { t: '我听不到，可以在这里打字', k: 'send' },
         { t: '谢谢，谢谢', k: 'send' }
       ],
@@ -1234,6 +1240,7 @@
       deaf: [
         { t: "I want to go to", k: 'fill' },
         { t: "Excuse me,", k: 'fill' },
+        { t: "I'm deaf — please speak, it turns into text.", k: 'send' },
         { t: "Where is the restroom?", k: 'send' },
         { t: "How do I get to the bus stop?", k: 'send' },
         { t: "Can you help me?", k: 'send' },
@@ -1443,6 +1450,7 @@
     inner += audioBarMarkup(m, i);
     if (m.tr && m.tr.text) inner += translationCardMarkup(m, i);
     const hasText = (m.text !== undefined && m.text);
+    const mediaOnly = !!(m.imgId && !hasText && !m.audioId);   /* 纯图片消息：操作区只留收藏 */
     return `
       <div class="msg ${m.by}" data-i="${i}">
         <div class="row">
@@ -1450,8 +1458,8 @@
           <div class="bubrow">
             <div class="bbtns">
               <button class="act favb ${isFav ? 'on' : ''}" data-i="${i}" title="${t('fav')}">${ic('heart', 16)}</button>
-              <button class="play" data-i="${i}" title="${t('autoRead')}">${ic('play', 15)}</button>
-              <button class="act copyb" data-i="${i}" title="${t('copyMsg')}">${ic('copy', 15)}</button>
+              ${mediaOnly ? '' : '<button class="play" data-i="' + i + '" title="' + t('autoRead') + '">' + ic('play', 15) + '</button>'}
+              ${mediaOnly ? '' : '<button class="act copyb" data-i="' + i + '" title="' + t('copyMsg') + '">' + ic('copy', 15) + '</button>'}
               ${hasText ? '<button class="act transb" data-i="' + i + '" title="' + t('transBtn') + '">译</button>' : ''}
             </div>
             <div class="bubble">${inner}</div>
@@ -3379,7 +3387,7 @@
     /* 设置面板 */
     $('btnSettings').onclick = () => {
       $('settingsOverlay').classList.add('show');
-      showSettingsPane('preset');
+      showSettingsPane('general');
       renderPresetList();
     };
     $('settingsClose').onclick = () => $('settingsOverlay').classList.remove('show');
