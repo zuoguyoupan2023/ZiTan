@@ -1189,6 +1189,7 @@
       zitanQuotaLeft: '今日剩余：{n} 次',
       zitanQuotaMaxed: '今天 25 次免费额度已用完，明天再来；或在 设置 → 云端识别 填自己的 API Key 无限使用。',
       zitanCloudDown: '字谈官方云端暂不可用（未部署或服务异常），可先在 设置 → 云端识别 填自己的 Key 使用。',
+      zitanTooLong: '云端单次最长 30 秒，请分多次说',
       /* 023 设置重构 / 引导页 / 预设快译 */
       dataTab: '数据', dataTitle: '数据管理',
       dataHint: '所有聊天、录音、图片与设置仅保存在本机浏览器中，不会上传服务器；可在此恢复历史会话或导出备份。',
@@ -1333,6 +1334,7 @@
       zitanQuotaLeft: '{n} uses left today',
       zitanQuotaMaxed: 'Today\'s 25 free uses are used up — come back tomorrow, or add your own API Key in Settings → Cloud for unlimited use.',
       zitanCloudDown: 'ZiTan Cloud is unavailable (not deployed or service error). Add your own key in Settings → Cloud for now.',
+      zitanTooLong: 'Cloud recognition allows up to 30 seconds per clip — please speak in shorter takes',
       /* 023 settings restructure / guide / preset fast translate */
       dataTab: 'Data', dataTitle: 'Data',
       dataHint: 'All chats, recordings, images and settings stay in this browser only — nothing is uploaded. Restore past sessions or export a backup here.',
@@ -1849,11 +1851,11 @@
     const extra = (state.cloud.extra || '').trim();
     if (!vendor || (!key && vendor !== 'zitan')) return Promise.reject(new Error(t('asrCloudNeed')));
     if (vendor === 'zitan') {
-      /* 024 字谈官方云端：音频发往本站 /api/asr（后端持 Key 转发 Azure，服务端限每设备每天 50 次）。
-         剩余次数从响应头 X-Quota-Remaining 读回并缓存展示。 */
-      return blobToWav16k(blob).then(wav => fetch('/api/asr', {
+      /* 024 字谈官方云端：音频发往本站 /api/asr（后端持 Key 转发 Azure，服务端限每设备每天 25 次）。
+         带上设备号 X-Device-Id 供服务端计数；剩余次数从响应头 X-Quota-Remaining 读回缓存展示。 */
+      return blobToWav16k(blob).then(wav => fetch('/api/asr?language=' + encodeURIComponent(lang || 'zh-CN'), {
         method: 'POST',
-        headers: { 'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000' },
+        headers: { 'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000', 'X-Device-Id': zitanDeviceId() },
         body: wav
       })).then(r => {
         const left = r.headers.get('X-Quota-Remaining');
@@ -1861,7 +1863,13 @@
         return r.json().then(j => ({ ok: r.ok, j })).catch(() => ({ ok: r.ok, j: {} }));
       }).then(({ ok, j }) => {
         if (ok) return j.text || '';
-        throw new Error(j.error || ('HTTP ' + ok));
+        /* 服务端约定的三类业务错误 → 直接给友好文案（不再套「云端识别失败：」前缀） */
+        let msg = '';
+        if (j.error === 'quota_exceeded') msg = t('zitanQuotaMaxed');
+        else if (j.error === 'official_not_configured') msg = t('zitanCloudDown');
+        else if (j.error === 'too_long') msg = t('zitanTooLong');
+        if (msg) { const e = new Error(msg); e.noPrefix = true; throw e; }
+        throw new Error((j && j.error) || ('HTTP ' + ok));
       });
     }
     if (vendor === 'openai') {
@@ -1923,9 +1931,9 @@
       } else if (engine === 'browser') {
         replayAudioForBrowser(rec.blob, apply);
       } else if (engine === 'cloud') {
-        /* 022：云端重识别（Azure / OpenAI 直连；阿里云/火山需后端代理） */
+        /* 022：云端重识别（字谈官方 / Azure / OpenAI 直连；阿里云/火山需后端代理） */
         cloudRecognizeBlob(rec.blob, state.voiceLang).then(apply)
-          .catch(err => { toast(t('cloudFail') + (err.message || err)); });
+          .catch(err => { toast((err && err.noPrefix ? '' : t('cloudFail')) + (err.message || err)); });
       } else {
         toast(t('asrCloudNeed'));
       }
@@ -2286,6 +2294,18 @@
     if (!el) return;
     const left = zitanQuotaToday();
     el.textContent = t('zitanQuotaLeft').replace('{n}', (left == null) ? ZITAN_DAILY_LIMIT : left);
+  }
+  /* 024 官方通道设备号：首次生成 UUID 存 localStorage，之后每次请求经 X-Device-Id 带给服务端计数 */
+  function zitanDeviceId() {
+    let id = '';
+    try { id = localStorage.getItem('zitanDeviceId') || ''; } catch (e) {}
+    if (!id) {
+      id = (window.crypto && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : 'd-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+      try { localStorage.setItem('zitanDeviceId', id); } catch (e) {}
+    }
+    return id;
   }
 
   function renderAsrPane() {
@@ -3624,7 +3644,7 @@
           toast(t('asrCloudRunning'));
           cloudRecognizeBlob(rec.blob, state.voiceLang)
             .then(text => finish(text, rec))
-            .catch(err => { finish(null, rec, true); toast(t('cloudFail') + (err.message || err)); });
+            .catch(err => { finish(null, rec, true); toast((err && err.noPrefix ? '' : t('cloudFail')) + (err.message || err)); });
         });
       }, limits).then(recorder => {
         activeBrowserRecorder = recorder;
