@@ -622,15 +622,15 @@
   <header>
     <div class="hrow">
       <div class="brand"><h1>字谈</h1></div>
-      <button class="toolbtn" id="btnClear" title="清空当前窗口内容" data-i18n-title="clearChat">
-        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5L11 13"/><path d="M11 13l-7 7"/><path d="M13 13l-8 8"/></svg>
-      </button>
-      <button class="toolbtn" id="btnSettings" title="设置" data-i18n-title="settings">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+      <button class="toolbtn" id="btnClear" title="新建对话（当前对话内容已自动存储）" data-i18n-title="newChat">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
       </button>
       <button class="toolbtn langbtn" id="langToggle" title="语言">EN</button>
       <button class="toolbtn" id="btnHc" data-i18n-title="darkMode" title="明暗切换">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>
+      </button>
+      <button class="toolbtn" id="btnSettings" title="设置" data-i18n-title="settings">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
       </button>
     </div>
     <div class="hrow tools">
@@ -1056,7 +1056,8 @@
       presetHint: '黄边 = 填入输入框继续写；无黄边 = 点一下直接发。点文字可编辑，点标签可切换，× 删除。',
       confirmDelPreset: '删除这条预设？',
       language: '语言', preview: '试听', others: '其他',
-      howTo: '使用说明', clearChat: '清空当前窗口内容\n（放心聊天记录不会消失）', done: '完成',
+      howTo: '使用说明', clearChat: '清空当前窗口内容\n（放心聊天记录不会消失）',
+      newChat: '新建对话（当前对话内容已自动存储）', done: '完成',
       exportChat: '导出聊天记录 (JSON)', exportDone: '已导出', exportFail: '导出失败',
       history: '对话历史', historyHint: '点击任意一条，可恢复到对话界面查看。',
       historyEmpty: '暂无对话记录', historyCurrent: '当前', historyMsgs: '条消息', historyLoaded: '已恢复到对话界面',
@@ -1191,7 +1192,8 @@
       presetHint: 'Yellow = fill in box; plain = send now. Tap text to edit, tap the label to switch, × to delete.',
       confirmDelPreset: 'Delete this preset?',
       language: 'Language', preview: 'Preview', others: 'More',
-      howTo: 'How to use', clearChat: 'Clear current window\n(Your chat history is kept)', done: 'Done',
+      howTo: 'How to use', clearChat: 'Clear current window\n(Your chat history is kept)',
+      newChat: 'New chat (current conversation is saved automatically)', done: 'Done',
       exportChat: 'Export chat (JSON)', exportDone: 'Exported', exportFail: 'Export failed',
       history: 'Conversation history', historyHint: 'Tap a session to restore it to the chat view.',
       historyEmpty: 'No saved conversations', historyCurrent: 'Current', historyMsgs: 'messages', historyLoaded: 'Restored to chat view',
@@ -2599,13 +2601,17 @@
 
   /* ============ 021 · 翻译（MyMemory 免费 / DeepSeek AI） ============ */
   const TRANS_LANGS = [
-    { v: 'zh-CN', n: 'Chinese (Simplified)' }, { v: 'zh-TW', n: 'Traditional Chinese' },
-    { v: 'en', n: 'English' }, { v: 'ja', n: 'Japanese' }, { v: 'ko', n: 'Korean' },
-    { v: 'fr', n: 'French' }, { v: 'de', n: 'German' }, { v: 'es', n: 'Spanish' },
-    { v: 'ru', n: 'Russian' }, { v: 'it', n: 'Italian' }, { v: 'pt', n: 'Portuguese' },
-    { v: 'th', n: 'Thai' }, { v: 'vi', n: 'Vietnamese' }, { v: 'id', n: 'Indonesian' }, { v: 'ar', n: 'Arabic' }
+    { v: 'zh-CN', n: 'Chinese (Simplified)', nZh: '中文（简体）' }, { v: 'zh-TW', n: 'Traditional Chinese', nZh: '中文（繁体）' },
+    { v: 'en', n: 'English', nZh: '英语' }, { v: 'ja', n: 'Japanese', nZh: '日语' }, { v: 'ko', n: 'Korean', nZh: '韩语' },
+    { v: 'fr', n: 'French', nZh: '法语' }, { v: 'de', n: 'German', nZh: '德语' }, { v: 'es', n: 'Spanish', nZh: '西班牙语' },
+    { v: 'ru', n: 'Russian', nZh: '俄语' }, { v: 'it', n: 'Italian', nZh: '意大利语' }, { v: 'pt', n: 'Portuguese', nZh: '葡萄牙语' },
+    { v: 'th', n: 'Thai', nZh: '泰语' }, { v: 'vi', n: 'Vietnamese', nZh: '越南语' }, { v: 'id', n: 'Indonesian', nZh: '印尼语' }, { v: 'ar', n: 'Arabic', nZh: '阿拉伯语' }
   ];
-  function transLangName(v) { const e = TRANS_LANGS.find(x => x.v === v); return e ? e.n : v; }
+  function transLangName(v) {
+    const e = TRANS_LANGS.find(x => x.v === v);
+    if (!e) return v;
+    return (state.uiLang === 'en') ? e.n : (e.nZh || e.n);   /* 024 语言名跟随界面语言 */
+  }
 
   function mymemoryTranslate(text, src, tgt) {
     const q = encodeURIComponent(String(text).slice(0, 3000));
@@ -2726,7 +2732,7 @@
   /* —— 设置里构建 按身份的 源/目标语言 下拉 —— */
   function buildTransSelects() {
     const mk = (sel, cur) => {
-      sel.innerHTML = TRANS_LANGS.map(l => '<option value="' + l.v + '"' + (l.v === cur ? ' selected' : '') + '>' + escapeHtml(l.n) + '</option>').join('');
+      sel.innerHTML = TRANS_LANGS.map(l => '<option value="' + l.v + '"' + (l.v === cur ? ' selected' : '') + '>' + escapeHtml(transLangName(l.v)) + '</option>').join('');
     };
     mk($('transSrcDeaf'), state.transDefs.deaf.src);
     mk($('transTgtDeaf'), state.transDefs.deaf.tgt);
@@ -3518,7 +3524,14 @@
     $('btnTts').onclick   = () => { state.tts = !state.tts; render(); toast(state.tts ? t('ttsOn') : t('ttsOff')); };
     $('btnHc').onclick    = () => { state.hc = !state.hc; render(); };
 
-    $('langToggle').onclick = () => setUiLang(state.uiLang === 'zh' ? 'en' : 'zh');
+    $('langToggle').onclick = () => {
+      setUiLang(state.uiLang === 'zh' ? 'en' : 'zh');
+      /* 024 切换界面语言时同步翻译方向：身份1(听障) 英→中，身份2(志愿者) 中→英 */
+      state.transDefs.deaf = { src: 'en', tgt: 'zh-CN' };
+      state.transDefs.vol  = { src: 'zh-CN', tgt: 'en' };
+      save();
+      buildTransSelects();
+    };
 
     /* 设置面板 */
     $('btnSettings').onclick = () => {
@@ -3661,7 +3674,12 @@
     $('historyClose').onclick = () => $('historyOverlay').classList.remove('show');
     $('historyX').onclick = () => $('historyOverlay').classList.remove('show');
     $('historyOverlay').addEventListener('click', e => { if (e.target === $('historyOverlay')) $('historyOverlay').classList.remove('show'); });
-    $('btnClear').onclick = () => { if (confirm(t('confirmClear'))) { state.messages = []; state.sessionId = Date.now(); state.sessionStart = Date.now(); render(); } };
+    $('btnClear').onclick = () => {
+      /* 024 新建对话：旧会话已自动存入历史（IndexedDB），直接开启新窗口 */
+      state.messages = []; state.sessionId = Date.now(); state.sessionStart = Date.now();
+      render();
+      toast(t('newChat'));
+    };
 
     /* 帮助 */
     $('helpClose').onclick = () => $('helpOverlay').classList.remove('show');
