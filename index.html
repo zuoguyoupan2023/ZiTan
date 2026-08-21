@@ -123,6 +123,10 @@
   .msg.deaf .bubble { background: var(--deaf); color: var(--deaf-ink); border-bottom-right-radius: 6px; }
   .msg.vol .bubble { background: var(--vol); color: var(--vol-ink); border-bottom-left-radius: 6px; }
 
+  /* 021 文本方向：倒置·正置混合 —— 听障人(deaf)发出的气泡内容整体 180° 旋转（非镜像），
+     供站在对面的朋友正读；操作按钮列(.bbtns)保持正置，便于听障人自己点按。 */
+  body.dir-mixed .msg.deaf .bubble { transform: rotate(180deg); }
+
   .play {
     flex: none; width: 36px; height: 36px; border-radius: 50%;
     border: none; background: rgba(0,0,0,.07); color: var(--ink);
@@ -745,6 +749,14 @@
         <div id="galleryGrid"></div>
       </div>
 
+      <!-- 021 文本方向 -->
+      <div class="sec-title" data-i18n="textDirTitle">文本方向</div>
+      <div class="seg" id="textDirRow">
+        <button id="dirUpright" data-dir="upright" data-i18n="textDirUpright">正置</button>
+        <button id="dirMixed" data-dir="mixed" data-i18n="textDirMixed">倒置 · 正置混合</button>
+      </div>
+      <p class="hint" data-i18n="textDirHint">倒置·正置混合：听障朋友发出的文字会 180° 旋转（不是镜像），站在对面的朋友无需颠倒手机即可正读；操作按钮保持正置。</p>
+
       <div class="sec-title" data-i18n="others">其他</div>
       <div class="minirow" id="openHelpRow" data-i18n="howTo">使用说明</div>
       <div class="minirow" id="historyRow" data-i18n="history">对话历史</div>
@@ -951,7 +963,10 @@
       sendToChat: '发送到当前会话', delImg: '删除这张图片', confirmDelImg: '删除这张图片？',
       chooseFrom: '选择图片来源', builtinGallery: '内置相册', phoneGallery: '手机相册',
       favTitle: '收藏', galleryTitle: '相册', sendImgFail: '发送失败', imgTooBig: '图片太大，已压缩',
-      pickImages: '选择要发送的图片', sendSelected: '发送选中（{n}）', pickEmpty: '相册里还没有图片，去“设置→相册”导入'
+      pickImages: '选择要发送的图片', sendSelected: '发送选中（{n}）', pickEmpty: '相册里还没有图片，去“设置→相册”导入',
+      /* 021 文本方向 */
+      textDirTitle: '文本方向', textDirUpright: '正置', textDirMixed: '倒置 · 正置混合',
+      textDirHint: '倒置·正置混合：听障朋友发出的文字会 180° 旋转（不是镜像），站在对面的朋友无需颠倒手机即可正读；操作按钮保持正置。'
     },
     en: {
       settings: 'Settings', fontDown: 'Smaller font', fontUp: 'Larger font',
@@ -1024,7 +1039,10 @@
       sendToChat: 'Send to chat', delImg: 'Delete this image', confirmDelImg: 'Delete this image?',
       chooseFrom: 'Choose image source', builtinGallery: 'Built-in gallery', phoneGallery: 'Phone gallery',
       favTitle: 'Favorites', galleryTitle: 'Gallery', sendImgFail: 'Send failed', imgTooBig: 'Image was large and has been compressed',
-      pickImages: 'Pick images to send', sendSelected: 'Send selected ({n})', pickEmpty: 'No images in gallery yet — import via Settings → Gallery'
+      pickImages: 'Pick images to send', sendSelected: 'Send selected ({n})', pickEmpty: 'No images in gallery yet — import via Settings → Gallery',
+      /* 021 text direction */
+      textDirTitle: 'Text direction', textDirUpright: 'Upright', textDirMixed: 'Inverted · mixed',
+      textDirHint: 'Inverted · mixed: text sent by the Deaf person rotates 180° (not mirrored), so the friend opposite can read it without turning the phone; action buttons stay upright.'
     }
   };
   let L = I18N.zh;
@@ -1110,6 +1128,7 @@
     fs: 1.0,
     tts: true,
     hc: false,
+    textDir: 'upright',        /* upright | mixed —— 文本方向：正置 / 倒置·正置混合 */
     viewing: -1,
     sessionId: Date.now(),
     sessionStart: Date.now(),
@@ -1210,9 +1229,12 @@
   function render() {
     document.body.style.setProperty('--fs', state.fs);
     document.body.classList.toggle('hc', state.hc);
+    document.body.classList.toggle('dir-mixed', state.textDir === 'mixed');
     $('whoDeaf').classList.toggle('on', state.identity === 'deaf');
     $('whoVol').classList.toggle('on', state.identity === 'vol');
     $('btnHc').classList.toggle('on', state.hc);
+    $('dirUpright').classList.toggle('on', state.textDir === 'upright');
+    $('dirMixed').classList.toggle('on', state.textDir === 'mixed');
     $('ttsState').textContent = state.tts ? t('ttsOnShort') : t('ttsOffShort');
     $('fontVal').textContent = Math.round(state.fs * 100) + '%';
 
@@ -1968,6 +1990,7 @@
         if (s.fs) state.fs = s.fs;
         if (typeof s.tts === 'boolean') state.tts = s.tts;
         if (s.hc) state.hc = s.hc;
+        if (s.textDir === 'mixed' || s.textDir === 'upright') state.textDir = s.textDir;
         if (s.voiceLang) state.voiceLang = s.voiceLang;
         if (s.voiceURI) state.voiceURI = s.voiceURI;
         if (s.asrEngine && ['auto','browser','model','cloud'].indexOf(s.asrEngine) > -1) state.asrEngine = s.asrEngine;
@@ -2573,6 +2596,17 @@
 
     $('whoDeaf').onclick = () => { state.identity = 'deaf'; render(); renderQuick(); };
     $('whoVol').onclick  = () => { state.identity = 'vol';  render(); renderQuick(); };
+
+    /* 021 文本方向：正置 / 倒置·正置混合 */
+    $('textDirRow').addEventListener('click', e => {
+      const b = e.target.closest('button[data-dir]');
+      if (!b) return;
+      const dir = b.dataset.dir;
+      if (state.textDir === dir) return;
+      state.textDir = dir;
+      render(); save();
+    });
+
     $('send').onclick = send;
     $('text').addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 
