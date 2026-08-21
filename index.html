@@ -422,7 +422,7 @@
   }
   .asr-choice-row button.on { background: var(--ink); color: var(--panel); border-color: var(--ink); }
 
-  /* 024 官方云端 30s 上限：25s 起屏幕四周微弱红光（呼吸脉动）+ 大数字倒计时 */
+  /* 024 官方云端 20s 上限：15s 起屏幕四周微弱红光（呼吸脉动）+ 大数字倒计时 */
   #recRedVeil {
     position: fixed; inset: 0; pointer-events: none; z-index: 9998;
     opacity: 0; transition: opacity .45s ease;
@@ -443,6 +443,12 @@
   .zitan-quota {
     flex: 1; min-width: 0; font-size: 14px; font-weight: 600;
     background: var(--bg); border-radius: 10px; padding: 9px 10px;
+  }
+  /* 024 语音识别隐私与合规提醒块（字符串换行渲染为多行） */
+  .privacy-note {
+    white-space: pre-line; font-size: 12px; color: var(--muted);
+    background: var(--bg); border-radius: 10px; padding: 10px 12px;
+    margin: 2px 0 12px; line-height: 1.7;
   }
 
   /* 手机端：屏幕矮，垂直间距比桌面更宝贵，再压缩一档 */
@@ -793,6 +799,15 @@
         <div id="asrEngineDesc" class="engine-legend" data-i18n="asrLegend">按当前设备/地区自动给出可用识别方式</div>
         <div id="asrEngineList"></div>
 
+        <!-- 024 隐私与合规提醒（字符串里的换行 + pre-line 渲染成多行） -->
+        <div class="privacy-note" data-i18n="privacyAsrNote">【隐私与合规提醒】
+无论使用哪种识别方式，你的语音都可能离开本机：
+• 浏览器识别：由设备系统转写，或上传至 Apple / Google / Microsoft 的服务器处理；
+• 云端识别：录音会上传至「字谈官方」代理的微软 Azure，或你自己填写的厂商（OpenAI 等）的服务器完成转写；
+• 字谈只做实时转发：不保存你上传的音频、不另作他用、不用于训练；
+• 请遵守你所在地区的法律与各服务商条款：录制他人前请先征得对方同意，勿录制、上传涉及他人隐私或违法违规的内容。
+继续使用即表示你已知悉上述处理方式，并同意相应服务商的服务条款与隐私政策。</div>
+
         <!-- 024：线下模型（SenseVoice 下载/进度条）已彻底移除——模型识别全局停用，不再提供下载入口 -->
 
         <div id="asrCloudWrap">
@@ -1048,7 +1063,7 @@
     </div>
   </div>
 
-  <!-- 024 官方云端 30s 上限：25s 起屏幕四周微弱红光 + 大数字倒计时 5·4·3·2·1，30s 自动停录 -->
+  <!-- 024 官方云端 20s 上限：15s 起屏幕四周微弱红光 + 大数字倒计时 5·4·3·2·1，20s 自动停录 -->
   <div id="recRedVeil" aria-hidden="true"></div>
   <div id="recCountdown" aria-hidden="true"><span id="recCdNum"></span></div>
 
@@ -1116,7 +1131,7 @@
       engBrowserDesc: '当前使用的是{br}浏览器识别，用{engine}的内部识别能力，音频会上传到它的官方服务器识别。',
       engineApple: 'Apple', engineGoogle: 'Google', engineMicrosoft: 'Microsoft',
       engModelDesc: '隐私优先。当前模式需要下载 SenseVoice 模型，下载完成后可用；进度可在「设置 → 语音识别 → 线下模型」看到。优点是保护隐私、无网络也能用；缺点是对设备有一定要求，且需下载模型（约 300MB）。',
-      engCloudDesc: '可免费用「字谈官方云端」（每天 50 次、单次最长 30 秒）；也可在「设置 → 语音识别 → 云端识别」自己填写 微软 / OpenAI 等 API Key 无限使用。',
+      engCloudDesc: '可免费用「字谈官方云端」（每天 25 次、单次最长 20 秒）；也可在「设置 → 语音识别 → 云端识别」自己填写 微软 / OpenAI 等 API Key 无限使用。',
       cloudKeyPh: '填入商家提供的 API Key / Secret',
       cloudHint: '云端识别会把音频发送到对应厂商服务器。未配置时，点麦克风选择云端会提醒你去填写。',
       asrCloudNeed: '提醒：使用云端识别请在「设置 → 语音 → 语音识别 → 云端识别」里选择云端服务（可选「字谈官方云端」免费用）。',
@@ -1185,11 +1200,13 @@
       cloudFail: '云端识别失败：',
       /* 024 字谈官方云端（开发者 Azure 免费额度代理） */
       cloudVendorZitan: '字谈官方云端（免费 · 每天 25 次）',
-      cloudFreeHintZitan: '无需 Key：由字谈开发者提供微软 Azure 免费额度（每月 5 小时）。每人每天 25 次、单次最长 30 秒；录到 25 秒时屏幕四周会出现微弱红光并倒计时 5·4·3·2·1，到 30 秒自动停止录音。当天额度用完可在下方填自己的 Key 无限使用。',
+      cloudFreeHintZitan: '无需 Key：由字谈开发者提供微软 Azure 免费额度（每月 5 小时）。每人每天 25 次、单次最长 20 秒；录到 15 秒时屏幕四周会出现微弱红光并倒计时 5·4·3·2·1，到 20 秒自动停止录音。当天额度用完可在下方填自己的 Key 无限使用。',
       zitanQuotaLeft: '今日剩余：{n} 次',
       zitanQuotaMaxed: '今天 25 次免费额度已用完，明天再来；或在 设置 → 云端识别 填自己的 API Key 无限使用。',
       zitanCloudDown: '字谈官方云端暂不可用（未部署或服务异常），可先在 设置 → 云端识别 填自己的 Key 使用。',
-      zitanTooLong: '云端单次最长 30 秒，请分多次说',
+      zitanTooLong: '云端单次最长 20 秒，请分多次说',
+      cloudHintZitan: '已选「字谈官方云端」：无需填写任何 Key，选择即用。额度为每天 25 次、单次最长 20 秒。',
+      privacyAsrNote: '【隐私与合规提醒】\n无论使用哪种识别方式，你的语音都可能离开本机：\n• 浏览器识别：由设备系统转写，或上传至 Apple / Google / Microsoft 的服务器处理；\n• 云端识别：录音会上传至「字谈官方」代理的微软 Azure，或你自己填写的厂商（OpenAI 等）的服务器完成转写；\n• 字谈只做实时转发：不保存你上传的音频、不另作他用、不用于训练；\n• 请遵守你所在地区的法律与各服务商条款：录制他人前请先征得对方同意，勿录制、上传涉及他人隐私或违法违规的内容。\n继续使用即表示你已知悉上述处理方式，并同意相应服务商的服务条款与隐私政策。',
       /* 023 设置重构 / 引导页 / 预设快译 */
       dataTab: '数据', dataTitle: '数据管理',
       dataHint: '所有聊天、录音、图片与设置仅保存在本机浏览器中，不会上传服务器；可在此恢复历史会话或导出备份。',
@@ -1261,7 +1278,7 @@
       engBrowserDesc: 'Uses {br} native recognition ({engine}), which uploads audio to its official servers.',
       engineApple: 'Apple', engineGoogle: 'Google', engineMicrosoft: 'Microsoft',
       engModelDesc: 'Privacy first. Downloads SenseVoice; usable offline. Progress is shown in Settings → Speech → Local model. Requires ~300 MB download and a capable device.',
-      engCloudDesc: 'Use “ZiTan Cloud” for free (50 uses/day, 30s max each), or bring your own key (Microsoft / OpenAI…) in Settings → Speech → Cloud for unlimited use.',
+      engCloudDesc: 'Use “ZiTan Cloud” for free (25 uses/day, 20s max each), or bring your own key (Microsoft / OpenAI…) in Settings → Speech → Cloud for unlimited use.',
       cloudKeyPh: 'Enter your API Key / Secret',
       cloudHint: 'Cloud recognition sends audio to the vendor\'s servers. If unconfigured, choosing Cloud will remind you to fill it in.',
       asrCloudNeed: 'Reminder: to use cloud recognition, pick a provider in Settings → Voice → Speech recognition → Cloud (“ZiTan Cloud” is free).',
@@ -1330,11 +1347,13 @@
       cloudFail: 'Cloud recognition failed: ',
       /* 024 ZiTan official cloud (developer's Azure free-tier proxy) */
       cloudVendorZitan: 'ZiTan Cloud (free · 25 uses/day)',
-      cloudFreeHintZitan: 'No key needed: powered by the developer\'s Microsoft Azure free tier (5 hrs/month). 25 uses per person per day, 30 seconds max each; at 25s a faint red glow appears around the screen with a 5·4·3·2·1 countdown, and recording auto-stops at 30s. When today\'s quota runs out, add your own key below for unlimited use.',
+      cloudFreeHintZitan: 'No key needed: powered by the developer\'s Microsoft Azure free tier (5 hrs/month). 25 uses per person per day, 20 seconds max each; at 15s a faint red glow appears around the screen with a 5·4·3·2·1 countdown, and recording auto-stops at 20s. When today\'s quota runs out, add your own key below for unlimited use.',
       zitanQuotaLeft: '{n} uses left today',
       zitanQuotaMaxed: 'Today\'s 25 free uses are used up — come back tomorrow, or add your own API Key in Settings → Cloud for unlimited use.',
       zitanCloudDown: 'ZiTan Cloud is unavailable (not deployed or service error). Add your own key in Settings → Cloud for now.',
-      zitanTooLong: 'Cloud recognition allows up to 30 seconds per clip — please speak in shorter takes',
+      zitanTooLong: 'Cloud recognition allows up to 20 seconds per clip — please speak in shorter takes',
+      cloudHintZitan: 'ZiTan Cloud selected: no key needed — just pick it and go. Quota: 25 uses/day, 20 seconds max each.',
+      privacyAsrNote: '[Privacy & compliance notice]\nYour audio may leave this device regardless of which engine you use:\n• Browser recognition: transcribed by the device OS, or uploaded to Apple / Google / Microsoft servers.\n• Cloud recognition: audio is uploaded to Microsoft Azure (via the ZiTan Cloud proxy) or to the provider you configure yourself (OpenAI etc.).\n• ZiTan only relays audio in real time — uploaded audio is never stored, reused, or used for training.\n• Follow your local laws and each provider\'s terms: get consent before recording others; never record or upload other people\'s private or unlawful content.\nBy continuing to use speech recognition you acknowledge the above and agree to the respective providers\' terms of service and privacy policies.',
       /* 023 settings restructure / guide / preset fast translate */
       dataTab: 'Data', dataTitle: 'Data',
       dataHint: 'All chats, recordings, images and settings stay in this browser only — nothing is uploaded. Restore past sessions or export a backup here.',
@@ -2340,7 +2359,13 @@
     $('cloudKeyRow').hidden = official;
     $('cloudExtraRow').hidden = official;
     $('cloudBtnBar').hidden = official;     /* 官方通道无需保存/清除（下拉选择即已保存） */
-    if (official) { updateZitanQuotaText(); $('cloudFreeHint').textContent = t('cloudFreeHintZitan'); return; }
+    if (official) {
+      updateZitanQuotaText();
+      $('cloudFreeHint').textContent = t('cloudFreeHintZitan');
+      $('cloudHint').textContent = t('cloudHintZitan');   /* 通用提示里“去填 Key”的说法对官方通道不适用 */
+      return;
+    }
+    $('cloudHint').textContent = t('cloudHint');
     if (meta && meta.extraPh) {
       $('cloudExtra').placeholder = meta.extraPh();
       $('cloudFreeHint').textContent = meta.freeHint();
@@ -3631,8 +3656,8 @@
       let active = 'cloud';
       micBtn.classList.add('rec');
       toast(t('micListening') || '请说话');
-      /* 024 仅「字谈官方云端」限 30s：25s 起红光倒计时；自带 Key 的厂商不限时 */
-      const limits = isOfficialCloud() ? { maxMs: 30000, warnMs: 25000 } : null;
+      /* 024 仅「字谈官方云端」限 20s：15s 起红光倒计时；自带 Key 的厂商不限时 */
+      const limits = isOfficialCloud() ? { maxMs: 20000, warnMs: 15000 } : null;
       beginBrowserRecording(() => {
         /* 022 静音自动结束（或 024 到达 30s 上限）：嘀一声 → 停录 → 上传云端识别 */
         if (active !== 'cloud') return;
@@ -3709,7 +3734,11 @@
     /* 设置面板 */
     $('btnSettings').onclick = () => {
       $('settingsOverlay').classList.add('show');
-      showSettingsPane('general');
+      /* 024 打开设置恢复上次关闭时停留的标签页（首次打开默认通用） */
+      let lastTab = 'general';
+      try { lastTab = localStorage.getItem('zitanSettingsTab') || 'general'; } catch (e) {}
+      if (['preset', 'sound', 'trans', 'fav', 'gallery', 'general', 'data', 'help'].indexOf(lastTab) < 0) lastTab = 'general';
+      showSettingsPane(lastTab);
       renderPresetList();
     };
     $('settingsClose').onclick = () => $('settingsOverlay').classList.remove('show');
@@ -4012,6 +4041,7 @@
   }
 
   function showSettingsPane(which) {
+    try { localStorage.setItem('zitanSettingsTab', which); } catch (e) {}   /* 024 记住本次停留的标签页 */
     const presetOn = (which === 'preset');
     const soundOn  = (which === 'sound');
     const transOn  = (which === 'trans');
@@ -4049,10 +4079,11 @@
     if (galOn) renderGallery();
   }
 
-  /* 语音一级标签内的二级标签：朗读 / 语音识别 */
-  let soundSub = 'read';
+  /* 语音一级标签内的二级标签：朗读 / 语音识别（024：记住上次选的二级标签） */
+  let soundSub = (() => { try { return localStorage.getItem('zitanSoundSub') === 'asr' ? 'asr' : 'read'; } catch (e) { return 'read'; } })();
   function showSoundSub(sub) {
     soundSub = sub;
+    try { localStorage.setItem('zitanSoundSub', sub); } catch (e) {}
     $('vSubRead').classList.toggle('on', sub === 'read');
     $('vSubAsr').classList.toggle('on', sub === 'asr');
     $('readPane').hidden = sub !== 'read';

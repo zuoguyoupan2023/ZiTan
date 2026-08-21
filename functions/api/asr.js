@@ -2,7 +2,7 @@
 //
 // 用途：前端选「字谈官方云端」（vendor=zitan）时，录音（16k 单声道 WAV）发到本接口。
 //       本函数用开发者自己的微软 Azure Key 转发识别，用户无需填任何 Key；
-//       并按「每设备每天 25 次、单次 ≤30s」限流，保护每月 5 小时的 F0 免费额度。
+//       并按「每设备每天 25 次、单次 ≤20s」限流，保护每月 5 小时的 F0 免费额度。
 //       Key 只存在于 Cloudflare 环境变量，永不下发前端、永不写入日志。
 //
 // 部署前（Cloudflare 控制台 / Pages 项目，详见 022 文档「阶段 3 操作手册」）：
@@ -18,12 +18,12 @@
 //   成功 → 200 { text } + 响应头 X-Quota-Remaining: <今日剩余次数>
 //   429 { error: 'quota_exceeded' }          当天额度用完（前端文案 zitanQuotaMaxed）
 //   503 { error: 'official_not_configured' } 未配 Key/KV（前端文案 zitanCloudDown）
-//   413 { error: 'too_long' }                音频超 30s（前端文案 zitanTooLong）
+//   413 { error: 'too_long' }                音频超 20s（前端文案 zitanTooLong）
 //   502 { error: 'upstream_error' }          Azure 侧失败（详情只进日志）
 
 const DAILY_LIMIT_DEFAULT = 25;        // 与前端 index.html 的 ZITAN_DAILY_LIMIT 保持一致
-const MAX_BODY_BYTES = 2 * 1024 * 1024; // 30s 的 16k 单声道 WAV ≈ 960KB，上限放宽到 2MB
-const MAX_SECONDS = 30;                 // 单次最长秒数（按 WAV 头精确校验，防绕过前端）
+const MAX_BODY_BYTES = 2 * 1024 * 1024; // 20s 的 16k 单声道 WAV ≈ 640KB，上限放宽到 2MB
+const MAX_SECONDS = 20;                 // 单次最长秒数（按 WAV 头精确校验，防绕过前端）
 
 const JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' };
 
@@ -90,7 +90,7 @@ export async function onRequestPost(context) {
     return json({ error: 'official_not_configured' }, 503);
   }
 
-  // 3. 时长二次校验（防绕过前端 30s 截断）
+  // 3. 时长二次校验（防绕过前端 20s 截断）
   const secs = wavSeconds(buf);
   if (secs !== null && secs > MAX_SECONDS + 1) return json({ error: 'too_long' }, 413);
 
