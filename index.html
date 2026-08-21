@@ -96,6 +96,9 @@
   .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; flex: none; background: currentColor; opacity: .9; }
   .seg button .dot { display: none; }
   .seg button.on .dot { display: inline-block; }
+  /* 021 文本方向：选中项绿色背景，状态更醒目 */
+  #textDirRow button.on { background: var(--deaf); color: var(--deaf-ink); border-color: var(--deaf); }
+  body.hc #textDirRow button.on { background: var(--deaf); color: var(--deaf-ink); border-color: var(--deaf); }
 
   /* ===== 聊天区 ===== */
   main { flex: 1; overflow-y: auto; padding: 14px 12px 8px; -webkit-overflow-scrolling: touch; }
