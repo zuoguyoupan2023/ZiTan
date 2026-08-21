@@ -455,6 +455,28 @@
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
     overflow: hidden; text-overflow: ellipsis; word-break: break-word;
   }
+
+  /* 021 翻译 */
+  .sec-title.sub { margin-top: 10px; }
+  #transEngineRow button.on { background: var(--deaf); color: var(--deaf-ink); border-color: var(--deaf); }
+  body.hc #transEngineRow button.on { background: var(--deaf); color: var(--deaf-ink); border-color: var(--deaf); }
+  .bbtns .act.transb.loading { opacity: .55; }
+  .trcard {
+    margin-top: 10px; padding: 8px 10px; border-radius: 12px;
+    background: rgba(0,0,0,.07); font-size: calc(14px * var(--fs)); line-height: 1.4;
+    align-self: stretch; word-break: break-word;
+  }
+  .msg.deaf .trcard { background: rgba(0,0,0,.10); color: var(--deaf-ink); }
+  .trcard .tr-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+  .trcard .tr-lang { font-size: calc(10px * var(--fs)); font-weight: 700; opacity: .75; letter-spacing: .3px; }
+  .trcard .tr-del {
+    flex: none; width: 22px; height: 22px; border: none; border-radius: 6px;
+    background: transparent; color: inherit; opacity: .6; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1;
+  }
+  .trcard .tr-del:active { background: rgba(0,0,0,.15); }
+  /* 混合模式下气泡倒置时，翻译卡片删除按钮反向转回正置 */
+  body.dir-mixed .msg.deaf .bubble .trcard .tr-del { transform: rotate(180deg); }
   .msg.qflash .bubble { animation: qf .9s ease-out; }
   @keyframes qf { 0%,40% { box-shadow: 0 0 0 3px var(--accent); } 100% { box-shadow: none; } }
   .bubimg {
@@ -760,6 +782,29 @@
       </div>
       <p class="hint" data-i18n="textDirHint">倒置·正置混合：听障朋友发出的文字会 180° 旋转（不是镜像），站在对面的朋友无需颠倒手机即可正读；操作按钮保持正置。</p>
 
+      <!-- 021 翻译 -->
+      <div class="sec-title" data-i18n="transTitle">翻译</div>
+      <div class="sec-title sub" data-i18n="transEngineLbl">翻译引擎</div>
+      <div class="seg" id="transEngineRow">
+        <button id="engMyMemory" data-eng="mymemory" data-i18n="transMyMemory">MyMemory（免费）</button>
+        <button id="engAI" data-eng="ai" data-i18n="transAI">AI（DeepSeek，付费）</button>
+      </div>
+      <div class="sec-title sub" data-i18n="transSrc">源语言</div>
+      <div class="asr-cloud-row"><select id="transSrcSel"></select></div>
+      <div class="sec-title sub" data-i18n="transTarget">目标语言</div>
+      <div class="asr-cloud-row"><select id="transTargetSel"></select></div>
+      <div id="aiConfigWrap">
+        <div class="sec-title sub" data-i18n="transAI">AI 翻译配置</div>
+        <div class="asr-cloud-row">
+          <input id="aiKeyInput" type="password" placeholder="sk-…" data-i18n-ph="aiKeyPh">
+          <button class="pvbtn" id="aiKeyClearBtn" data-i18n="aiKeyClear">清除 Key</button>
+        </div>
+        <div class="asr-cloud-row">
+          <input id="aiModelInput" type="text" value="deepseek-chat" data-i18n-ph="aiModelPh">
+        </div>
+        <p class="hint" data-i18n="transAIHint">AI 翻译使用 DeepSeek API，按量付费，与免费的 MyMemory 不同。Key 仅存本机，可随时清除。未填 Key 时 AI 不可用。</p>
+      </div>
+
       <div class="sec-title" data-i18n="others">其他</div>
       <div class="minirow" id="openHelpRow" data-i18n="howTo">使用说明</div>
       <div class="minirow" id="historyRow" data-i18n="history">对话历史</div>
@@ -969,7 +1014,15 @@
       pickImages: '选择要发送的图片', sendSelected: '发送选中（{n}）', pickEmpty: '相册里还没有图片，去“设置→相册”导入',
       /* 021 文本方向 */
       textDirTitle: '文本方向', textDirUpright: '正置', textDirMixed: '倒置 · 正置混合',
-      textDirHint: '倒置·正置混合：听障朋友发出的文字会 180° 旋转（不是镜像），站在对面的朋友无需颠倒手机即可正读；操作按钮保持正置。'
+      textDirHint: '倒置·正置混合：听障朋友发出的文字会 180° 旋转（不是镜像），站在对面的朋友无需颠倒手机即可正读；操作按钮保持正置。',
+      /* 021 翻译 */
+      transTitle: '翻译', transMyMemory: 'MyMemory（免费）', transAI: 'AI（DeepSeek，付费）',
+      transSrc: '源语言', transTarget: '目标语言', transEngineLbl: '翻译引擎',
+      aiKeyPh: '填入 DeepSeek API Key', aiModelPh: '模型（默认 deepseek-chat）', aiKeyClear: '清除 Key',
+      transAIHint: 'AI 翻译使用 DeepSeek API，按量付费，与免费的 MyMemory 不同。Key 仅存本机，可随时清除。未填 Key 时 AI 不可用。',
+      transBtn: '翻译', transLangEn: '英', transRun: '翻译中…', transFail: '翻译失败：',
+      transEmpty: '没有翻译到内容', transDel: '删除翻译', transNeedAIKey: '请先在 设置 → 翻译 填写 DeepSeek API Key',
+      transAIKeyInvalid: 'DeepSeek Key 无效，请检查后重试'
     },
     en: {
       settings: 'Settings', fontDown: 'Smaller font', fontUp: 'Larger font',
@@ -1045,7 +1098,15 @@
       pickImages: 'Pick images to send', sendSelected: 'Send selected ({n})', pickEmpty: 'No images in gallery yet — import via Settings → Gallery',
       /* 021 text direction */
       textDirTitle: 'Text direction', textDirUpright: 'Upright', textDirMixed: 'Inverted · mixed',
-      textDirHint: 'Inverted · mixed: text sent by the Deaf person rotates 180° (not mirrored), so the friend opposite can read it without turning the phone; action buttons stay upright.'
+      textDirHint: 'Inverted · mixed: text sent by the Deaf person rotates 180° (not mirrored), so the friend opposite can read it without turning the phone; action buttons stay upright.',
+      /* 021 translation */
+      transTitle: 'Translation', transMyMemory: 'MyMemory (free)', transAI: 'AI (DeepSeek, paid)',
+      transSrc: 'Source language', transTarget: 'Target language', transEngineLbl: 'Translation engine',
+      aiKeyPh: 'Enter DeepSeek API Key', aiModelPh: 'Model (default deepseek-chat)', aiKeyClear: 'Clear Key',
+      transAIHint: 'AI translation uses the DeepSeek API and is billed by usage, unlike free MyMemory. Key is stored on this device only and can be cleared anytime. AI is unavailable without a Key.',
+      transBtn: 'Translate', transLangEn: 'EN', transRun: 'Translating…', transFail: 'Translation failed: ',
+      transEmpty: 'Nothing to translate', transDel: 'Delete translation', transNeedAIKey: 'Add a DeepSeek API Key in Settings → Translation first',
+      transAIKeyInvalid: 'DeepSeek Key invalid — please check and retry'
     }
   };
   let L = I18N.zh;
@@ -1132,6 +1193,10 @@
     tts: true,
     hc: false,
     textDir: 'upright',        /* upright | mixed —— 文本方向：正置 / 倒置·正置混合 */
+    transEngine: 'mymemory',   /* mymemory | ai —— 翻译引擎 */
+    transSrc: 'zh-CN',         /* 翻译源语言（MyMemory 用） */
+    transTarget: 'en',         /* 翻译目标语言 */
+    ai: { deepseekKey: '', model: 'deepseek-chat' },   /* DeepSeek AI 翻译配置 */
     viewing: -1,
     sessionId: Date.now(),
     sessionStart: Date.now(),
@@ -1238,6 +1303,8 @@
     $('btnHc').classList.toggle('on', state.hc);
     $('dirUpright').classList.toggle('on', state.textDir === 'upright');
     $('dirMixed').classList.toggle('on', state.textDir === 'mixed');
+    $('engMyMemory').classList.toggle('on', state.transEngine === 'mymemory');
+    $('engAI').classList.toggle('on', state.transEngine === 'ai');
     $('ttsState').textContent = state.tts ? t('ttsOnShort') : t('ttsOffShort');
     $('fontVal').textContent = Math.round(state.fs * 100) + '%';
 
@@ -1272,6 +1339,8 @@
       inner += '<span class="bubtext">' + escapeHtml(m.text) + '</span>';
     }
     inner += audioBarMarkup(m, i);
+    if (m.tr && m.tr.text) inner += translationCardMarkup(m, i);
+    const hasText = (m.text !== undefined && m.text);
     return `
       <div class="msg ${m.by}" data-i="${i}">
         <div class="row">
@@ -1281,11 +1350,27 @@
               <button class="act favb ${isFav ? 'on' : ''}" data-i="${i}" title="${t('fav')}">${ic('heart', 16)}</button>
               <button class="play" data-i="${i}" title="${t('autoRead')}">${ic('play', 15)}</button>
               <button class="act copyb" data-i="${i}" title="${t('copyMsg')}">${ic('copy', 15)}</button>
+              ${hasText ? '<button class="act transb" data-i="' + i + '" title="' + t('transBtn') + '">译</button>' : ''}
             </div>
             <div class="bubble">${inner}</div>
           </div>
         </div>
       </div>`;
+  }
+
+  /* 021 翻译：目标语言短标签（EN/中文/日…）+ 引擎小标 */
+  function transShortLabel(code) {
+    const L = { 'zh-CN': '中', 'zh-TW': '繁中', 'en': 'EN', 'ja': '日', 'ko': '韩', 'fr': '法', 'de': '德',
+      'es': '西', 'ru': '俄', 'it': '意', 'pt': '葡', 'th': '泰', 'vi': '越', 'id': '印', 'ar': '阿' };
+    return L[code] || (code || '').toUpperCase();
+  }
+  function translationCardMarkup(m, i) {
+    const tgt = transShortLabel(m.tr.tgt || state.transTarget);
+    const eng = (m.tr.engine === 'ai') ? 'AI' : 'MyMemory';
+    return '<div class="trcard" data-tri="' + i + '">'
+      + '<div class="tr-head"><span class="tr-lang">' + escapeHtml(tgt + ' · ' + eng) + '</span>'
+      + '<button class="tr-del" data-i="' + i + '" title="' + t('transDel') + '">×</button></div>'
+      + '<div class="tr-text">' + escapeHtml(m.tr.text) + '</div></div>';
   }
 
   /* 渲染时按 imgId 异步填充 objectURL（不阻塞 render 同步） */
@@ -1994,6 +2079,15 @@
         if (typeof s.tts === 'boolean') state.tts = s.tts;
         if (s.hc) state.hc = s.hc;
         if (s.textDir === 'mixed' || s.textDir === 'upright') state.textDir = s.textDir;
+        if (s.transEngine === 'ai' || s.transEngine === 'mymemory') state.transEngine = s.transEngine;
+        if (s.transSrc) state.transSrc = s.transSrc;
+        if (s.transTarget) state.transTarget = s.transTarget;
+        if (s.ai) {
+          state.ai = {
+            deepseekKey: (typeof s.ai.deepseekKey === 'string' ? s.ai.deepseekKey : ''),
+            model: (s.ai.model || 'deepseek-chat')
+          };
+        }
         if (s.voiceLang) state.voiceLang = s.voiceLang;
         if (s.voiceURI) state.voiceURI = s.voiceURI;
         if (s.asrEngine && ['auto','browser','model','cloud'].indexOf(s.asrEngine) > -1) state.asrEngine = s.asrEngine;
@@ -2151,6 +2245,94 @@
       req.onsuccess = () => resolve(req.result || null);
       req.onerror = () => reject(req.error);
     }));
+  }
+
+  /* ============ 021 · 翻译（MyMemory 免费 / DeepSeek AI） ============ */
+  const TRANS_LANGS = [
+    { v: 'zh-CN', n: 'Chinese (Simplified)' }, { v: 'zh-TW', n: 'Traditional Chinese' },
+    { v: 'en', n: 'English' }, { v: 'ja', n: 'Japanese' }, { v: 'ko', n: 'Korean' },
+    { v: 'fr', n: 'French' }, { v: 'de', n: 'German' }, { v: 'es', n: 'Spanish' },
+    { v: 'ru', n: 'Russian' }, { v: 'it', n: 'Italian' }, { v: 'pt', n: 'Portuguese' },
+    { v: 'th', n: 'Thai' }, { v: 'vi', n: 'Vietnamese' }, { v: 'id', n: 'Indonesian' }, { v: 'ar', n: 'Arabic' }
+  ];
+  function transLangName(v) { const e = TRANS_LANGS.find(x => x.v === v); return e ? e.n : v; }
+
+  function mymemoryTranslate(text, src, tgt) {
+    const q = encodeURIComponent(String(text).slice(0, 3000));
+    const url = 'https://api.mymemory.translated.net/get?q=' + q + '&langpair=' + encodeURIComponent(src) + '|' + encodeURIComponent(tgt);
+    return fetch(url).then(res => {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    }).then(data => {
+      if (data && data.responseStatus !== undefined && data.responseStatus !== 200) {
+        throw new Error(data.responseDetails || ('MyMemory ' + data.responseStatus));
+      }
+      const out = (data && data.responseData && data.responseData.translatedText) || '';
+      return out.trim() ? out.trim() : null;
+    });
+  }
+
+  function aiTranslate(text, tgt, src) {
+    const key = (state.ai && state.ai.deepseekKey) || '';
+    if (!key) throw new Error('nokey');
+    const model = (state.ai && state.ai.model) || 'deepseek-chat';
+    const tgtName = transLangName(tgt);
+    const prompt = 'Translate the following text into ' + tgtName
+      + (src ? ' (source: ' + transLangName(src) + ')' : '')
+      + '. Output only the translation, nothing else.\n\n' + text;
+    return fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+      body: JSON.stringify({ model: model, messages: [{ role: 'user', content: prompt }], temperature: 0.3 })
+    }).then(res => {
+      if (res.status === 401 || res.status === 403) throw new Error('aikey');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    }).then(data => {
+      const out = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      return (out || '').trim() ? out.trim() : null;
+    });
+  }
+
+  function translateMessage(i, btn) {
+    const m = state.messages[i];
+    const text = (m && m.text) ? m.text : '';
+    if (!text) return;
+    if (btn) btn.classList.add('loading');
+    const engine = state.transEngine;
+    const src = state.transSrc || 'zh-CN';
+    const tgt = state.transTarget || 'en';
+    const p = (engine === 'ai')
+      ? aiTranslate(text, tgt, src)
+      : mymemoryTranslate(text, src, tgt);
+    p.then(out => {
+      if (!out) { toast(t('transEmpty')); return; }
+      m.tr = { text: out, engine: engine, tgt: tgt, time: Date.now() };
+      save(); render();
+    }).catch(err => {
+      const msg = (err && err.message === 'aikey') ? t('transAIKeyInvalid')
+        : (err && err.message === 'nokey') ? t('transNeedAIKey')
+        : t('transFail') + ((err && err.message) || '');
+      toast(msg);
+    }).then(() => { if (btn) btn.classList.remove('loading'); });
+  }
+
+  function deleteTranslation(i) {
+    const m = state.messages[i];
+    if (!m || !m.tr) return;
+    delete m.tr;
+    save(); render();
+  }
+
+  /* —— 设置里构建 源/目标语言 下拉 —— */
+  function buildTransSelects() {
+    const mk = (sel, cur) => {
+      sel.innerHTML = TRANS_LANGS.map(l => '<option value="' + l.v + '"' + (l.v === cur ? ' selected' : '') + '>' + escapeHtml(l.n) + '</option>').join('');
+    };
+    mk($('transSrcSel'), state.transSrc);
+    mk($('transTargetSel'), state.transTarget);
+    $('aiKeyInput').value = (state.ai && state.ai.deepseekKey) || '';
+    $('aiModelInput').value = (state.ai && state.ai.model) || 'deepseek-chat';
   }
 
   /* ============ 020 · 消息增强（复制/收藏/引用/粘贴/相册发图） ============ */
@@ -2610,6 +2792,25 @@
       render(); save();
     });
 
+    /* 021 翻译：引擎 / 语言 / AI Key 设置 */
+    buildTransSelects();
+    $('transEngineRow').addEventListener('click', e => {
+      const b = e.target.closest('button[data-eng]');
+      if (!b) return;
+      const eng = b.dataset.eng;
+      if (state.transEngine === eng) return;
+      state.transEngine = eng;
+      render(); save();
+    });
+    $('transSrcSel').addEventListener('change', e => { state.transSrc = e.target.value; save(); });
+    $('transTargetSel').addEventListener('change', e => { state.transTarget = e.target.value; save(); });
+    $('aiKeyInput').addEventListener('change', e => { state.ai.deepseekKey = e.target.value.trim(); save(); });
+    $('aiModelInput').addEventListener('change', e => { state.ai.model = e.target.value.trim() || 'deepseek-chat'; save(); });
+    $('aiKeyClearBtn').onclick = () => {
+      state.ai.deepseekKey = ''; $('aiKeyInput').value = ''; save();
+      toast(t('aiKeyClear'));
+    };
+
     $('send').onclick = send;
     $('text').addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 
@@ -2925,6 +3126,10 @@
       if (play) { playMsg(+play.dataset.i, play); return; }
       const copyb = e.target.closest('.copyb');
       if (copyb) { copyMessage(+copyb.dataset.i); return; }
+      const trDel = e.target.closest('.tr-del');
+      if (trDel) { deleteTranslation(+trDel.dataset.i); return; }
+      const transb = e.target.closest('.transb');
+      if (transb) { translateMessage(+transb.dataset.i, transb); return; }
       const favb = e.target.closest('.favb');
       if (favb) { toggleFavorite(+favb.dataset.i, favb); return; }
       const quoteEl = e.target.closest('.quote');
