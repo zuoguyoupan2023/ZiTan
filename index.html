@@ -422,6 +422,29 @@
   }
   .asr-choice-row button.on { background: var(--ink); color: var(--panel); border-color: var(--ink); }
 
+  /* 024 官方云端 30s 上限：25s 起屏幕四周微弱红光（呼吸脉动）+ 大数字倒计时 */
+  #recRedVeil {
+    position: fixed; inset: 0; pointer-events: none; z-index: 9998;
+    opacity: 0; transition: opacity .45s ease;
+    background: radial-gradient(ellipse at center, transparent 52%, rgba(255, 32, 32, .30) 100%);
+  }
+  #recRedVeil.on { opacity: 1; animation: recVeilPulse 1.2s ease-in-out infinite; }
+  @keyframes recVeilPulse { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
+  #recCountdown {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    pointer-events: none; z-index: 9999; opacity: 0; transition: opacity .3s ease;
+  }
+  #recCountdown.on { opacity: 1; }
+  #recCountdown span {
+    font-size: min(26vw, 170px); font-weight: 800; line-height: 1;
+    color: rgba(255, 64, 64, .88); text-shadow: 0 0 28px rgba(255, 0, 0, .35);
+  }
+  /* 官方通道今日剩余次数展示 */
+  .zitan-quota {
+    flex: 1; min-width: 0; font-size: 14px; font-weight: 600;
+    background: var(--bg); border-radius: 10px; padding: 9px 10px;
+  }
+
   /* 手机端：屏幕矮，垂直间距比桌面更宝贵，再压缩一档 */
   @media (max-width: 600px) {
     main { padding: 10px 10px 6px; }
@@ -770,23 +793,24 @@
         <div id="asrEngineDesc" class="engine-legend" data-i18n="asrLegend">按当前设备/地区自动给出可用识别方式</div>
         <div id="asrEngineList"></div>
 
-        <div class="sec-title" data-i18n="asrLocal">线下模型</div>
-        <div id="asrLocalStatus" class="asr-status"></div>
-        <div class="asr-progress" id="asrLocalBar" hidden><i></i></div>
-        <button class="pvbtn" id="asrDownloadBtn" data-i18n="asrModelDownload">下载模型</button>
+        <!-- 024：线下模型（SenseVoice 下载/进度条）已彻底移除——模型识别全局停用，不再提供下载入口 -->
 
         <div id="asrCloudWrap">
           <div class="sec-title" data-i18n="asrCloud">云端识别</div>
           <div class="asr-cloud-row">
             <select id="cloudVendor"></select>
           </div>
-          <div class="asr-cloud-row">
+          <!-- 024 字谈官方云端：今日剩余次数（选官方通道时显示） -->
+          <div class="asr-cloud-row" id="zitanQuotaRow" hidden>
+            <span class="zitan-quota" id="zitanQuotaText"></span>
+          </div>
+          <div class="asr-cloud-row" id="cloudKeyRow">
             <input id="cloudApiKey" type="password" placeholder="" data-i18n-ph="cloudKeyPh">
           </div>
-          <div class="asr-cloud-row">
+          <div class="asr-cloud-row" id="cloudExtraRow">
             <input id="cloudExtra" type="text" placeholder="">
           </div>
-          <div class="ai-keybar">
+          <div class="ai-keybar" id="cloudBtnBar">
             <button class="pvbtn" id="cloudSaveBtn" data-i18n="aiKeySave">保存</button>
             <button class="pvbtn" id="cloudClearBtn" data-i18n="aiKeyClear">清除 Key</button>
           </div>
@@ -1024,6 +1048,10 @@
     </div>
   </div>
 
+  <!-- 024 官方云端 30s 上限：25s 起屏幕四周微弱红光 + 大数字倒计时 5·4·3·2·1，30s 自动停录 -->
+  <div id="recRedVeil" aria-hidden="true"></div>
+  <div id="recCountdown" aria-hidden="true"><span id="recCdNum"></span></div>
+
   <!-- 模型加载/下载进度（对话界面） -->
   <div class="modelprog" id="modelProg" hidden>
     <div class="mp-card">
@@ -1088,10 +1116,10 @@
       engBrowserDesc: '当前使用的是{br}浏览器识别，用{engine}的内部识别能力，音频会上传到它的官方服务器识别。',
       engineApple: 'Apple', engineGoogle: 'Google', engineMicrosoft: 'Microsoft',
       engModelDesc: '隐私优先。当前模式需要下载 SenseVoice 模型，下载完成后可用；进度可在「设置 → 语音识别 → 线下模型」看到。优点是保护隐私、无网络也能用；缺点是对设备有一定要求，且需下载模型（约 300MB）。',
-      engCloudDesc: '当前支持自己填写 微软 / 阿里云 / 科大讯飞 等。需要在「设置 → 语音识别 → 云端识别」选择供应商并填写 API Key 等信息。',
+      engCloudDesc: '可免费用「字谈官方云端」（每天 50 次、单次最长 30 秒）；也可在「设置 → 语音识别 → 云端识别」自己填写 微软 / OpenAI 等 API Key 无限使用。',
       cloudKeyPh: '填入商家提供的 API Key / Secret',
       cloudHint: '云端识别会把音频发送到对应厂商服务器。未配置时，点麦克风选择云端会提醒你去填写。',
-      asrCloudNeed: '提醒：使用云端识别请在「设置 → 语音 → 语音识别 → 云端识别」里选择供应商并填写 API Key。',
+      asrCloudNeed: '提醒：使用云端识别请在「设置 → 语音 → 语音识别 → 云端识别」里选择云端服务（可选「字谈官方云端」免费用）。',
       asrRegionAuto: '自动', asrRegionChina: '中国', asrRegionOverseas: '国外',
       asrDidAuto: '已自动识别为：', asrPlatform: '设备', asrBrowser: '浏览器',
       asrModelNotFound: '未下载', asrModelSize: '约 300MB', asrCloudNotConfig: '（未配置）',
@@ -1102,7 +1130,7 @@
       asrReDone: '重新识别完成', asrReFail: '重新识别失败', asrReRunning: '正在重新识别…',
       audioPlayFail: '录音播放失败', audioTapPlay: '点按播放，长按重新识别',
       asrNeedModel: '请先下载线下模型（设置 → 语音识别 → 线下模型）',
-      asrNeedCloud: '请先在 设置 → 语音 → 语音识别 → 云端识别 配置 API Key',
+      asrNeedCloud: '请先在 设置 → 语音 → 语音识别 → 云端识别 选择云端服务（可选「字谈官方云端」免费用）',
       asrNoBrowser: '当前浏览器不支持', asrReEmpty: '没有识别到内容，保留原文本',
       /* 020 消息增强 */
       copyMsg: '复制', copied: '已复制', copyImgFail: '无法复制图片',
@@ -1155,6 +1183,12 @@
       asrCloudRunning: '云端识别中…',
       cloudNeedProxy: '该厂商需要后端代理签名/中转，暂未接入；请选择 微软 Azure 或 OpenAI。',
       cloudFail: '云端识别失败：',
+      /* 024 字谈官方云端（开发者 Azure 免费额度代理） */
+      cloudVendorZitan: '字谈官方云端（免费 · 每天 25 次）',
+      cloudFreeHintZitan: '无需 Key：由字谈开发者提供微软 Azure 免费额度（每月 5 小时）。每人每天 25 次、单次最长 30 秒；录到 25 秒时屏幕四周会出现微弱红光并倒计时 5·4·3·2·1，到 30 秒自动停止录音。当天额度用完可在下方填自己的 Key 无限使用。',
+      zitanQuotaLeft: '今日剩余：{n} 次',
+      zitanQuotaMaxed: '今天 25 次免费额度已用完，明天再来；或在 设置 → 云端识别 填自己的 API Key 无限使用。',
+      zitanCloudDown: '字谈官方云端暂不可用（未部署或服务异常），可先在 设置 → 云端识别 填自己的 Key 使用。',
       /* 023 设置重构 / 引导页 / 预设快译 */
       dataTab: '数据', dataTitle: '数据管理',
       dataHint: '所有聊天、录音、图片与设置仅保存在本机浏览器中，不会上传服务器；可在此恢复历史会话或导出备份。',
@@ -1226,10 +1260,10 @@
       engBrowserDesc: 'Uses {br} native recognition ({engine}), which uploads audio to its official servers.',
       engineApple: 'Apple', engineGoogle: 'Google', engineMicrosoft: 'Microsoft',
       engModelDesc: 'Privacy first. Downloads SenseVoice; usable offline. Progress is shown in Settings → Speech → Local model. Requires ~300 MB download and a capable device.',
-      engCloudDesc: 'Bring your own vendor (Microsoft / Aliyun / iFlytek...). Choose a provider and enter an API Key in Settings → Speech → Cloud.',
+      engCloudDesc: 'Use “ZiTan Cloud” for free (50 uses/day, 30s max each), or bring your own key (Microsoft / OpenAI…) in Settings → Speech → Cloud for unlimited use.',
       cloudKeyPh: 'Enter your API Key / Secret',
       cloudHint: 'Cloud recognition sends audio to the vendor\'s servers. If unconfigured, choosing Cloud will remind you to fill it in.',
-      asrCloudNeed: 'Reminder: to use cloud recognition, choose a provider and enter your API Key in Settings → Voice → Speech recognition → Cloud.',
+      asrCloudNeed: 'Reminder: to use cloud recognition, pick a provider in Settings → Voice → Speech recognition → Cloud (“ZiTan Cloud” is free).',
       asrRegionAuto: 'Auto', asrRegionChina: 'China', asrRegionOverseas: 'Overseas',
       asrDidAuto: 'Detected as: ', asrPlatform: 'Device', asrBrowser: 'Browser',
       asrModelNotFound: 'Not downloaded', asrModelSize: '~300 MB', asrCloudNotConfig: '(not configured)',
@@ -1240,7 +1274,7 @@
       asrReDone: 'Re-recognized', asrReFail: 'Re-recognition failed', asrReRunning: 'Recognizing again…',
       audioPlayFail: 'Could not play recording', audioTapPlay: 'Tap to play, long-press to re-recognize',
       asrNeedModel: 'Download the local model first (Settings → Speech recognition → Local model)',
-      asrNeedCloud: 'Set up an API Key in Settings → Voice → Speech recognition → Cloud first',
+      asrNeedCloud: 'Pick a cloud provider in Settings → Voice → Speech recognition → Cloud first (“ZiTan Cloud” is free)',
       asrNoBrowser: 'Not supported in this browser', asrReEmpty: 'No speech detected, keeping the original text',
       /* 020 message enhancements */
       copyMsg: 'Copy', copied: 'Copied', copyImgFail: 'Could not copy image',
@@ -1293,6 +1327,12 @@
       asrCloudRunning: 'Recognizing in cloud…',
       cloudNeedProxy: 'This vendor requires a signed backend proxy — not wired yet. Please choose Microsoft Azure or OpenAI.',
       cloudFail: 'Cloud recognition failed: ',
+      /* 024 ZiTan official cloud (developer's Azure free-tier proxy) */
+      cloudVendorZitan: 'ZiTan Cloud (free · 25 uses/day)',
+      cloudFreeHintZitan: 'No key needed: powered by the developer\'s Microsoft Azure free tier (5 hrs/month). 25 uses per person per day, 30 seconds max each; at 25s a faint red glow appears around the screen with a 5·4·3·2·1 countdown, and recording auto-stops at 30s. When today\'s quota runs out, add your own key below for unlimited use.',
+      zitanQuotaLeft: '{n} uses left today',
+      zitanQuotaMaxed: 'Today\'s 25 free uses are used up — come back tomorrow, or add your own API Key in Settings → Cloud for unlimited use.',
+      zitanCloudDown: 'ZiTan Cloud is unavailable (not deployed or service error). Add your own key in Settings → Cloud for now.',
       /* 023 settings restructure / guide / preset fast translate */
       dataTab: 'Data', dataTitle: 'Data',
       dataHint: 'All chats, recordings, images and settings stay in this browser only — nothing is uploaded. Restore past sessions or export a backup here.',
@@ -1759,9 +1799,9 @@
       const ready = typeof SenseVoiceAsr !== 'undefined' && SenseVoiceAsr.getReady && SenseVoiceAsr.getReady();
       push('model', ready, ready ? '' : t('asrNeedModel'));
     }
-    /* 云端第三选项：022 起开放（Azure / OpenAI 浏览器直连；阿里云/火山需后端代理） */
+    /* 云端第三选项：022 起开放（字谈官方 / Azure / OpenAI；阿里云/火山需后端代理） */
     if (cur !== 'cloud' && CLOUD_ASR_ENABLED) {
-      const cfg = !!(state.cloud.vendor && state.cloud.apiKey);
+      const cfg = cloudConfigured();   /* 024 官方通道无需 Key 即算已配置 */
       push('cloud', cfg, cfg ? '' : t('asrNeedCloud'));
     }
     if (!box.children.length) {
@@ -1802,12 +1842,28 @@
     });
   }
 
-  /* 022 云端识别：录音上传到所配置厂商（Azure / OpenAI 浏览器直连；阿里云/火山需后端代理） */
+  /* 022 云端识别：录音上传到所配置厂商（字谈官方走 /api/asr 代理；Azure / OpenAI 浏览器直连；阿里云/火山需后端代理） */
   function cloudRecognizeBlob(blob, lang) {
     const vendor = state.cloud.vendor;
     const key = state.cloud.apiKey || '';
     const extra = (state.cloud.extra || '').trim();
-    if (!vendor || !key) return Promise.reject(new Error(t('asrCloudNeed')));
+    if (!vendor || (!key && vendor !== 'zitan')) return Promise.reject(new Error(t('asrCloudNeed')));
+    if (vendor === 'zitan') {
+      /* 024 字谈官方云端：音频发往本站 /api/asr（后端持 Key 转发 Azure，服务端限每设备每天 50 次）。
+         剩余次数从响应头 X-Quota-Remaining 读回并缓存展示。 */
+      return blobToWav16k(blob).then(wav => fetch('/api/asr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000' },
+        body: wav
+      })).then(r => {
+        const left = r.headers.get('X-Quota-Remaining');
+        if (left != null && !isNaN(+left)) setZitanQuota(+left);
+        return r.json().then(j => ({ ok: r.ok, j })).catch(() => ({ ok: r.ok, j: {} }));
+      }).then(({ ok, j }) => {
+        if (ok) return j.text || '';
+        throw new Error(j.error || ('HTTP ' + ok));
+      });
+    }
     if (vendor === 'openai') {
       const fd = new FormData();
       fd.append('file', blob, 'audio.webm');
@@ -2189,6 +2245,8 @@
 
   /* 设置·语音识别 tab */
   const CLOUD_VENDORS = [
+    /* 024 字谈官方云端置顶：开发者 Azure 免费额度代理，无需用户填 Key */
+    { id: 'zitan',   label: () => t('cloudVendorZitan'),   freeHint: () => t('cloudFreeHintZitan') },
     { id: 'azure',   label: () => t('cloudVendorAzure'),   extraPh: () => t('cloudExtraPhAzure'),  freeHint: () => t('cloudFreeHintAzure') },
     { id: 'openai',  label: () => t('cloudVendorOpenai'),  extraPh: () => t('cloudExtraPhOpenai'), freeHint: () => t('cloudFreeHintOpenai') },
     { id: 'aliyun',  label: () => t('cloudVendorAliyun'),  extraPh: () => t('cloudExtraPhAliyun'), freeHint: () => t('cloudFreeHintAliyun') },
@@ -2196,47 +2254,48 @@
   ];
   function cloudVendorMeta(id) { return CLOUD_VENDORS.find(v => v.id === id) || null; }
 
+  /* 024 官方通道判定与「已配置」判定：zitan 无需 Key 即算配置完成 */
+  function isOfficialCloud() { return !!(state.cloud && state.cloud.vendor === 'zitan'); }
+  function cloudConfigured() {
+    const v = state.cloud && state.cloud.vendor;
+    return !!v && (v === 'zitan' || !!state.cloud.apiKey);
+  }
+
+  /* 024 官方通道每日免费次数（与后端 ZITAN_DAILY_LIMIT 保持一致） */
+  const ZITAN_DAILY_LIMIT = 25;
+  /* 024 官方通道今日剩余次数（本机缓存展示；权威值以后端响应头 X-Quota-Remaining 为准。
+     没有当天使用记录 → 直接显示满额，不搞「待首次使用后显示」。 */
+  function zitanQuotaToday() {
+    try {
+      const d = new Date();
+      const day = d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+      const s = JSON.parse(localStorage.getItem('zitanQuota') || 'null');
+      return (s && s.day === day && typeof s.left === 'number') ? s.left : null;
+    } catch (e) { return null; }
+  }
+  function setZitanQuota(n) {
+    try {
+      const d = new Date();
+      const day = d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+      localStorage.setItem('zitanQuota', JSON.stringify({ day: day, left: n }));
+    } catch (e) {}
+    updateZitanQuotaText();
+  }
+  function updateZitanQuotaText() {
+    const el = $('zitanQuotaText');
+    if (!el) return;
+    const left = zitanQuotaToday();
+    el.textContent = t('zitanQuotaLeft').replace('{n}', (left == null) ? ZITAN_DAILY_LIMIT : left);
+  }
+
   function renderAsrPane() {
     const cur = state.asrEngine === 'auto' ? '' : state.asrEngine;
     renderEngineList('asrEngineList', (which) => {
       state.asrEngine = which; save(); renderAsrPane();
-      /* 选云端识别：本地没有配置（供应商 + API Key）时立即提醒去填写 */
-      if (which === 'cloud' && !(state.cloud.vendor && state.cloud.apiKey)) toast(t('asrCloudNeed'));
+      /* 选云端识别：本地没有配置（官方通道无需 Key；其他厂商需 Key）时立即提醒去填写 */
+      if (which === 'cloud' && !cloudConfigured()) toast(t('asrCloudNeed'));
     }, cur);
-    /* 模型识别全局隐藏（MODEL_ASR_ENABLED=false）：隐藏“线下模型”区块（标题/状态/下载按钮/进度条） */
-    const isMobilePane = EnvDetect.isMobile();
-    const showLocal = MODEL_ASR_ENABLED && !isMobilePane;
-    const localTitle = document.querySelector('[data-i18n="asrLocal"]');
-    if (localTitle) localTitle.hidden = !showLocal;
-    const lk = $('asrLocalStatus'), btn = $('asrDownloadBtn'), bar = $('asrLocalBar');
-    if (lk) lk.hidden = !showLocal;
-    if (btn) btn.hidden = !showLocal;
-    if (bar) bar.hidden = true;   /* 进度条默认隐藏 */
-    if (!showLocal) return;
-    const ready = typeof SenseVoiceAsr !== 'undefined' && SenseVoiceAsr.getReady && SenseVoiceAsr.getReady();
-    if (ready) {
-      lk.innerHTML = '<span class="asr-label">' + t('asrModelReady') + '</span><span class="asr-val"> ✓</span>';
-      bar.hidden = true;
-      btn.hidden = true;
-    } else if (_asrDownloading) {
-      lk.innerHTML = '<span class="asr-label">' + t('asrDownloading') + '</span><span class="asr-val">' + (_asrDownloadPct + '%') + '</span>';
-      bar.hidden = false;
-      const i = bar.querySelector('i'); if (i) i.style.width = _asrDownloadPct + '%';
-      btn.hidden = false;
-      btn.disabled = true;
-      btn.textContent = t('asrDownloading') + ' ' + _asrDownloadPct + '%';
-    } else if (typeof SenseVoiceAsr !== 'undefined' && SenseVoiceAsr.hasStoredModel) {
-      /* 先显示检查中，再异步刷新成「已缓存本地模型 / 未下载」——避免刷新后误报未下载 */
-      lk.innerHTML = '<span class="asr-label">' + t('asrCheckCache') + '</span>';
-      btn.hidden = true;
-      refreshAsrStatus();
-    } else {
-      lk.innerHTML = '<span class="asr-label">' + t('asrModelNotFound') + '</span><span class="asr-val">' + t('asrModelSize') + '</span>';
-      bar.hidden = true;
-      btn.hidden = false;
-      btn.disabled = false;
-      btn.textContent = t('asrModelDownload');
-    }
+    /* 024：线下模型区块已从 HTML 移除（模型识别全局停用），下载/进度条逻辑一并删除 */
   }
   /* 云端识别配置区块（022：Azure / OpenAI / 阿里云 / 火山引擎） */
   function renderCloudConfig() {
@@ -2254,64 +2313,20 @@
     syncCloudExtraUI();
   }
   function syncCloudExtraUI() {
-    const meta = cloudVendorMeta($('cloudVendor').value);
-    if (meta) {
+    const v = $('cloudVendor').value;
+    const meta = cloudVendorMeta(v);
+    const official = (v === 'zitan');       /* 024 官方通道：无需 Key/区域，显示今日剩余次数 */
+    $('zitanQuotaRow').hidden = !official;
+    $('cloudKeyRow').hidden = official;
+    $('cloudExtraRow').hidden = official;
+    $('cloudBtnBar').hidden = official;     /* 官方通道无需保存/清除（下拉选择即已保存） */
+    if (official) { updateZitanQuotaText(); $('cloudFreeHint').textContent = t('cloudFreeHintZitan'); return; }
+    if (meta && meta.extraPh) {
       $('cloudExtra').placeholder = meta.extraPh();
       $('cloudFreeHint').textContent = meta.freeHint();
     }
   }
-  /* 异步查询本地是否已存完整模型，把「检查中」刷新成「已缓存本地模型 / 未下载」 */
-  let _asrStatusBusy = false;
-  function refreshAsrStatus() {
-    if (_asrStatusBusy) return;
-    if (typeof SenseVoiceAsr === 'undefined' || !SenseVoiceAsr.hasStoredModel || _asrDownloading) return;
-    _asrStatusBusy = true;
-    SenseVoiceAsr.hasStoredModel()
-      .then((cached) => {
-        const lk = $('asrLocalStatus'), btn = $('asrDownloadBtn'), bar = $('asrLocalBar');
-        if (!lk || lk.hidden || _asrDownloading) return;    /* 手机端隐藏区块/正在下载时不动 */
-        if (cached) {
-          lk.innerHTML = '<span class="asr-label">' + t('asrModelCached') + '</span><span class="asr-val"> 本地</span>';
-          if (btn) { btn.hidden = false; btn.disabled = false; btn.textContent = t('asrModelLoad'); }
-          if (bar) bar.hidden = true;
-        } else {
-          lk.innerHTML = '<span class="asr-label">' + t('asrModelNotFound') + '</span><span class="asr-val">' + t('asrModelSize') + '</span>';
-          if (btn) { btn.hidden = false; btn.disabled = false; btn.textContent = t('asrModelDownload'); }
-          if (bar) bar.hidden = true;
-        }
-      })
-      .catch(() => {})
-      .then(() => { _asrStatusBusy = false; });
-  }
-  let _asrDownloading = false;
-  let _asrDownloadPct = 0;
-  function startAsrDownload() {
-    if (typeof SenseVoiceAsr === 'undefined' || _asrDownloading) return;
-    _asrDownloading = true;
-    _asrDownloadPct = 0;
-    renderAsrPane();
-    SenseVoiceAsr.ensureLoaded((p) => {
-      /* p 可能是文字说明（如'加载识别引擎…'）或 0~1 进度 */
-      if (typeof p === 'number') {
-        _asrDownloadPct = Math.min(100, Math.round(p * 100));
-        const lk2 = $('asrLocalStatus'); const b2 = $('asrDownloadBtn');
-        if (lk2) lk2.querySelector('.asr-val') && (lk2.querySelector('.asr-val').textContent = _asrDownloadPct + '%');
-        if (b2) b2.textContent = t('asrDownloading') + ' ' + _asrDownloadPct + '%';
-        const bar2 = $('asrLocalBar');
-        if (bar2 && !bar2.hidden) { const i = bar2.querySelector('i'); if (i) i.style.width = _asrDownloadPct + '%'; }
-      }
-    })
-      .then(() => {
-        _asrDownloading = false;
-        renderAsrPane();
-        toast(t('asrModelReady'));
-      })
-      .catch((e) => {
-        _asrDownloading = false;
-        renderAsrPane();
-        toast(t('micFail') + (e && e.message || e));
-      });
-  }
+  /* 024：线下模型下载相关（refreshAsrStatus / startAsrDownload / 进度状态）已随 UI 一并移除 */
 
   /* 首次点麦克风：弹出引擎选择 */
   let asrChooseCallback = null;   // 用户点“确定”后回调，参数为选中引擎
@@ -3389,8 +3404,10 @@
 
     /* 浏览器识别 / 云端识别：Web Speech API 拿不到音频，需要同时开一个 MediaRecorder 录音。
        022：同时用 AnalyserNode 做静音检测 —— 检测到说过话、且持续静音 SILENCE_MS 后
-       自动触发 onSilence（上层停止识别并嘀一声），无需手动关停。 */
-    function beginBrowserRecording(onSilence) {
+       自动触发 onSilence（上层停止识别并嘀一声），无需手动关停。
+       024：limits = { maxMs, warnMs } 时启用时长上限（仅字谈官方云端传入）——
+       录到 warnMs 屏幕四周亮微弱红光并显示 5·4·3·2·1 大数字倒计时，到 maxMs 自动触发 onSilence 停录。 */
+    function beginBrowserRecording(onSilence, limits) {
       if (typeof MediaRecorder === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return Promise.resolve(null);
       return navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null).then(stream => {
         if (!stream) return null;
@@ -3407,6 +3424,7 @@
               finished = true;
               stream.getTracks().forEach(t => t.stop());
               stopSilenceWatch();
+              stopLimitWatch();
               closeAudioProbe();
               resolve(chunks.length ? new Blob(chunks, { type: rec.mimeType || mime || 'audio/webm' }) : null);
             }
@@ -3447,8 +3465,47 @@
         }
         function stopSilenceWatch() { if (watchTimer) { clearTimeout(watchTimer); watchTimer = null; } }
         function closeAudioProbe() { try { if (probeCtx) { probeCtx.close(); probeCtx = null; } } catch (e) {} }
+        /* —— 024 时长上限 + 红光倒计时（仅官方通道传 limits 时启用） —— */
+        let warnTimer = null, maxTimer = null, cdTimer = null, limitFired = false;
+        function hideCountdownUI() {
+          const veil = $('recRedVeil'), cdBox = $('recCountdown');
+          if (veil) veil.classList.remove('on');
+          if (cdBox) cdBox.classList.remove('on');
+        }
+        function fireLimitStop() {
+          if (limitFired || finished) return;
+          limitFired = true;
+          hideCountdownUI();
+          if (onSilence) onSilence();   // 与静音自动结束走同一条停录路径（嘀一声 → 停录 → 识别）
+        }
+        function startCountdown() {
+          if (finished || limitFired) return;
+          const veil = $('recRedVeil'), cdBox = $('recCountdown'), cdNum = $('recCdNum');
+          if (veil) veil.classList.add('on');           // 微弱红光：CSS 呼吸脉动
+          let n = Math.max(1, Math.round(((limits.maxMs - (limits.warnMs || 0)) / 1000)));   // 5
+          if (cdNum) cdNum.textContent = n;
+          if (cdBox) cdBox.classList.add('on');
+          cdTimer = setInterval(() => {
+            if (finished || limitFired) { if (cdTimer) { clearInterval(cdTimer); cdTimer = null; } return; }
+            n -= 1;
+            if (n <= 0) { if (cdTimer) { clearInterval(cdTimer); cdTimer = null; } return; }
+            if (cdNum) cdNum.textContent = n;
+          }, 1000);
+        }
+        function startLimitWatch() {
+          if (!limits || !limits.maxMs) return;
+          warnTimer = setTimeout(startCountdown, Math.min(limits.warnMs || 0, limits.maxMs));
+          maxTimer = setTimeout(fireLimitStop, limits.maxMs);
+        }
+        function stopLimitWatch() {
+          if (warnTimer) { clearTimeout(warnTimer); warnTimer = null; }
+          if (maxTimer) { clearTimeout(maxTimer); maxTimer = null; }
+          if (cdTimer) { clearInterval(cdTimer); cdTimer = null; }
+          hideCountdownUI();
+        }
         rec.start();
         startSilenceWatch();
+        startLimitWatch();
         return { rec, started, stop: () => { if (!finished) { try { rec.stop(); } catch (e) { stream.getTracks().forEach(t => t.stop()); } } return stopped; } };
       });
     }
@@ -3554,8 +3611,10 @@
       let active = 'cloud';
       micBtn.classList.add('rec');
       toast(t('micListening') || '请说话');
+      /* 024 仅「字谈官方云端」限 30s：25s 起红光倒计时；自带 Key 的厂商不限时 */
+      const limits = isOfficialCloud() ? { maxMs: 30000, warnMs: 25000 } : null;
       beginBrowserRecording(() => {
-        /* 022 静音自动结束：嘀一声 → 停录 → 上传云端识别 */
+        /* 022 静音自动结束（或 024 到达 30s 上限）：嘀一声 → 停录 → 上传云端识别 */
         if (active !== 'cloud') return;
         active = 'recognizing';
         playRecEndBeep();
@@ -3567,7 +3626,7 @@
             .then(text => finish(text, rec))
             .catch(err => { finish(null, rec, true); toast(t('cloudFail') + (err.message || err)); });
         });
-      }).then(recorder => {
+      }, limits).then(recorder => {
         activeBrowserRecorder = recorder;
         if (!recorder) {
           micBtn.classList.remove('rec'); micBtn.disabled = false;
@@ -3584,7 +3643,7 @@
         if (!CLOUD_ASR_ENABLED) {            /* 云端未开放：降级到本地 */
           toast(t('asrCloudNeed'));
           startLocal(finishMic);
-        } else if (!state.cloud.vendor || !state.cloud.apiKey) {
+        } else if (!cloudConfigured()) {   /* 024 官方通道无需 Key */
           micBtn.classList.remove('rec'); micBtn.disabled = false;
           toast(t('asrCloudNeed'));
         } else {
@@ -3726,7 +3785,7 @@
     /* 识别引擎：设置面板选择 */
     $('cloudVendor').onchange = (e) => { state.cloud.vendor = e.target.value; save(); };
     $('cloudApiKey').oninput = (e) => { state.cloud.apiKey = e.target.value; save(); };
-    $('asrDownloadBtn').onclick = startAsrDownload;
+    /* 024：线下模型下载按钮已移除，不再绑定 startAsrDownload */
 
     /* 识别引擎选择弹层 */
     $('asrChooseDone').onclick = () => {
