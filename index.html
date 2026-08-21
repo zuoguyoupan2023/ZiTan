@@ -858,6 +858,8 @@
           <div class="asr-cloud-row"><select id="aiProviderSel"></select></div>
           <div class="sec-title sub2" data-i18n="aiKeyLbl">API Key</div>
           <div class="asr-cloud-row"><input id="aiKeyInput" type="password" placeholder="sk-…" data-i18n-ph="aiKeyPh"></div>
+          <p class="hint" data-i18n="aiPayNote">费用由你直接向 AI 供应商支付（注册充值后获取 API Key），字谈不收费、不经手；Key 仅保存在本机浏览器。</p>
+          <p class="hint"><a id="aiKeyLink" href="#" target="_blank" rel="noopener"></a></p>
           <div class="sec-title sub2" data-i18n="aiModelLbl">模型</div>
           <div class="asr-cloud-row"><select id="aiModelSel"></select></div>
           <div class="ai-keybar">
@@ -1057,7 +1059,7 @@
       confirmDelPreset: '删除这条预设？',
       language: '语言', preview: '试听', others: '其他',
       howTo: '使用说明', clearChat: '清空当前窗口内容\n（放心聊天记录不会消失）',
-      newChat: '新建对话（当前对话内容已自动存储）', done: '完成',
+      newChat: '已开启新对话；旧对话已自动存储，可在 设置 → 数据 → 对话历史 查看', done: '完成',
       exportChat: '导出聊天记录 (JSON)', exportDone: '已导出', exportFail: '导出失败',
       history: '对话历史', historyHint: '点击任意一条，可恢复到对话界面查看。',
       historyEmpty: '暂无对话记录', historyCurrent: '当前', historyMsgs: '条消息', historyLoaded: '已恢复到对话界面',
@@ -1128,7 +1130,9 @@
       aiKeyPh: '填入 API Key（sk-…）', aiKeyLbl: 'API Key', aiModelLbl: '模型', aiProvider: 'AI 提供方',
       aiKeySave: '保存', aiKeyClear: '清除 Key',
       aiKeySaved: 'Key 密钥只保存在浏览器本地，请放心使用',
-      transAIHint: 'AI 翻译支持 DeepSeek / 智谱 GLM / 月之暗面 Kimi，按量付费，与免费的 MyMemory 不同。各家的 Key 分别保存、仅存本机，可随时清除。未填 Key 时 AI 不可用。',
+      aiPayNote: '费用由你直接向 AI 供应商支付（注册充值后获取 API Key），字谈不收费、不经手；Key 仅保存在本机浏览器。',
+      aiGetKey: '去获取 API Key',
+      transAIHint: 'AI 翻译支持 DeepSeek / 智谱 GLM / Kimi / OpenAI / Claude / Gemini，按量付费（向各供应商付费，与字谈无关）。各家的 Key 分别保存、仅存本机，可随时清除。未填 Key 时 AI 不可用。',
       transBtn: '翻译', transRead: '朗读翻译', transLangEn: '英', transRun: '翻译中…', transFail: '翻译失败：',
       transEmpty: '没有翻译到内容', transDel: '删除翻译', transNeedAIKey: '请先在 设置 → 通用 → 翻译 填写 API Key',
       transAIKeyInvalid: 'API Key 无效，请检查后重试',
@@ -1193,7 +1197,7 @@
       confirmDelPreset: 'Delete this preset?',
       language: 'Language', preview: 'Preview', others: 'More',
       howTo: 'How to use', clearChat: 'Clear current window\n(Your chat history is kept)',
-      newChat: 'New chat (current conversation is saved automatically)', done: 'Done',
+      newChat: 'New chat started — the previous conversation is saved automatically (Settings → Data → History)', done: 'Done',
       exportChat: 'Export chat (JSON)', exportDone: 'Exported', exportFail: 'Export failed',
       history: 'Conversation history', historyHint: 'Tap a session to restore it to the chat view.',
       historyEmpty: 'No saved conversations', historyCurrent: 'Current', historyMsgs: 'messages', historyLoaded: 'Restored to chat view',
@@ -1264,7 +1268,9 @@
       aiKeyPh: 'Enter API Key (sk-…)', aiKeyLbl: 'API Key', aiModelLbl: 'Model', aiProvider: 'AI provider',
       aiKeySave: 'Save', aiKeyClear: 'Clear Key',
       aiKeySaved: 'Key is stored only in this browser, rest assured.',
-      transAIHint: 'AI translation supports DeepSeek / Zhipu GLM / Moonshot Kimi and is billed by usage, unlike free MyMemory. Each provider Key is stored separately, on this device only, and can be cleared anytime. AI is unavailable without a Key.',
+      aiPayNote: 'You pay the AI provider directly (sign up and top up to get an API Key) — ZiTan charges nothing and never touches your money. Keys stay in this browser only.',
+      aiGetKey: 'Get an API Key',
+      transAIHint: 'AI translation supports DeepSeek / Zhipu GLM / Kimi / OpenAI / Claude / Gemini, billed by usage (paid to each provider, not to ZiTan). Each provider Key is stored separately, on this device only, and can be cleared anytime. AI is unavailable without a Key.',
       transBtn: 'Translate', transRead: 'Read translation', transLangEn: 'EN', transRun: 'Translating…', transFail: 'Translation failed: ',
       transEmpty: 'Nothing to translate', transDel: 'Delete translation', transNeedAIKey: 'Add an API Key in Settings → General → Translation first',
       transAIKeyInvalid: 'API Key invalid — please check and retry',
@@ -1432,7 +1438,7 @@
       deaf: { src: 'zh-CN', tgt: 'en' },     /* 听障身份(身份1)：默认中→英 */
       vol:  { src: 'en', tgt: 'zh-CN' }      /* 志愿者身份(身份2)：默认英→中 */
     },
-    ai: { provider: 'deepseek', deepseekKey: '', zhipuKey: '', moonshotKey: '', model: 'deepseek-v4-pro' },   /* AI 翻译（DeepSeek / 智谱 GLM / Kimi） */
+    ai: { provider: 'deepseek', deepseekKey: '', zhipuKey: '', moonshotKey: '', openaiKey: '', claudeKey: '', geminiKey: '', model: 'deepseek-v4-pro' },   /* AI 翻译（DeepSeek / 智谱 / Kimi / OpenAI / Claude / Gemini），费用由用户向供应商支付 */
     viewing: -1,
     sessionId: Date.now(),
     sessionStart: Date.now(),
@@ -2436,6 +2442,9 @@
             deepseekKey: (typeof s.ai.deepseekKey === 'string' ? s.ai.deepseekKey : ''),
             zhipuKey: (typeof s.ai.zhipuKey === 'string' ? s.ai.zhipuKey : ''),
             moonshotKey: (typeof s.ai.moonshotKey === 'string' ? s.ai.moonshotKey : ''),
+            openaiKey: (typeof s.ai.openaiKey === 'string' ? s.ai.openaiKey : ''),
+            claudeKey: (typeof s.ai.claudeKey === 'string' ? s.ai.claudeKey : ''),
+            geminiKey: (typeof s.ai.geminiKey === 'string' ? s.ai.geminiKey : ''),
             model: (s.ai.model || AI_PROVIDERS[prov].models[0].id)
           };
         }
@@ -2633,21 +2642,45 @@
      - DeepSeek  https://api-docs.deepseek.com/quick_start/pricing
      - 智谱 GLM   https://docs.bigmodel.cn/cn/guide/models/text/glm-5.2
      - Kimi      https://platform.kimi.com/docs/models */
+  /* 024 AI 翻译提供方：费用由用户直接向各供应商支付（自购 API Key），与字谈无关。
+     url = 去获取 API Key 的地址；kind = 'anthropic' 走 /v1/messages 专有协议，其余走 OpenAI 兼容 /chat/completions。
+     模型列表为 2026-08 各家官网当前在售型号。 */
   const AI_PROVIDERS = {
-    deepseek: { label: 'DeepSeek', base: 'https://api.deepseek.com', key: 'deepseekKey', models: [
+    deepseek: { label: 'DeepSeek', base: 'https://api.deepseek.com', key: 'deepseekKey',
+      url: 'https://platform.deepseek.com/api_keys', models: [
       { id: 'deepseek-v4-pro', n: 'DeepSeek-V4-Pro' },
       { id: 'deepseek-v4-flash', n: 'DeepSeek-V4-Flash' }
     ]},
-    zhipu: { label: '智谱 GLM', base: 'https://open.bigmodel.cn/api/paas/v4', key: 'zhipuKey', models: [
+    zhipu: { label: '智谱 GLM', base: 'https://open.bigmodel.cn/api/paas/v4', key: 'zhipuKey',
+      url: 'https://open.bigmodel.cn/usercenter/apikeys', models: [
       { id: 'glm-5.2', n: 'GLM-5.2' },
       { id: 'glm-5.1', n: 'GLM-5.1' },
       { id: 'glm-5', n: 'GLM-5' },
       { id: 'glm-4.7-flash', n: 'GLM-4.7-Flash（免费）' }
     ]},
-    moonshot: { label: '月之暗面 Kimi', base: 'https://api.moonshot.cn/v1', key: 'moonshotKey', models: [
+    moonshot: { label: '月之暗面 Kimi', base: 'https://api.moonshot.cn/v1', key: 'moonshotKey',
+      url: 'https://platform.moonshot.cn/console/api-keys', models: [
       { id: 'kimi-k3', n: 'Kimi-K3' },
       { id: 'kimi-k2.6', n: 'Kimi-K2.6' },
       { id: 'kimi-k2.7-code', n: 'Kimi-K2.7-Code' }
+    ]},
+    openai: { label: 'OpenAI', base: 'https://api.openai.com/v1', key: 'openaiKey',
+      url: 'https://platform.openai.com/api-keys', models: [
+      { id: 'gpt-5.6-luna', n: 'GPT-5.6 Luna（低成本）' },
+      { id: 'gpt-5.6-terra', n: 'GPT-5.6 Terra（均衡）' },
+      { id: 'gpt-5.6', n: 'GPT-5.6 Sol（旗舰）' }
+    ]},
+    claude: { label: 'Claude', base: 'https://api.anthropic.com/v1', key: 'claudeKey', kind: 'anthropic',
+      url: 'https://console.anthropic.com/settings/keys', models: [
+      { id: 'claude-haiku-4-5', n: 'Claude Haiku 4.5（低成本）' },
+      { id: 'claude-sonnet-5', n: 'Claude Sonnet 5（均衡）' },
+      { id: 'claude-opus-5', n: 'Claude Opus 5（旗舰）' }
+    ]},
+    gemini: { label: 'Gemini', base: 'https://generativelanguage.googleapis.com/v1beta/openai', key: 'geminiKey',
+      url: 'https://aistudio.google.com/apikey', models: [
+      { id: 'gemini-3.6-flash', n: 'Gemini 3.6 Flash（稳定版）' },
+      { id: 'gemini-3.1-flash-lite', n: 'Gemini 3.1 Flash-Lite（低成本）' },
+      { id: 'gemini-3.1-pro-preview', n: 'Gemini 3.1 Pro（预览版）' }
     ]}
   };
   function aiProvider() { return AI_PROVIDERS[(state.ai && state.ai.provider)] || AI_PROVIDERS.deepseek; }
@@ -2661,6 +2694,27 @@
     const prompt = 'Translate the following text into ' + tgtName
       + (src ? ' (source: ' + transLangName(src) + ')' : '')
       + '. Output only the translation, nothing else.\n\n' + text;
+    /* Anthropic 专有协议：/v1/messages（x-api-key；浏览器直连需 dangerous-direct-browser-access 头） */
+    if (prov.kind === 'anthropic') {
+      return fetch(prov.base + '/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({ model: model, max_tokens: 2000, messages: [{ role: 'user', content: prompt }] })
+      }).then(res => {
+        if (res.status === 401 || res.status === 403) throw new Error('aikey');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      }).then(data => {
+        const out = data && data.content && data.content[0] && data.content[0].text;
+        return (out || '').trim() ? out.trim() : null;
+      });
+    }
+    /* 其余供应商：OpenAI 兼容 /chat/completions */
     return fetch(prov.base + '/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
@@ -2756,6 +2810,12 @@
       '<option value="' + m.id + '"' + (m.id === state.ai.model ? ' selected' : '') + '>' + escapeHtml(m.n) + '</option>').join('');
     $('aiKeyInput').value = (state.ai && state.ai[prov.key]) || '';
     $('aiKeyInput').placeholder = 'sk-…（' + prov.label + '）';
+    /* 024 付费说明 + 去获取 API Key 链接（随供应商切换） */
+    const link = $('aiKeyLink');
+    if (link) {
+      link.href = prov.url || '#';
+      link.textContent = t('aiGetKey') + '：' + (prov.url || '');
+    }
   }
 
   /* ============ 020 · 消息增强（复制/收藏/引用/粘贴/相册发图） ============ */
