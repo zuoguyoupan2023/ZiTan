@@ -1204,7 +1204,7 @@
     transEngine: 'mymemory',   /* mymemory | ai —— 翻译引擎 */
     transSrc: 'zh-CN',         /* 翻译源语言（MyMemory 用） */
     transTarget: 'en',         /* 翻译目标语言 */
-    ai: { provider: 'deepseek', deepseekKey: '', zhipuKey: '', moonshotKey: '', model: 'deepseek-chat' },   /* AI 翻译（DeepSeek / 智谱 GLM / Kimi） */
+    ai: { provider: 'deepseek', deepseekKey: '', zhipuKey: '', moonshotKey: '', model: 'deepseek-v4-pro' },   /* AI 翻译（DeepSeek / 智谱 GLM / Kimi） */
     viewing: -1,
     sessionId: Date.now(),
     sessionStart: Date.now(),
@@ -2285,23 +2285,26 @@
     });
   }
 
-  /* AI 翻译提供方：DeepSeek / 智谱 GLM / 月之暗面 Kimi（均 OpenAI 兼容 /chat/completions） */
+  /* AI 翻译提供方：DeepSeek / 智谱 GLM / 月之暗面 Kimi（均 OpenAI 兼容 /chat/completions）
+     模型以官方文档当前可用为准：
+     - DeepSeek  https://api-docs.deepseek.com/quick_start/pricing
+     - 智谱 GLM   https://docs.bigmodel.cn/cn/guide/models/text/glm-5.2
+     - Kimi      https://platform.kimi.com/docs/models */
   const AI_PROVIDERS = {
     deepseek: { label: 'DeepSeek', base: 'https://api.deepseek.com', key: 'deepseekKey', models: [
-      { id: 'deepseek-chat', n: 'DeepSeek-V3 (deepseek-chat)' },
-      { id: 'deepseek-reasoner', n: 'DeepSeek-R1 (deepseek-reasoner)' },
-      { id: 'deepseek-v4-flash-pro', n: 'DeepSeek-V4-Flash-Pro' }
+      { id: 'deepseek-v4-pro', n: 'DeepSeek-V4-Pro' },
+      { id: 'deepseek-v4-flash', n: 'DeepSeek-V4-Flash' }
     ]},
     zhipu: { label: '智谱 GLM', base: 'https://open.bigmodel.cn/api/paas/v4', key: 'zhipuKey', models: [
       { id: 'glm-5.2', n: 'GLM-5.2' },
-      { id: 'glm-5.0', n: 'GLM-5.0' },
-      { id: 'glm-4-plus', n: 'GLM-4-Plus' },
-      { id: 'glm-4-flash', n: 'GLM-4-Flash (免费)' }
+      { id: 'glm-5.1', n: 'GLM-5.1' },
+      { id: 'glm-5', n: 'GLM-5' },
+      { id: 'glm-4.7-flash', n: 'GLM-4.7-Flash（免费）' }
     ]},
     moonshot: { label: '月之暗面 Kimi', base: 'https://api.moonshot.cn/v1', key: 'moonshotKey', models: [
       { id: 'kimi-k3', n: 'Kimi-K3' },
-      { id: 'kimi-k2', n: 'Kimi-K2' },
-      { id: 'moonshot-v1-8k', n: 'Moonshot-v1-8k' }
+      { id: 'kimi-k2.6', n: 'Kimi-K2.6' },
+      { id: 'kimi-k2.7-code', n: 'Kimi-K2.7-Code' }
     ]}
   };
   function aiProvider() { return AI_PROVIDERS[(state.ai && state.ai.provider)] || AI_PROVIDERS.deepseek; }
