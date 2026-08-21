@@ -281,6 +281,15 @@
     flex: 0 1 auto; min-width: max-content; padding: 7px 11px; border: 1.5px solid var(--line); border-radius: 10px;
     background: var(--panel); color: var(--ink); font-size: 13px; font-weight: 600; cursor: pointer;
   }
+  .tabs3 button.on { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+  body.hc .tabs3 button.on { background: var(--deaf); color: var(--deaf-ink); border-color: var(--deaf); }
+
+  /* 023 设置卡片固定高度：切换一级标签时宽高不变，内容少不萎缩，内容多内部滚动 */
+  #settingsOverlay .card { height: min(84vh, 680px); }
+
+  /* 023 首次引导浮窗：不再显示复选框 */
+  .guide-nomore { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 15px; cursor: pointer; }
+  .guide-nomore input { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
   .proll { display: flex; align-items: center; gap: 8px; background: var(--bg); border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; }
   .proll .ptext { flex: 1; font-size: 15px; word-break: break-word; cursor: text; }
   .proll .pedit { flex: 1; min-width: 0; font-size: 15px; padding: 4px 8px; border: 1.5px solid var(--accent); border-radius: 8px; background: var(--panel); color: var(--ink); outline: none; }
@@ -453,7 +462,7 @@
     max-width: 100%; padding: 6px 10px; margin-bottom: 2px;
     border-left: 3px solid rgba(0,0,0,.25);
     background: rgba(0,0,0,.10); border-radius: 8px;
-    font-size: 0.6em; line-height: 1.4; cursor: pointer;   /* em：随气泡字号（设置里的字号）等比缩放 */
+    font-size: inherit; line-height: 1.4; cursor: pointer;   /* 与正文同字号（随设置字号缩放） */
   }
   .quote .q-ic { flex: none; margin-top: 2px; opacity: .7; }
   .quote .q-txt {
@@ -474,12 +483,12 @@
   .bbtns .act.transb.loading { opacity: .55; }
   .trcard {
     margin-top: 10px; padding: 8px 10px; border-radius: 12px;
-    background: rgba(0,0,0,.07); font-size: 0.6em; line-height: 1.4;   /* em：随气泡字号等比缩放 */
+    background: rgba(0,0,0,.07); font-size: inherit; line-height: 1.4;   /* 与正文同字号 */
     align-self: stretch; word-break: break-word;
   }
   .msg.deaf .trcard { background: rgba(0,0,0,.10); color: var(--deaf-ink); }
   .trcard .tr-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
-  .trcard .tr-lang { font-size: 0.65em; font-weight: 700; opacity: .75; letter-spacing: .3px; }
+  .trcard .tr-lang { font-size: calc(11px * var(--fs)); font-weight: 700; opacity: .75; letter-spacing: .3px; }
   .trcard .tr-acts { display: flex; align-items: center; gap: 2px; }
   .trcard .tr-del, .trcard .tr-play {
     flex: none; width: 22px; height: 22px; border: none; border-radius: 6px;
@@ -712,8 +721,11 @@
         <button id="sTabGeneral" data-i18n="general">通用</button>
         <button id="sTabPreset" class="on" data-i18n="presets">预设</button>
         <button id="sTabSound" data-i18n="voiceTab">语音</button>
+        <button id="sTabTrans" data-i18n="transTitle">翻译</button>
         <button id="sTabFav" data-i18n="favTitle">收藏</button>
         <button id="sTabGallery" data-i18n="galleryTitle">相册</button>
+        <button id="sTabData" data-i18n="dataTab">数据</button>
+        <button id="sTabHelp" data-i18n="helpTab">使用说明</button>
       </div>
 
       <!-- 预设 -->
@@ -823,9 +835,10 @@
           <button id="dirMixed" data-dir="mixed" data-i18n="textDirMixed">倒置 · 正置混合</button>
         </div>
         <p class="hint" data-i18n="textDirHint">倒置·正置混合：听障朋友发出的文字会 180° 旋转（不是镜像），站在对面的朋友无需颠倒手机即可正读；操作按钮保持正置。</p>
+      </div>
 
-        <!-- 021 翻译 -->
-        <div class="sec-title" data-i18n="transTitle">翻译</div>
+      <!-- 023 翻译（独立一级标签） -->
+      <div id="transPane" hidden>
         <div class="sec-title sub" data-i18n="transEngineLbl">翻译引擎</div>
         <div class="seg" id="transEngineRow">
           <button id="engMyMemory" data-eng="mymemory" data-i18n="transMyMemory">MyMemory（免费）</button>
@@ -838,6 +851,7 @@
         <div class="sec-title sub2"><span class="role-tag" id="transRoleTagVol">志愿者身份</span></div>
         <div class="asr-cloud-row"><span class="role-lbl" data-i18n="transSrc">源语言</span><select id="transSrcVol"></select></div>
         <div class="asr-cloud-row"><span class="role-lbl" data-i18n="transTarget">目标语言</span><select id="transTgtVol"></select></div>
+        <p class="hint" data-i18n="transPresetHint">直发的预设用语在中英互译时秒翻：直接使用对应语言版本的预设文本，不调用翻译接口。</p>
         <div id="aiConfigWrap">
           <div class="sec-title sub" data-i18n="transAI">AI 翻译配置</div>
           <div class="sec-title sub2" data-i18n="aiProvider">AI 提供方</div>
@@ -852,11 +866,30 @@
           </div>
           <p class="hint" data-i18n="transAIHint">AI 翻译支持 DeepSeek / 智谱 GLM / 月之暗面 Kimi，按量付费，与免费的 MyMemory 不同。Key 仅存本机，可随时清除。未填 Key 时 AI 不可用。</p>
         </div>
+      </div>
 
-        <div class="sec-title" data-i18n="others">其他</div>
-        <div class="minirow" id="openHelpRow" data-i18n="howTo">使用说明</div>
+      <!-- 023 数据（历史 + 导出） -->
+      <div id="dataPane" hidden>
+        <div class="sec-title" data-i18n="dataTitle">数据管理</div>
         <div class="minirow" id="historyRow" data-i18n="history">对话历史</div>
         <div class="minirow" id="exportRow" data-i18n="exportChat">导出聊天记录 (JSON)</div>
+        <p class="hint" data-i18n="dataHint">所有聊天、录音、图片与设置仅保存在本机浏览器中，不会上传服务器；可在此恢复历史会话或导出备份。</p>
+      </div>
+
+      <!-- 023 使用说明（独立一级标签，覆盖全部功能） -->
+      <div id="helpPane" hidden>
+        <div class="sec-title" data-i18n="helpTab">使用说明</div>
+        <p class="hint" data-i18n="hp1">① 身份：顶部按钮切换「听障朋友 / 志愿者」，决定气泡颜色和快捷用语；称呼可在 设置 → 通用 自定义。</p>
+        <p class="hint" data-i18n="hp2">② 快捷用语：黄边 = 填入输入框继续编辑，无黄边 = 点一下直接发送；可在 设置 → 预设 增删改。</p>
+        <p class="hint" data-i18n="hp3">③ 打字 / 发图：底部输入框打字发送；「+」可从内置相册或手机相册发图；长按气泡可引用对方消息。</p>
+        <p class="hint" data-i18n="hp4">④ 语音输入：点麦克风说话，停止说话后自动结束识别；安卓国内可选云端识别（设置 → 语音 → 语音识别，支持微软 Azure / OpenAI 等）。</p>
+        <p class="hint" data-i18n="hp5">⑤ 朗读：开启顶栏喇叭后，发出的消息自动朗读；声音可在 设置 → 语音 → 朗读 选择并试听。</p>
+        <p class="hint" data-i18n="hp6">⑥ 大字号：顶栏 A+ / A− 调整全局字号，引用与翻译随正文同步缩放。</p>
+        <p class="hint" data-i18n="hp7">⑦ 倒置模式：设置 → 通用 → 文本方向选「倒置·正置混合」，听障朋友发出的文字和图片旋转 180°，对面朋友无需颠倒手机。</p>
+        <p class="hint" data-i18n="hp8">⑧ 翻译：点气泡旁「译」翻译消息；默认 MyMemory 免费，也可在 设置 → 翻译 配置 AI 翻译；直发预设中英互译秒翻。</p>
+        <p class="hint" data-i18n="hp9">⑨ 收藏 / 相册：点气泡左侧心形收藏；设置 → 收藏 查看，设置 → 相册 管理图片。</p>
+        <p class="hint" data-i18n="hp10">⑩ 全屏展示：点气泡全屏大字给对方看，左右滑动切换上一条 / 下一条。</p>
+        <p class="hint" data-i18n="hp11">⑪ 数据：聊天仅存本机浏览器；设置 → 数据 可查看历史会话、导出 JSON 备份。</p>
       </div>
 
       <button class="done" id="settingsClose" data-i18n="done">完成</button>
@@ -969,6 +1002,25 @@
   </div>
 
   <div class="toast" id="toast"></div>
+
+  <!-- 023 首次使用引导浮窗（简化流程版；勾选“不再显示”后关闭即不再出现） -->
+  <div class="overlay" id="guideOverlay">
+    <div class="card">
+      <h2 data-i18n="gTitle">欢迎使用字谈</h2>
+      <p class="hint" data-i18n="gSub">三步开始面对面交流：</p>
+      <ol>
+        <li data-i18n="gStep1">顶部选择身份：听障朋友 / 志愿者（决定气泡颜色和快捷用语）。</li>
+        <li data-i18n="gStep2">打字、点「+」发图，或点麦克风说话 —— 停止说话后自动结束识别。</li>
+        <li data-i18n="gStep3">点气泡全屏大字展示给对方；心形图标可收藏常用内容。</li>
+      </ol>
+      <p class="hint" data-i18n="gMore">朗读、翻译、倒置显示等更多功能，见 设置 → 使用说明。</p>
+      <label class="guide-nomore">
+        <input type="checkbox" id="guideNoMore">
+        <span data-i18n="gNoMore">不再显示</span>
+      </label>
+      <button class="done" id="guideStart" data-i18n="gStart">开始使用</button>
+    </div>
+  </div>
 
   <!-- 模型加载/下载进度（对话界面） -->
   <div class="modelprog" id="modelProg" hidden>
@@ -1097,7 +1149,32 @@
       cloudCleared: '云端识别配置已清除',
       asrCloudRunning: '云端识别中…',
       cloudNeedProxy: '该厂商需要后端代理签名/中转，暂未接入；请选择 微软 Azure 或 OpenAI。',
-      cloudFail: '云端识别失败：'
+      cloudFail: '云端识别失败：',
+      /* 023 设置重构 / 引导页 / 预设快译 */
+      dataTab: '数据', dataTitle: '数据管理',
+      dataHint: '所有聊天、录音、图片与设置仅保存在本机浏览器中，不会上传服务器；可在此恢复历史会话或导出备份。',
+      helpTab: '使用说明',
+      transPresetHint: '直发的预设用语在中英互译时秒翻：直接使用对应语言版本的预设文本，不调用翻译接口。',
+      transPreset: '预设',
+      hp1: '① 身份：顶部按钮切换「听障朋友 / 志愿者」，决定气泡颜色和快捷用语；称呼可在 设置 → 通用 自定义。',
+      hp2: '② 快捷用语：黄边 = 填入输入框继续编辑，无黄边 = 点一下直接发送；可在 设置 → 预设 增删改。',
+      hp3: '③ 打字 / 发图：底部输入框打字发送；「+」可从内置相册或手机相册发图；长按气泡可引用对方消息。',
+      hp4: '④ 语音输入：点麦克风说话，停止说话后自动结束识别；安卓国内可选云端识别（设置 → 语音 → 语音识别，支持微软 Azure / OpenAI 等）。',
+      hp5: '⑤ 朗读：开启顶栏喇叭后，发出的消息自动朗读；声音可在 设置 → 语音 → 朗读 选择并试听。',
+      hp6: '⑥ 大字号：顶栏 A+ / A− 调整全局字号，引用与翻译随正文同步缩放。',
+      hp7: '⑦ 倒置模式：设置 → 通用 → 文本方向选「倒置·正置混合」，听障朋友发出的文字和图片旋转 180°，对面朋友无需颠倒手机。',
+      hp8: '⑧ 翻译：点气泡旁「译」翻译消息；默认 MyMemory 免费，也可在 设置 → 翻译 配置 AI 翻译；直发预设中英互译秒翻。',
+      hp9: '⑨ 收藏 / 相册：点气泡左侧心形收藏；设置 → 收藏 查看，设置 → 相册 管理图片。',
+      hp10: '⑩ 全屏展示：点气泡全屏大字给对方看，左右滑动切换上一条 / 下一条。',
+      hp11: '⑪ 数据：聊天仅存本机浏览器；设置 → 数据 可查看历史会话、导出 JSON 备份。',
+      gTitle: '欢迎使用字谈',
+      gSub: '三步开始面对面交流：',
+      gStep1: '顶部选择身份：听障朋友 / 志愿者（决定气泡颜色和快捷用语）。',
+      gStep2: '打字、点「+」发图，或点麦克风说话 —— 停止说话后自动结束识别。',
+      gStep3: '点气泡全屏大字展示给对方；心形图标可收藏常用内容。',
+      gMore: '朗读、翻译、倒置显示等更多功能，见 设置 → 使用说明。',
+      gNoMore: '不再显示',
+      gStart: '开始使用'
     },
     en: {
       settings: 'Settings', fontDown: 'Smaller font', fontUp: 'Larger font',
@@ -1207,7 +1284,32 @@
       cloudCleared: 'Cloud config cleared',
       asrCloudRunning: 'Recognizing in cloud…',
       cloudNeedProxy: 'This vendor requires a signed backend proxy — not wired yet. Please choose Microsoft Azure or OpenAI.',
-      cloudFail: 'Cloud recognition failed: '
+      cloudFail: 'Cloud recognition failed: ',
+      /* 023 settings restructure / guide / preset fast translate */
+      dataTab: 'Data', dataTitle: 'Data',
+      dataHint: 'All chats, recordings, images and settings stay in this browser only — nothing is uploaded. Restore past sessions or export a backup here.',
+      helpTab: 'How to use',
+      transPresetHint: 'Direct-send presets translate instantly between Chinese and English by using the matching preset text — no translation API call.',
+      transPreset: 'Preset',
+      hp1: '① Identity: switch "Deaf / Volunteer" at the top — it sets bubble colors and quick phrases; rename them in Settings → General.',
+      hp2: '② Quick phrases: yellow border = fill into the box to edit; no border = tap to send directly. Edit them in Settings → Presets.',
+      hp3: '③ Typing / images: type in the box below; tap "+" to send an image from the built-in or phone gallery; long-press a bubble to quote.',
+      hp4: '④ Voice input: tap the mic and speak — recognition ends automatically after you stop. Cloud engines (Azure / OpenAI...) can be set in Settings → Voice → Speech recognition.',
+      hp5: '⑤ Read aloud: turn on the speaker icon to auto-read sent messages; pick voices in Settings → Voice → Read aloud.',
+      hp6: '⑥ Font size: A+ / A− in the top bar scales everything — quotes and translations follow the body text.',
+      hp7: '⑦ Inverted mode: Settings → General → Text direction "Inverted · mixed" rotates the Deaf person\'s text and images 180° so the other side reads without flipping the phone.',
+      hp8: '⑧ Translation: tap "译" beside a bubble. MyMemory is free by default; AI translation can be configured in Settings → Translation. Direct-send presets translate instantly (ZH↔EN).',
+      hp9: '⑨ Favorites / gallery: tap the heart beside a bubble to favorite; see Settings → Favorites, manage images in Settings → Gallery.',
+      hp10: '⑩ Fullscreen: tap a bubble for fullscreen big text; swipe for previous / next.',
+      hp11: '⑪ Data: chats stay in this browser; Settings → Data restores history or exports a JSON backup.',
+      gTitle: 'Welcome to ZiTan',
+      gSub: 'Three steps to start talking face to face:',
+      gStep1: 'Pick an identity at the top: Deaf / Volunteer (sets bubble colors and quick phrases).',
+      gStep2: 'Type, tap "+" to send an image, or tap the mic and speak — recognition stops automatically when you do.',
+      gStep3: 'Tap a bubble for fullscreen big text; tap the heart to save frequently used content.',
+      gMore: 'For read-aloud, translation, inverted mode and more, see Settings → How to use.',
+      gNoMore: 'Don\'t show again',
+      gStart: 'Get started'
     }
   };
   let L = I18N.zh;
@@ -1258,6 +1360,32 @@
     }
   };
   function cloneDefaults(lang) { return JSON.parse(JSON.stringify(DEFAULT_PRESETS[lang])); }
+
+  /* 023 预设快译：消息文本是「直发型」预设（k==='send'，填入编辑型不算），
+     且当前翻译方向是 中↔英 互译时，直接返回对应语言版本的同一预设文本，不调用翻译接口。
+     仅处理 zh↔en；后续扩展更多语言时，保持各语言预设列表同序，并在下面语言对表里加一行即可。 */
+  const PRESET_FAST_LANG_PAIRS = [
+    { from: 'zh', to: 'en', fromRe: /^zh/i, toRe: /^en/i },
+    { from: 'en', to: 'zh', fromRe: /^en/i, toRe: /^zh/i }
+    /* 示例：{ from: 'ja', to: 'zh', fromRe: /^ja/i, toRe: /^zh/i } —— 需先补齐对应语言的 DEFAULT_PRESETS */
+  ];
+  function presetFastTranslate(text, src, tgt) {
+    const pair = PRESET_FAST_LANG_PAIRS.find(p => p.fromRe.test(src || '') && p.toRe.test(tgt || ''));
+    if (!pair) return null;
+    let hit = null;
+    ['deaf', 'vol'].some(role => {
+      return DEFAULT_PRESETS[pair.from][role].some((p, idx) => {
+        if (p.k !== 'send') return false;            /* 仅直发文本参与快译 */
+        if (p.t === text) {
+          const counterpart = (DEFAULT_PRESETS[pair.to][role] || [])[idx];
+          if (counterpart && counterpart.k === 'send') hit = counterpart;
+          return true;
+        }
+        return false;
+      });
+    });
+    return hit ? hit.t : null;
+  }
 
   /* ============ 语音语言列表（列出尽可能多，不再用「其他」） ============ */
   const LANGS = [
@@ -1476,7 +1604,7 @@
   }
   function translationCardMarkup(m, i) {
     const tgt = transShortLabel(m.tr.tgt || 'en');
-    let eng = (m.tr.engine === 'ai') ? 'AI' : 'MyMemory';
+    let eng = (m.tr.engine === 'ai') ? 'AI' : (m.tr.engine === 'preset' ? t('transPreset') : 'MyMemory');
     if (m.tr.engine === 'ai' && m.tr.prov && AI_PROVIDERS[m.tr.prov]) eng = AI_PROVIDERS[m.tr.prov].label;
     return '<div class="trcard" data-tri="' + i + '">'
       + '<div class="tr-head"><span class="tr-lang">' + escapeHtml(tgt + ' · ' + eng) + '</span>'
@@ -2551,6 +2679,14 @@
     const def = state.transDefs[(m && m.by)] || state.transDefs.deaf;
     const src = (def && def.src) || 'zh-CN';
     const tgt = (def && def.tgt) || 'en';
+    /* 023 预设快译：直发预设 + 中英互译 → 直接用对应语言预设文本，不走翻译接口 */
+    const fastText = presetFastTranslate(text, src, tgt);
+    if (fastText) {
+      m.tr = { text: fastText, engine: 'preset', prov: '', tgt: tgt, time: Date.now() };
+      save(); render();
+      if (btn) btn.classList.remove('loading');
+      return;
+    }
     const p = (engine === 'ai')
       ? aiTranslate(text, tgt, src)
       : mymemoryTranslate(text, src, tgt);
@@ -3395,11 +3531,14 @@
     $('settingsOverlay').addEventListener('click', e => { if (e.target === $('settingsOverlay')) $('settingsOverlay').classList.remove('show'); });
     $('sTabPreset').onclick = () => showSettingsPane('preset');
     $('sTabSound').onclick  = () => showSettingsPane('sound');
+    $('sTabTrans').onclick  = () => showSettingsPane('trans');
     $('vSubRead').onclick   = () => showSoundSub('read');
     $('vSubAsr').onclick    = () => showSoundSub('asr');
     $('sTabFav').onclick    = () => showSettingsPane('fav');
     $('sTabGallery').onclick= () => showSettingsPane('gallery');
     $('sTabGeneral').onclick= () => showSettingsPane('general');
+    $('sTabData').onclick   = () => showSettingsPane('data');
+    $('sTabHelp').onclick   = () => showSettingsPane('help');
 
     /* 020 消息增强事件 */
     /* 加号：选择图片来源 */
@@ -3517,7 +3656,6 @@
     };
 
     /* 设置里：使用说明 / 清空 */
-    $('openHelpRow').onclick = () => { $('settingsOverlay').classList.remove('show'); $('helpOverlay').classList.add('show'); };
     $('exportRow').onclick = exportChat;
     $('historyRow').onclick = () => { $('settingsOverlay').classList.remove('show'); $('historyOverlay').classList.add('show'); renderHistoryList(); };
     $('historyClose').onclick = () => $('historyOverlay').classList.remove('show');
@@ -3529,6 +3667,15 @@
     $('helpClose').onclick = () => $('helpOverlay').classList.remove('show');
     $('helpX').onclick = () => $('helpOverlay').classList.remove('show');
     $('helpOverlay').addEventListener('click', e => { if (e.target === $('helpOverlay')) $('helpOverlay').classList.remove('show'); });
+
+    /* 023 首次使用引导浮窗：默认每次打开都出现；勾选「不再显示」后关闭即不再出现 */
+    const closeGuide = () => {
+      if ($('guideNoMore').checked) localStorage.setItem('zitanGuideOff', '1');
+      $('guideOverlay').classList.remove('show');
+    };
+    if (!localStorage.getItem('zitanGuideOff')) $('guideOverlay').classList.add('show');
+    $('guideStart').onclick = closeGuide;
+    $('guideOverlay').addEventListener('click', e => { if (e.target === $('guideOverlay')) closeGuide(); });
 
     /* 聊天区：播放 / 录音条点按播放、长按换引擎 / 大字展示 */
     chatEl.addEventListener('click', e => {
@@ -3676,20 +3823,30 @@
   function showSettingsPane(which) {
     const presetOn = (which === 'preset');
     const soundOn  = (which === 'sound');
+    const transOn  = (which === 'trans');
     const favOn    = (which === 'fav');
     const galOn    = (which === 'gallery');
     const genOn    = (which === 'general');
+    const dataOn   = (which === 'data');
+    const helpOn   = (which === 'help');
+    $('sTabGeneral').classList.toggle('on', genOn);
     $('sTabPreset').classList.toggle('on', presetOn);
     $('sTabSound').classList.toggle('on', soundOn);
+    $('sTabTrans').classList.toggle('on', transOn);
     $('sTabFav').classList.toggle('on', favOn);
     $('sTabGallery').classList.toggle('on', galOn);
-    $('sTabGeneral').classList.toggle('on', genOn);
+    $('sTabData').classList.toggle('on', dataOn);
+    $('sTabHelp').classList.toggle('on', helpOn);
     $('presetPane').hidden = !presetOn;
     $('soundPane').hidden  = !soundOn;
+    $('transPane').hidden  = !transOn;
     $('favPane').hidden    = !favOn;
     $('galleryPane').hidden = !galOn;
     $('generalPane').hidden = !genOn;
-    if (genOn) { buildTransSelects(); buildAIConfig(); applyRoleNames(); }
+    $('dataPane').hidden   = !dataOn;
+    $('helpPane').hidden   = !helpOn;
+    if (genOn) { applyRoleNames(); }
+    if (transOn) { buildTransSelects(); buildAIConfig(); }
     if (soundOn) {
       showSoundSub(soundSub);
       if (!voices.length) voicesKicked = false;  /* 用户手势：允许重新触发一次语音加载 */
