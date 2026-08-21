@@ -90,6 +90,13 @@
     if (rec) { try { rec.abort(); } catch (e) {} rec = null; }
   }
 
+  /* 优雅停止（022：静音自动结束用）——调 r.stop() 让浏览器把已说的内容吐成最终结果，
+     不置 manualStop：若还有结果会照常触发 onresult；若没有，onend 会报 end-no-result 由上层复位 */
+  function gracefulStop() {
+    clearWatchdog();
+    if (rec) { try { rec.stop(); } catch (e) { try { rec.abort(); } catch (e2) {} } }
+  }
+
   /* 环境信息（供调试/展示） */
   function info() {
     return {
@@ -99,5 +106,5 @@
     };
   }
 
-  global.NativeAsr = { isSupported, start, stop, info, CAN_FALLBACK };
+  global.NativeAsr = { isSupported, start, stop, gracefulStop, info, CAN_FALLBACK };
 })(window);

@@ -129,6 +129,9 @@
   /* 021 文本方向：倒置·正置混合 —— 听障人(deaf)发出的气泡内容整体 180° 旋转（非镜像），
      供站在对面的朋友正读；操作按钮列(.bbtns)保持正置，便于听障人自己点按。 */
   body.dir-mixed .msg.deaf .bubble { transform: rotate(180deg); }
+  /* 混合模式下：听障朋友发的图片在气泡内与全屏查看器里同样倒置 */
+  body.dir-mixed .msg.deaf .bubble .bubimg { transform: rotate(180deg); }
+  #imgViewer.flip img { transform: rotate(180deg); }
 
   .play {
     flex: none; width: 36px; height: 36px; border-radius: 50%;
@@ -265,9 +268,9 @@
   .card ol { padding-left: 20px; margin: 8px 0; }
   .card .done { width: 100%; margin-top: 16px; padding: 12px; border: none; border-radius: 12px; background: var(--accent); color: #fff; font-size: 16px; cursor: pointer; }
 
-  .tabs2 { display: flex; gap: 8px; margin: 8px 0 14px; }
+  .tabs2 { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 14px; }
   .tabs2 button {
-    flex: 1; padding: 10px; border: 1.5px solid var(--line); border-radius: 10px;
+    flex: 1 1 auto; min-width: max-content; padding: 10px; border: 1.5px solid var(--line); border-radius: 10px;
     background: var(--panel); color: var(--ink); font-size: 15px; font-weight: 600; cursor: pointer;
   }
   .tabs2 button.on { background: var(--ink); color: var(--panel); border-color: var(--ink); }
@@ -448,7 +451,7 @@
     max-width: 100%; padding: 6px 10px; margin-bottom: 2px;
     border-left: 3px solid rgba(0,0,0,.25);
     background: rgba(0,0,0,.10); border-radius: 8px;
-    font-size: calc(15px * var(--fs)); line-height: 1.4; cursor: pointer;
+    font-size: 0.6em; line-height: 1.4; cursor: pointer;   /* em：随气泡字号（设置里的字号）等比缩放 */
   }
   .quote .q-ic { flex: none; margin-top: 2px; opacity: .7; }
   .quote .q-txt {
@@ -469,12 +472,12 @@
   .bbtns .act.transb.loading { opacity: .55; }
   .trcard {
     margin-top: 10px; padding: 8px 10px; border-radius: 12px;
-    background: rgba(0,0,0,.07); font-size: calc(14px * var(--fs)); line-height: 1.4;
+    background: rgba(0,0,0,.07); font-size: 0.6em; line-height: 1.4;   /* em：随气泡字号等比缩放 */
     align-self: stretch; word-break: break-word;
   }
   .msg.deaf .trcard { background: rgba(0,0,0,.10); color: var(--deaf-ink); }
   .trcard .tr-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
-  .trcard .tr-lang { font-size: calc(10px * var(--fs)); font-weight: 700; opacity: .75; letter-spacing: .3px; }
+  .trcard .tr-lang { font-size: 0.65em; font-weight: 700; opacity: .75; letter-spacing: .3px; }
   .trcard .tr-acts { display: flex; align-items: center; gap: 2px; }
   .trcard .tr-del, .trcard .tr-play {
     flex: none; width: 22px; height: 22px; border: none; border-radius: 6px;
@@ -705,8 +708,7 @@
       <h2 data-i18n="settings">设置</h2>
       <div class="tabs2">
         <button id="sTabPreset" class="on" data-i18n="presets">预设</button>
-        <button id="sTabVoice" data-i18n="voice">语音</button>
-        <button id="sTabAsr" data-i18n="asrTitle">语音识别</button>
+        <button id="sTabSound" data-i18n="voiceTab">语音</button>
         <button id="sTabFav" data-i18n="favTitle">收藏</button>
         <button id="sTabGallery" data-i18n="galleryTitle">相册</button>
         <button id="sTabGeneral" data-i18n="general">通用</button>
@@ -729,20 +731,27 @@
         <p class="hint" data-i18n="presetHint">黄边 = 填入输入框继续写；无黄边 = 点一下直接发。点标签可切换，× 删除。</p>
       </div>
 
-      <!-- 语音 -->
-      <div id="voicePane" hidden>
-        <div class="sec-title" data-i18n="language">语言</div>
-        <select id="langSel"></select>
-        <div class="sec-title" data-i18n="voice">语音</div>
-        <div id="voiceList"></div>
-        <button class="pvbtn" id="previewBtn">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
-          <span data-i18n="preview">试听</span>
-        </button>
-      </div>
+      <!-- 语音（二级标签：朗读 / 语音识别） -->
+      <div id="soundPane" hidden>
+        <div class="tabs3">
+          <button id="vSubRead" class="on" data-i18n="readAloud">朗读</button>
+          <button id="vSubAsr" data-i18n="asrTitle">语音识别</button>
+        </div>
 
-      <!-- 语音识别 -->
-      <div id="asrPane" hidden>
+        <!-- 朗读 -->
+        <div id="readPane">
+          <div class="sec-title" data-i18n="language">语言</div>
+          <select id="langSel"></select>
+          <div class="sec-title" data-i18n="voice">语音</div>
+          <div id="voiceList"></div>
+          <button class="pvbtn" id="previewBtn">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+            <span data-i18n="preview">试听</span>
+          </button>
+        </div>
+
+        <!-- 语音识别 -->
+        <div id="asrPane" hidden>
         <div class="sec-title" data-i18n="asrEngine">识别引擎</div>
         <div id="asrEngineDesc" class="engine-legend" data-i18n="asrLegend">按当前设备/地区自动给出可用识别方式</div>
         <div id="asrEngineList"></div>
@@ -760,8 +769,17 @@
           <div class="asr-cloud-row">
             <input id="cloudApiKey" type="password" placeholder="" data-i18n-ph="cloudKeyPh">
           </div>
+          <div class="asr-cloud-row">
+            <input id="cloudExtra" type="text" placeholder="">
+          </div>
+          <div class="ai-keybar">
+            <button class="pvbtn" id="cloudSaveBtn" data-i18n="aiKeySave">保存</button>
+            <button class="pvbtn" id="cloudClearBtn" data-i18n="aiKeyClear">清除 Key</button>
+          </div>
           <p class="hint" data-i18n="cloudHint">云端识别会把音频发送到对应厂商服务器。未配置时，点麦克风选择云端会提醒你去填写。</p>
+          <p class="hint" id="cloudFreeHint"></p>
         </div>
+      </div>
       </div>
 
       <!-- 收藏 -->
@@ -1015,7 +1033,7 @@
       engCloudDesc: '当前支持自己填写 微软 / 阿里云 / 科大讯飞 等。需要在「设置 → 语音识别 → 云端识别」选择供应商并填写 API Key 等信息。',
       cloudKeyPh: '填入商家提供的 API Key / Secret',
       cloudHint: '云端识别会把音频发送到对应厂商服务器。未配置时，点麦克风选择云端会提醒你去填写。',
-      asrCloudNeed: '提醒：使用云端识别请在「设置 → 语音识别 → 云端识别」里选择供应商并填写 API Key。',
+      asrCloudNeed: '提醒：使用云端识别请在「设置 → 语音 → 语音识别 → 云端识别」里选择供应商并填写 API Key。',
       asrRegionAuto: '自动', asrRegionChina: '中国', asrRegionOverseas: '国外',
       asrDidAuto: '已自动识别为：', asrPlatform: '设备', asrBrowser: '浏览器',
       asrModelNotFound: '未下载', asrModelSize: '约 300MB', asrCloudNotConfig: '（未配置）',
@@ -1026,7 +1044,7 @@
       asrReDone: '重新识别完成', asrReFail: '重新识别失败', asrReRunning: '正在重新识别…',
       audioPlayFail: '录音播放失败', audioTapPlay: '点按播放，长按重新识别',
       asrNeedModel: '请先下载线下模型（设置 → 语音识别 → 线下模型）',
-      asrNeedCloud: '请先在 设置 → 语音识别 → 云端识别 配置 API Key',
+      asrNeedCloud: '请先在 设置 → 语音 → 语音识别 → 云端识别 配置 API Key',
       asrNoBrowser: '当前浏览器不支持', asrReEmpty: '没有识别到内容，保留原文本',
       /* 020 消息增强 */
       copyMsg: '复制', copied: '已复制', copyImgFail: '无法复制图片',
@@ -1056,7 +1074,26 @@
       transAIHint: 'AI 翻译支持 DeepSeek / 智谱 GLM / 月之暗面 Kimi，按量付费，与免费的 MyMemory 不同。各家的 Key 分别保存、仅存本机，可随时清除。未填 Key 时 AI 不可用。',
       transBtn: '翻译', transRead: '朗读翻译', transLangEn: '英', transRun: '翻译中…', transFail: '翻译失败：',
       transEmpty: '没有翻译到内容', transDel: '删除翻译', transNeedAIKey: '请先在 设置 → 通用 → 翻译 填写 API Key',
-      transAIKeyInvalid: 'API Key 无效，请检查后重试'
+      transAIKeyInvalid: 'API Key 无效，请检查后重试',
+      /* 022 设置重构 + 云端识别 */
+      voiceTab: '语音', readAloud: '朗读',
+      cloudVendorAzure: '微软 Azure 语音（每月免费 5 小时）',
+      cloudVendorAliyun: '阿里云智能语音（试用期内每日免费 2 小时）',
+      cloudVendorVolc: '火山引擎豆包语音（每应用免费 20 小时）',
+      cloudVendorOpenai: 'OpenAI Whisper（无免费额度，约 $0.006/分钟）',
+      cloudExtraPhAzure: '区域（如 eastasia / japaneast）',
+      cloudExtraPhOpenai: '模型（默认 whisper-1，可填 gpt-4o-mini-transcribe）',
+      cloudExtraPhAliyun: 'AppKey（需后端代理调用，暂未接入）',
+      cloudExtraPhVolc: 'APP ID（需后端代理调用，暂未接入）',
+      cloudFreeHintAzure: 'Azure F0 免费层：每月 5 小时实时转写免费（长期有效）。在 portal.azure.com 创建「语音服务」（选 F0 免费层），填入 Key1 与区域即可。',
+      cloudFreeHintAliyun: '阿里云智能语音交互：新用户 3 个月内，录音文件识别每 24 小时免费 2 小时。因需要 AccessKey 签名，浏览器无法直连，需通过后端代理调用。',
+      cloudFreeHintVolc: '火山引擎豆包语音：每个应用赠送 20 小时免费识别额度（可新建应用续领）。提交任务需公网音频链接，浏览器无法直连，需通过后端代理调用。',
+      cloudFreeHintOpenai: 'OpenAI 转写 API 无每月免费额度（新账号偶有一次性赠金），whisper-1 约 $0.006/分钟、gpt-4o-mini-transcribe 约 $0.003/分钟。在 platform.openai.com 创建 API Key 后填入即可。',
+      cloudSaved: '云端识别配置已保存（仅存本机）',
+      cloudCleared: '云端识别配置已清除',
+      asrCloudRunning: '云端识别中…',
+      cloudNeedProxy: '该厂商需要后端代理签名/中转，暂未接入；请选择 微软 Azure 或 OpenAI。',
+      cloudFail: '云端识别失败：'
     },
     en: {
       settings: 'Settings', fontDown: 'Smaller font', fontUp: 'Larger font',
@@ -1105,7 +1142,7 @@
       engCloudDesc: 'Bring your own vendor (Microsoft / Aliyun / iFlytek...). Choose a provider and enter an API Key in Settings → Speech → Cloud.',
       cloudKeyPh: 'Enter your API Key / Secret',
       cloudHint: 'Cloud recognition sends audio to the vendor\'s servers. If unconfigured, choosing Cloud will remind you to fill it in.',
-      asrCloudNeed: 'Reminder: to use cloud recognition, choose a provider and enter your API Key in Settings → Speech recognition → Cloud.',
+      asrCloudNeed: 'Reminder: to use cloud recognition, choose a provider and enter your API Key in Settings → Voice → Speech recognition → Cloud.',
       asrRegionAuto: 'Auto', asrRegionChina: 'China', asrRegionOverseas: 'Overseas',
       asrDidAuto: 'Detected as: ', asrPlatform: 'Device', asrBrowser: 'Browser',
       asrModelNotFound: 'Not downloaded', asrModelSize: '~300 MB', asrCloudNotConfig: '(not configured)',
@@ -1116,7 +1153,7 @@
       asrReDone: 'Re-recognized', asrReFail: 'Re-recognition failed', asrReRunning: 'Recognizing again…',
       audioPlayFail: 'Could not play recording', audioTapPlay: 'Tap to play, long-press to re-recognize',
       asrNeedModel: 'Download the local model first (Settings → Speech recognition → Local model)',
-      asrNeedCloud: 'Set up an API Key in Settings → Speech recognition → Cloud first',
+      asrNeedCloud: 'Set up an API Key in Settings → Voice → Speech recognition → Cloud first',
       asrNoBrowser: 'Not supported in this browser', asrReEmpty: 'No speech detected, keeping the original text',
       /* 020 message enhancements */
       copyMsg: 'Copy', copied: 'Copied', copyImgFail: 'Could not copy image',
@@ -1146,7 +1183,26 @@
       transAIHint: 'AI translation supports DeepSeek / Zhipu GLM / Moonshot Kimi and is billed by usage, unlike free MyMemory. Each provider Key is stored separately, on this device only, and can be cleared anytime. AI is unavailable without a Key.',
       transBtn: 'Translate', transRead: 'Read translation', transLangEn: 'EN', transRun: 'Translating…', transFail: 'Translation failed: ',
       transEmpty: 'Nothing to translate', transDel: 'Delete translation', transNeedAIKey: 'Add an API Key in Settings → General → Translation first',
-      transAIKeyInvalid: 'API Key invalid — please check and retry'
+      transAIKeyInvalid: 'API Key invalid — please check and retry',
+      /* 022 settings restructure + cloud ASR */
+      voiceTab: 'Voice', readAloud: 'Read aloud',
+      cloudVendorAzure: 'Microsoft Azure Speech (5 hrs free / month)',
+      cloudVendorAliyun: 'Aliyun Speech (2 hrs free / day during trial)',
+      cloudVendorVolc: 'Volcengine Doubao (20 hrs free per app)',
+      cloudVendorOpenai: 'OpenAI Whisper (no free tier, ~$0.006/min)',
+      cloudExtraPhAzure: 'Region (e.g. eastasia / japaneast)',
+      cloudExtraPhOpenai: 'Model (default whisper-1, or gpt-4o-mini-transcribe)',
+      cloudExtraPhAliyun: 'AppKey (requires server proxy, not wired yet)',
+      cloudExtraPhVolc: 'APP ID (requires server proxy, not wired yet)',
+      cloudFreeHintAzure: 'Azure F0 free tier: 5 audio hours of real-time transcription per month (ongoing). Create a Speech resource (F0) at portal.azure.com, then enter Key1 and region.',
+      cloudFreeHintAliyun: 'Aliyun ISI: within the 3-month trial, file transcription gets 2 free hours per 24h. Requires AccessKey signing — browser cannot call it directly; a backend proxy is needed.',
+      cloudFreeHintVolc: 'Volcengine Doubao ASR: each app gets 20 free hours (create a new app to renew). Task submission needs a public audio URL — a backend proxy is required.',
+      cloudFreeHintOpenai: 'OpenAI transcription has no monthly free tier (new accounts may get one-time credit). whisper-1 ≈ $0.006/min, gpt-4o-mini-transcribe ≈ $0.003/min. Create a key at platform.openai.com.',
+      cloudSaved: 'Cloud config saved (stored on this device only)',
+      cloudCleared: 'Cloud config cleared',
+      asrCloudRunning: 'Recognizing in cloud…',
+      cloudNeedProxy: 'This vendor requires a signed backend proxy — not wired yet. Please choose Microsoft Azure or OpenAI.',
+      cloudFail: 'Cloud recognition failed: '
     }
   };
   let L = I18N.zh;
@@ -1247,7 +1303,7 @@
     voiceURI: '',
     presetEdited: false,
     asrEngine: 'auto',        /* auto | browser | model | cloud */
-    cloud: { vendor: '', apiKey: '' },
+    cloud: { vendor: '', apiKey: '', extra: '' },
     presets: cloneDefaults('zh')
   };
   let roleTab = 'deaf';
@@ -1267,14 +1323,16 @@
       plus:   '<path d="M12 5v14M5 12h14"/>',
       check:  '<path d="M20 6L9 17l-5-5"/>',
       copy:   '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
-      heart:  '<path d="M12 21s-7-4.5-9.3-9C1.2 9 2.6 5.5 6 5.5c2 0 3.2 1 4 2.3.8-1.2 2-2.3 4-2.3 3.4 0 4.8 3.5 3.3 6.5C19 16.5 12 21 12 21z"/>',
+      heart:  '<path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>',
       paste:  '<rect x="8" y="4" width="8" height="4" rx="1"/><path d="M8 6H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3"/><path d="M12 11v6M9 14h6"/>',
       gallery:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5-9 9"/>',
       link:   '<path d="M10 14a4 4 0 0 0 6 .5l3-3a4 4 0 1 0-5.5-5.5l-1 1"/><path d="M14 10a4 4 0 0 0-6-.5l-3 3a4 4 0 1 0 5.5 5.5l1-1"/>',
       trash:  '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M9 7V4h6v3"/>',
       up:     '<path d="M12 5v14M5 12l7-7 7 7"/>'
     };
-    const attrs = ' fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"';
+    const attrs = (name === 'heart')
+      ? ' fill="currentColor" stroke="none"'   /* 心形：单一实心，未收藏白(墨色)/已收藏红(.favb.on) */
+      : ' fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"';
     return '<svg viewBox="0 0 24 24" width="' + s + '" height="' + s + '"' + attrs + '>' + P[name] + '</svg>';
   }
 
@@ -1553,11 +1611,11 @@
       const ok = typeof NativeAsr !== 'undefined' && NativeAsr.isSupported();
       push('browser', ok, ok ? '' : t('asrNoBrowser'));
     }
-    if (cur !== 'model' && !EnvDetect.isMobile()) {   /* 手机端算力不够，不提供本地模型 */
+    if (cur !== 'model' && MODEL_ASR_ENABLED && !EnvDetect.isMobile()) {   /* 手机端算力不够，不提供本地模型；022 起模型识别全局隐藏 */
       const ready = typeof SenseVoiceAsr !== 'undefined' && SenseVoiceAsr.getReady && SenseVoiceAsr.getReady();
       push('model', ready, ready ? '' : t('asrNeedModel'));
     }
-    /* 云端第三选项：代码先写上并注释掉；当前 CLOUD_ASR_ENABLED=false 时不会显示，日后一起开放。 */
+    /* 云端第三选项：022 起开放（Azure / OpenAI 浏览器直连；阿里云/火山需后端代理） */
     if (cur !== 'cloud' && CLOUD_ASR_ENABLED) {
       const cfg = !!(state.cloud.vendor && state.cloud.apiKey);
       push('cloud', cfg, cfg ? '' : t('asrNeedCloud'));
@@ -1565,6 +1623,46 @@
     if (!box.children.length) {
       box.innerHTML = '<div class="empty-voices">' + escapeHtml(t('asrNoEngine')) + '</div>';
     }
+  }
+
+  /* 022 云端识别：录音上传到所配置厂商（Azure / OpenAI 浏览器直连；阿里云/火山需后端代理） */
+  function cloudRecognizeBlob(blob, lang) {
+    const vendor = state.cloud.vendor;
+    const key = state.cloud.apiKey || '';
+    const extra = (state.cloud.extra || '').trim();
+    if (!vendor || !key) return Promise.reject(new Error(t('asrCloudNeed')));
+    if (vendor === 'openai') {
+      const fd = new FormData();
+      fd.append('file', blob, 'audio.webm');
+      fd.append('model', extra || 'whisper-1');
+      fd.append('response_format', 'json');
+      if (lang) fd.append('language', String(lang).split('-')[0]);
+      return fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + key },
+        body: fd
+      }).then(r => r.json().then(j => ({ ok: r.ok, j }))).then(({ ok, j }) => {
+        if (!ok || !j.text) throw new Error((j.error && j.error.message) || ('HTTP ' + ok));
+        return j.text;
+      });
+    }
+    if (vendor === 'azure') {
+      const region = extra || 'eastasia';
+      const url = 'https://' + region + '.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=' + encodeURIComponent(lang || 'zh-CN');
+      return fetch(url, {
+        method: 'POST',
+        headers: {
+          'Ocp-Apim-Subscription-Key': key,
+          'Content-Type': (blob.type || 'audio/webm') + '; codecs=audio/opus'
+        },
+        body: blob
+      }).then(r => r.json().then(j => ({ ok: r.ok, j }))).then(({ ok, j }) => {
+        if (!ok) throw new Error((j.error && j.error.message) || ('HTTP ' + ok));
+        if (j.RecognitionStatus && j.RecognitionStatus !== 'Success') throw new Error(j.RecognitionStatus);
+        return j.DisplayText || '';
+      });
+    }
+    return Promise.reject(new Error(t('cloudNeedProxy')));
   }
 
   /* 用已保存的录音重新识别：成功 → 覆盖替换文本与 asr，写回 IndexedDB（旧文本丢弃） */
@@ -1590,8 +1688,11 @@
           .catch(() => toast(t('asrReFail')));
       } else if (engine === 'browser') {
         replayAudioForBrowser(rec.blob, apply);
+      } else if (engine === 'cloud') {
+        /* 022：云端重识别（Azure / OpenAI 直连；阿里云/火山需后端代理） */
+        cloudRecognizeBlob(rec.blob, state.voiceLang).then(apply)
+          .catch(err => { toast(t('cloudFail') + (err.message || err)); });
       } else {
-        /* cloud 第三选项：真实云端识别另行接入；本期不执行 */
         toast(t('asrCloudNeed'));
       }
     }).catch(() => toast(t('asrReFail')));
@@ -1800,8 +1901,12 @@
          · android/harmony → Chrome→Google / Edge→Microsoft
          · windows → Chrome→Google / Edge→Microsoft
          · macOS/server → Safari→Apple / Chrome→Google / Edge→Microsoft   */
-  /* 云端识别（③）暂未开放：设 false 时隐藏云端选项、隐藏设置里的云端区块（保代码，日后改回 true 即可开启） */
-  const CLOUD_ASR_ENABLED = false;
+  /* 云端识别（③）：022 起开放设置与调用（Azure / OpenAI 可浏览器直连；阿里云/火山需后端代理，先可配置） */
+  const CLOUD_ASR_ENABLED = true;
+  /* 模型识别（SenseVoice 线下模型）：022 起全局隐藏（下载速度不理想）。
+     设 false 时引擎列表/重识别列表不再出现「模型识别」，设置里隐藏「线下模型」区块；
+     代码保留，日后改回 true 即可恢复。 */
+  const MODEL_ASR_ENABLED = false;
   const EnvDetect = (function () {
     const ua = navigator.userAgent || '';        // 先解析，再用 navigator.platform 补
     const plt = (navigator.platform || '').toLowerCase();
@@ -1860,8 +1965,10 @@
           list = ['cloud'];                         /* 安卓/鸿蒙 国内：只云端 */
         }
       }
-      /* 云端识别暂未开放：从可选列表中去掉（保留在代码里，日后改回 true 即显示） */
+      /* 云端识别：CLOUD_ASR_ENABLED=false 时从可选列表中去掉 */
       if (!CLOUD_ASR_ENABLED) list = list.filter(e => e !== 'cloud');
+      /* 模型识别：022 起全局隐藏（下载速度不理想），改回 MODEL_ASR_ENABLED=true 恢复 */
+      if (!MODEL_ASR_ENABLED) list = list.filter(e => e !== 'model');
       return list;
     }
     function supportsBrowser() {   // 平台矩阵是否含 browser（长按重识别 / 引擎列表用）
@@ -1887,7 +1994,7 @@
   function currentEngine() {
     if (state.asrEngine !== 'auto') return state.asrEngine;   // 手动指定就直接用它
     const av = EnvDetect.available();
-    return av[0] || 'model';   // auto 默认取第一个（国外/iOS/mac 默认 browser；国内受限默认 model）
+    return av[0] || (MODEL_ASR_ENABLED ? 'model' : 'browser');   // auto 默认取第一个（国外/iOS/mac 默认 browser；国内受限默认 model）
   }
   function engineDesc(which) {
     return (ENGINE_META[which] && ENGINE_META[which].desc()) || '';
@@ -1910,28 +2017,27 @@
   }
 
   /* 设置·语音识别 tab */
+  const CLOUD_VENDORS = [
+    { id: 'azure',   label: () => t('cloudVendorAzure'),   extraPh: () => t('cloudExtraPhAzure'),  freeHint: () => t('cloudFreeHintAzure') },
+    { id: 'openai',  label: () => t('cloudVendorOpenai'),  extraPh: () => t('cloudExtraPhOpenai'), freeHint: () => t('cloudFreeHintOpenai') },
+    { id: 'aliyun',  label: () => t('cloudVendorAliyun'),  extraPh: () => t('cloudExtraPhAliyun'), freeHint: () => t('cloudFreeHintAliyun') },
+    { id: 'volc',    label: () => t('cloudVendorVolc'),    extraPh: () => t('cloudExtraPhVolc'),   freeHint: () => t('cloudFreeHintVolc') }
+  ];
+  function cloudVendorMeta(id) { return CLOUD_VENDORS.find(v => v.id === id) || null; }
+
   function renderAsrPane() {
     const cur = state.asrEngine === 'auto' ? '' : state.asrEngine;
     renderEngineList('asrEngineList', (which) => { state.asrEngine = which; save(); renderAsrPane(); }, cur);
-    /* 手机端算力不够：隐藏“线下模型”区块（标题/状态/下载按钮/进度条） */
+    /* 模型识别全局隐藏（MODEL_ASR_ENABLED=false）：隐藏“线下模型”区块（标题/状态/下载按钮/进度条） */
     const isMobilePane = EnvDetect.isMobile();
+    const showLocal = MODEL_ASR_ENABLED && !isMobilePane;
     const localTitle = document.querySelector('[data-i18n="asrLocal"]');
-    if (localTitle) localTitle.hidden = isMobilePane;
-    const ls = $('asrLocalStatus'), lb = $('asrDownloadBtn'), lbb = $('asrLocalBar');
-    if (ls) ls.hidden = isMobilePane;
-    if (lb) lb.hidden = isMobilePane;
-    if (lbb) lbb.hidden = true;   /* 进度条默认隐藏 */
-    // 线下模型状态
-    const lk = $('asrLocalStatus');
-    const btn = $('asrDownloadBtn');
-    const bar = $('asrLocalBar');
-    if (isMobilePane) {
-      /* 手机端算力不够：线下模型整个区块隐藏，不填充任何状态 */
-      if (lk) lk.hidden = true;
-      if (btn) btn.hidden = true;
-      if (bar) bar.hidden = true;
-      return;
-    }
+    if (localTitle) localTitle.hidden = !showLocal;
+    const lk = $('asrLocalStatus'), btn = $('asrDownloadBtn'), bar = $('asrLocalBar');
+    if (lk) lk.hidden = !showLocal;
+    if (btn) btn.hidden = !showLocal;
+    if (bar) bar.hidden = true;   /* 进度条默认隐藏 */
+    if (!showLocal) return;
     const ready = typeof SenseVoiceAsr !== 'undefined' && SenseVoiceAsr.getReady && SenseVoiceAsr.getReady();
     if (ready) {
       lk.innerHTML = '<span class="asr-label">' + t('asrModelReady') + '</span><span class="asr-val"> ✓</span>';
@@ -1956,18 +2062,27 @@
       btn.disabled = false;
       btn.textContent = t('asrModelDownload');
     }
-    // 云端（暂未开放：隐藏区块，保留填充逻辑）
-    const cloudWrap = $('asrCloudWrap');
-    if (cloudWrap) cloudWrap.hidden = !CLOUD_ASR_ENABLED;
-    if (CLOUD_ASR_ENABLED) {
-      const cv = $('cloudVendor');
-      if (!cv.options.length) {
-        const vendors = ['', 'azure', 'aliyun', 'iflytek', 'baidu', 'tencent'];
-        const names = { '': '—', azure: 'Microsoft Azure', aliyun: '阿里云', iflytek: '科大讯飞', baidu: '百度', tencent: '腾讯云' };
-        vendors.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = names[v]; cv.appendChild(o); });
-      }
-      cv.value = state.cloud.vendor || '';
-      $('cloudApiKey').value = state.cloud.apiKey || '';
+  }
+  /* 云端识别配置区块（022：Azure / OpenAI / 阿里云 / 火山引擎） */
+  function renderCloudConfig() {
+    const wrap = $('asrCloudWrap');
+    if (!wrap) return;
+    wrap.hidden = !CLOUD_ASR_ENABLED;
+    if (!CLOUD_ASR_ENABLED) return;
+    const cv = $('cloudVendor');
+    if (!cv.options.length) {
+      CLOUD_VENDORS.forEach(v => { const o = document.createElement('option'); o.value = v.id; o.textContent = v.label(); cv.appendChild(o); });
+    }
+    cv.value = state.cloud.vendor || 'azure';
+    $('cloudApiKey').value = state.cloud.apiKey || '';
+    $('cloudExtra').value = state.cloud.extra || '';
+    syncCloudExtraUI();
+  }
+  function syncCloudExtraUI() {
+    const meta = cloudVendorMeta($('cloudVendor').value);
+    if (meta) {
+      $('cloudExtra').placeholder = meta.extraPh();
+      $('cloudFreeHint').textContent = meta.freeHint();
     }
   }
   /* 异步查询本地是否已存完整模型，把「检查中」刷新成「已缓存本地模型 / 未下载」 */
@@ -2192,7 +2307,8 @@
         if (s.cloud) {
           state.cloud = {
             vendor: (s.cloud.vendor || ''),
-            apiKey: (s.cloud.apiKey || '')
+            apiKey: (s.cloud.apiKey || ''),
+            extra: (s.cloud.extra || '')
           };
         }
         if (s.presetEdited) state.presetEdited = true;
@@ -2713,7 +2829,7 @@
           const img = document.createElement('img');
           img.src = url; img.alt = '';
           cell.insertBefore(img, cell.firstChild);
-          cell.onclick = () => { $('imgViewMain').src = url; $('imgViewer').classList.add('show'); };
+          cell.onclick = () => { $('imgViewMain').src = url; $('imgViewer').classList.remove('flip'); $('imgViewer').classList.add('show'); };
           cell.querySelector('.gbtn').onclick = e => {
             e.stopPropagation();
             pendingImages.push({
@@ -2922,7 +3038,7 @@
     render();
     renderQuick();
     renderPresetList();
-    if (!$('voicePane').hidden) renderVoicePane();
+    if (!$('readPane').hidden) renderVoicePane();
     if (!$('asrPane').hidden) renderAsrPane();
   }
   function setUiLang(lang) {
@@ -2988,6 +3104,22 @@
       toast(t('aiKeyClear'));
     };
 
+    /* 022 云端识别配置（语音 → 语音识别） */
+    $('cloudVendor').addEventListener('change', () => { syncCloudExtraUI(); });
+    $('cloudSaveBtn').onclick = () => {
+      state.cloud.vendor = $('cloudVendor').value;
+      state.cloud.apiKey = $('cloudApiKey').value.trim();
+      state.cloud.extra = $('cloudExtra').value.trim();
+      save();
+      toast(t('cloudSaved'));
+    };
+    $('cloudClearBtn').onclick = () => {
+      state.cloud = { vendor: '', apiKey: '', extra: '' };
+      $('cloudApiKey').value = ''; $('cloudExtra').value = '';
+      save();
+      toast(t('cloudCleared'));
+    };
+
     $('send').onclick = send;
     $('text').addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 
@@ -2996,8 +3128,27 @@
     let asrCurrentEngine = 'model';           // 本轮识别实际使用的引擎（写入 asr.engine）
     let activeBrowserRecorder = null;         // 浏览器识别时的同步录音（MediaRecorder）
 
-    /* 浏览器识别：Web Speech API 拿不到音频，需要同时开一个 MediaRecorder 录音 */
-    function beginBrowserRecording() {
+    /* 022 录制结束提示音：嘀一声表示录制结束 */
+    let _beepCtx = null;
+    function playRecEndBeep() {
+      try {
+        _beepCtx = _beepCtx || new (window.AudioContext || window.webkitAudioContext)();
+        if (_beepCtx.state === 'suspended') _beepCtx.resume();
+        const o = _beepCtx.createOscillator(), g = _beepCtx.createGain();
+        o.type = 'sine'; o.frequency.value = 880;
+        const t0 = _beepCtx.currentTime;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.28);
+        o.connect(g); g.connect(_beepCtx.destination);
+        o.start(t0); o.stop(t0 + 0.3);
+      } catch (e) {}
+    }
+
+    /* 浏览器识别 / 云端识别：Web Speech API 拿不到音频，需要同时开一个 MediaRecorder 录音。
+       022：同时用 AnalyserNode 做静音检测 —— 检测到说过话、且持续静音 SILENCE_MS 后
+       自动触发 onSilence（上层停止识别并嘀一声），无需手动关停。 */
+    function beginBrowserRecording(onSilence) {
       if (typeof MediaRecorder === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return Promise.resolve(null);
       return navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null).then(stream => {
         if (!stream) return null;
@@ -3013,11 +3164,49 @@
             if (!finished) {
               finished = true;
               stream.getTracks().forEach(t => t.stop());
+              stopSilenceWatch();
+              closeAudioProbe();
               resolve(chunks.length ? new Blob(chunks, { type: rec.mimeType || mime || 'audio/webm' }) : null);
             }
           };
         });
+        /* —— 静音检测 —— */
+        const SILENCE_RMS = 0.015;     // 低于该 RMS 视为静音（0~1）
+        const SILENCE_MS = 1800;       // 说过话后持续静音这么久 → 自动结束
+        let probeCtx = null, analyser = null, buf = null, watchTimer = null;
+        let speechStarted = false, silentSince = 0, silenceFired = false;
+        function startSilenceWatch() {
+          try {
+            probeCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (probeCtx.state === 'suspended') probeCtx.resume();
+            analyser = probeCtx.createAnalyser();
+            analyser.fftSize = 1024;
+            probeCtx.createMediaStreamSource(stream).connect(analyser);
+            buf = new Float32Array(analyser.fftSize);
+          } catch (e) { return; }   // 拿不到分析器就不做自动结束，退回手动关停
+          const tick = () => {
+            if (finished || silenceFired) return;
+            analyser.getFloatTimeDomainData(buf);
+            let sum = 0;
+            for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+            const rms = Math.sqrt(sum / buf.length);
+            if (rms > SILENCE_RMS) { speechStarted = true; silentSince = 0; }
+            else if (speechStarted) {
+              if (!silentSince) silentSince = Date.now();
+              else if (Date.now() - silentSince > SILENCE_MS) {
+                silenceFired = true;
+                if (onSilence) onSilence();
+                return;
+              }
+            }
+            watchTimer = setTimeout(tick, 100);
+          };
+          tick();
+        }
+        function stopSilenceWatch() { if (watchTimer) { clearTimeout(watchTimer); watchTimer = null; } }
+        function closeAudioProbe() { try { if (probeCtx) { probeCtx.close(); probeCtx = null; } } catch (e) {} }
         rec.start();
+        startSilenceWatch();
         return { rec, started, stop: () => { if (!finished) { try { rec.stop(); } catch (e) { stream.getTracks().forEach(t => t.stop()); } } return stopped; } };
       });
     }
@@ -3078,17 +3267,32 @@
     const startBrowser = (finish) => {
       let active = 'native';
       asrCurrentEngine = 'browser';
-      const wrapFinish = (text) => { if (active === 'native') stopBrowserRecording().then(rec => finish(text, rec)); };
+      const wrapFinish = (text) => { if (active === 'native') { active = 'done'; stopBrowserRecording().then(rec => finish(text, rec)); } };
       const fallbackToLocal = () => {
         if (active !== 'native') return;
+        if (!MODEL_ASR_ENABLED) {
+          /* 022 模型识别已全局隐藏：不再回退下载大模型，直接结束本轮 */
+          active = 'done';
+          stopBrowserRecording();
+          micBtn.classList.remove('rec'); micBtn.disabled = false;
+          toast(t('micFail') + t('asrNoEngine'));
+          return;
+        }
         active = 'local';
         stopBrowserRecording();
         toast(t('micNativeFallback'));
         startLocal(finish);
       };
-      beginBrowserRecording().then(recorder => {
+      beginBrowserRecording(() => {
+        /* 022 静音自动结束：嘀一声 + 优雅停止原生识别（让 Safari 把最终结果吐出来） */
+        if (active !== 'native') return;
+        playRecEndBeep();
+        if (typeof NativeAsr !== 'undefined' && NativeAsr.gracefulStop) NativeAsr.gracefulStop();
+        else wrapFinish(null);
+      }).then(recorder => {
         activeBrowserRecorder = recorder;
         if (active !== 'native') return;
+        if (!recorder) { micBtn.classList.remove('rec'); micBtn.disabled = false; toast(t('micNoPermission')); return; }
         if (NativeAsr.isSupported()) {
           NativeAsr.start(wrapFinish, (err) => {
             if (active !== 'native') return;
@@ -3103,7 +3307,34 @@
         }
       });
     };
+    const startCloud = (finish) => {
+      asrCurrentEngine = 'cloud';
+      let active = 'cloud';
+      micBtn.classList.add('rec');
+      toast(t('micListening') || '请说话');
+      beginBrowserRecording(() => {
+        /* 022 静音自动结束：嘀一声 → 停录 → 上传云端识别 */
+        if (active !== 'cloud') return;
+        active = 'recognizing';
+        playRecEndBeep();
+        micBtn.classList.remove('rec');
+        stopBrowserRecording().then(rec => {
+          if (!rec || !rec.blob) { finish(null, null); return; }
+          toast(t('asrCloudRunning'));
+          cloudRecognizeBlob(rec.blob, state.voiceLang)
+            .then(text => finish(text, rec))
+            .catch(err => { toast(t('cloudFail') + (err.message || err)); finish(null, rec); });
+        });
+      }).then(recorder => {
+        activeBrowserRecorder = recorder;
+        if (!recorder) {
+          micBtn.classList.remove('rec'); micBtn.disabled = false;
+          toast(t('micNoPermission'));
+        }
+      });
+    };
     const runEngine = (which) => {
+      if (which === 'model' && !MODEL_ASR_ENABLED) which = 'browser';   // 模型识别已全局隐藏
       if (which === 'browser') startBrowser(finishMic);
       else if (which === 'model') startLocal(finishMic);
       else {   // cloud
@@ -3115,8 +3346,7 @@
           micBtn.classList.remove('rec'); micBtn.disabled = false;
           toast(t('asrCloudNeed'));
         } else {
-          toast(t('asrCloudNeed'));   /* 云端真识别本轮未接入：提示后回退本地 */
-          startLocal(finishMic);
+          startCloud(finishMic);
         }
       }
     };
@@ -3156,8 +3386,9 @@
     $('settingsX').onclick = () => $('settingsOverlay').classList.remove('show');
     $('settingsOverlay').addEventListener('click', e => { if (e.target === $('settingsOverlay')) $('settingsOverlay').classList.remove('show'); });
     $('sTabPreset').onclick = () => showSettingsPane('preset');
-    $('sTabVoice').onclick  = () => showSettingsPane('voice');
-    $('sTabAsr').onclick    = () => showSettingsPane('asr');
+    $('sTabSound').onclick  = () => showSettingsPane('sound');
+    $('vSubRead').onclick   = () => showSoundSub('read');
+    $('vSubAsr').onclick    = () => showSoundSub('asr');
     $('sTabFav').onclick    = () => showSettingsPane('fav');
     $('sTabGallery').onclick= () => showSettingsPane('gallery');
     $('sTabGeneral').onclick= () => showSettingsPane('general');
@@ -3213,8 +3444,8 @@
       renderPendingShots();
     });
     /* 图片大图查看 */
-    $('imgViewX').onclick = () => $('imgViewer').classList.remove('show');
-    $('imgViewer').addEventListener('click', e => { if (e.target === $('imgViewer')) $('imgViewer').classList.remove('show'); });
+    $('imgViewX').onclick = () => { $('imgViewer').classList.remove('show'); $('imgViewer').classList.remove('flip'); };
+    $('imgViewer').addEventListener('click', e => { if (e.target === $('imgViewer')) { $('imgViewer').classList.remove('show'); $('imgViewer').classList.remove('flip'); } });
     /* 收藏页：清空 */
     $('favClearBtn').onclick = () => {
       if (!confirm(t('confirmClearFav'))) return;
@@ -3323,6 +3554,9 @@
       const imgEl = e.target.closest('.bubimg');
       if (imgEl) {
         const imgId = imgEl.dataset.img;
+        /* 022 混合模式：听障朋友发的图片全屏查看时同样倒置 */
+        const msgEl = imgEl.closest('.msg');
+        $('imgViewer').classList.toggle('flip', !!(msgEl && msgEl.classList.contains('deaf') && state.textDir === 'mixed'));
         const cached = imgUrlCache[imgId];
         if (cached) { $('imgViewMain').src = cached; $('imgViewer').classList.add('show'); return; }
         getImage(imgId).then(rec => {
@@ -3419,7 +3653,7 @@
 
     if ('speechSynthesis' in window) {
       if (!speechSynthesis.getVoices().length) kickVoices();  /* 安卓 Chrome 首次为空，先触发一次加载 */
-      speechSynthesis.onvoiceschanged = () => { if (!$('voicePane').hidden) renderVoicePane(); };
+      speechSynthesis.onvoiceschanged = () => { if (!$('readPane').hidden) renderVoicePane(); };
     }
 
     /* 暂不启用离线 Service Worker（页面始终联网拉最新）。
@@ -3433,31 +3667,40 @@
 
   function showSettingsPane(which) {
     const presetOn = (which === 'preset');
-    const voiceOn  = (which === 'voice');
-    const asrOn    = (which === 'asr');
+    const soundOn  = (which === 'sound');
     const favOn    = (which === 'fav');
     const galOn    = (which === 'gallery');
     const genOn    = (which === 'general');
     $('sTabPreset').classList.toggle('on', presetOn);
-    $('sTabVoice').classList.toggle('on', voiceOn);
-    $('sTabAsr').classList.toggle('on', asrOn);
+    $('sTabSound').classList.toggle('on', soundOn);
     $('sTabFav').classList.toggle('on', favOn);
     $('sTabGallery').classList.toggle('on', galOn);
     $('sTabGeneral').classList.toggle('on', genOn);
     $('presetPane').hidden = !presetOn;
-    $('voicePane').hidden  = !voiceOn;
-    $('asrPane').hidden    = !asrOn;
+    $('soundPane').hidden  = !soundOn;
     $('favPane').hidden    = !favOn;
     $('galleryPane').hidden = !galOn;
     $('generalPane').hidden = !genOn;
     if (genOn) { buildTransSelects(); buildAIConfig(); applyRoleNames(); }
-    if (!presetOn && !favOn && !galOn) {
+    if (soundOn) {
+      showSoundSub(soundSub);
       if (!voices.length) voicesKicked = false;  /* 用户手势：允许重新触发一次语音加载 */
       renderVoicePane();
+      renderAsrPane();
+      renderCloudConfig();
     }
-    if (asrOn) renderAsrPane();
     if (favOn) renderFavList();
     if (galOn) renderGallery();
+  }
+
+  /* 语音一级标签内的二级标签：朗读 / 语音识别 */
+  let soundSub = 'read';
+  function showSoundSub(sub) {
+    soundSub = sub;
+    $('vSubRead').classList.toggle('on', sub === 'read');
+    $('vSubAsr').classList.toggle('on', sub === 'asr');
+    $('readPane').hidden = sub !== 'read';
+    $('asrPane').hidden = sub !== 'asr';
   }
 
   init();
