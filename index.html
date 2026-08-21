@@ -460,6 +460,12 @@
   .sec-title.sub { margin-top: 10px; }
   #transEngineRow button.on { background: var(--deaf); color: var(--deaf-ink); border-color: var(--deaf); }
   body.hc #transEngineRow button.on { background: var(--deaf); color: var(--deaf-ink); border-color: var(--deaf); }
+  /* AI 配置：Key/模型各占一整行，Key 不被按钮挤压 */
+  .sec-title.sub2 { margin-top: 8px; }
+  #aiConfigWrap .asr-cloud-row input#aiKeyInput { width: 100%; flex: 1 1 auto; }
+  #aiConfigWrap .asr-cloud-row select#aiModelSel { width: 100%; }
+  .ai-keybar { display: flex; justify-content: flex-start; margin-top: 6px; }
+  .ai-keybar .pvbtn { font-size: 13px; }
   .bbtns .act.transb.loading { opacity: .55; }
   .trcard {
     margin-top: 10px; padding: 8px 10px; border-radius: 12px;
@@ -795,14 +801,16 @@
       <div class="asr-cloud-row"><select id="transTargetSel"></select></div>
       <div id="aiConfigWrap">
         <div class="sec-title sub" data-i18n="transAI">AI 翻译配置</div>
-        <div class="asr-cloud-row">
-          <input id="aiKeyInput" type="password" placeholder="sk-…" data-i18n-ph="aiKeyPh">
+        <div class="sec-title sub2" data-i18n="aiProvider">AI 提供方</div>
+        <div class="asr-cloud-row"><select id="aiProviderSel"></select></div>
+        <div class="sec-title sub2" data-i18n="aiKeyLbl">API Key</div>
+        <div class="asr-cloud-row"><input id="aiKeyInput" type="password" placeholder="sk-…" data-i18n-ph="aiKeyPh"></div>
+        <div class="sec-title sub2" data-i18n="aiModelLbl">模型</div>
+        <div class="asr-cloud-row"><select id="aiModelSel"></select></div>
+        <div class="ai-keybar">
           <button class="pvbtn" id="aiKeyClearBtn" data-i18n="aiKeyClear">清除 Key</button>
         </div>
-        <div class="asr-cloud-row">
-          <input id="aiModelInput" type="text" value="deepseek-chat" data-i18n-ph="aiModelPh">
-        </div>
-        <p class="hint" data-i18n="transAIHint">AI 翻译使用 DeepSeek API，按量付费，与免费的 MyMemory 不同。Key 仅存本机，可随时清除。未填 Key 时 AI 不可用。</p>
+        <p class="hint" data-i18n="transAIHint">AI 翻译使用 DeepSeek / 智谱 GLM / Kimi API，按量付费，与免费的 MyMemory 不同。Key 仅存本机，可随时清除。未填 Key 时 AI 不可用。</p>
       </div>
 
       <div class="sec-title" data-i18n="others">其他</div>
@@ -1018,8 +1026,8 @@
       /* 021 翻译 */
       transTitle: '翻译', transMyMemory: 'MyMemory（免费）', transAI: 'AI（DeepSeek，付费）',
       transSrc: '源语言', transTarget: '目标语言', transEngineLbl: '翻译引擎',
-      aiKeyPh: '填入 DeepSeek API Key', aiModelPh: '模型（默认 deepseek-chat）', aiKeyClear: '清除 Key',
-      transAIHint: 'AI 翻译使用 DeepSeek API，按量付费，与免费的 MyMemory 不同。Key 仅存本机，可随时清除。未填 Key 时 AI 不可用。',
+      aiKeyPh: '填入 API Key（sk-…）', aiKeyLbl: 'API Key', aiModelLbl: '模型', aiProvider: 'AI 提供方', aiKeyClear: '清除 Key',
+      transAIHint: 'AI 翻译支持 DeepSeek / 智谱 GLM / 月之暗面 Kimi，按量付费，与免费的 MyMemory 不同。各家的 Key 分别保存、仅存本机，可随时清除。未填 Key 时 AI 不可用。',
       transBtn: '翻译', transLangEn: '英', transRun: '翻译中…', transFail: '翻译失败：',
       transEmpty: '没有翻译到内容', transDel: '删除翻译', transNeedAIKey: '请先在 设置 → 翻译 填写 DeepSeek API Key',
       transAIKeyInvalid: 'DeepSeek Key 无效，请检查后重试'
@@ -1102,8 +1110,8 @@
       /* 021 translation */
       transTitle: 'Translation', transMyMemory: 'MyMemory (free)', transAI: 'AI (DeepSeek, paid)',
       transSrc: 'Source language', transTarget: 'Target language', transEngineLbl: 'Translation engine',
-      aiKeyPh: 'Enter DeepSeek API Key', aiModelPh: 'Model (default deepseek-chat)', aiKeyClear: 'Clear Key',
-      transAIHint: 'AI translation uses the DeepSeek API and is billed by usage, unlike free MyMemory. Key is stored on this device only and can be cleared anytime. AI is unavailable without a Key.',
+      aiKeyPh: 'Enter API Key (sk-…)', aiKeyLbl: 'API Key', aiModelLbl: 'Model', aiProvider: 'AI provider', aiKeyClear: 'Clear Key',
+      transAIHint: 'AI translation supports DeepSeek / Zhipu GLM / Moonshot Kimi and is billed by usage, unlike free MyMemory. Each provider Key is stored separately, on this device only, and can be cleared anytime. AI is unavailable without a Key.',
       transBtn: 'Translate', transLangEn: 'EN', transRun: 'Translating…', transFail: 'Translation failed: ',
       transEmpty: 'Nothing to translate', transDel: 'Delete translation', transNeedAIKey: 'Add a DeepSeek API Key in Settings → Translation first',
       transAIKeyInvalid: 'DeepSeek Key invalid — please check and retry'
@@ -1196,7 +1204,7 @@
     transEngine: 'mymemory',   /* mymemory | ai —— 翻译引擎 */
     transSrc: 'zh-CN',         /* 翻译源语言（MyMemory 用） */
     transTarget: 'en',         /* 翻译目标语言 */
-    ai: { deepseekKey: '', model: 'deepseek-chat' },   /* DeepSeek AI 翻译配置 */
+    ai: { provider: 'deepseek', deepseekKey: '', zhipuKey: '', moonshotKey: '', model: 'deepseek-chat' },   /* AI 翻译（DeepSeek / 智谱 GLM / Kimi） */
     viewing: -1,
     sessionId: Date.now(),
     sessionStart: Date.now(),
@@ -1366,7 +1374,8 @@
   }
   function translationCardMarkup(m, i) {
     const tgt = transShortLabel(m.tr.tgt || state.transTarget);
-    const eng = (m.tr.engine === 'ai') ? 'AI' : 'MyMemory';
+    let eng = (m.tr.engine === 'ai') ? 'AI' : 'MyMemory';
+    if (m.tr.engine === 'ai' && m.tr.prov && AI_PROVIDERS[m.tr.prov]) eng = AI_PROVIDERS[m.tr.prov].label;
     return '<div class="trcard" data-tri="' + i + '">'
       + '<div class="tr-head"><span class="tr-lang">' + escapeHtml(tgt + ' · ' + eng) + '</span>'
       + '<button class="tr-del" data-i="' + i + '" title="' + t('transDel') + '">×</button></div>'
@@ -2083,9 +2092,13 @@
         if (s.transSrc) state.transSrc = s.transSrc;
         if (s.transTarget) state.transTarget = s.transTarget;
         if (s.ai) {
+          const prov = (s.ai.provider && AI_PROVIDERS[s.ai.provider]) ? s.ai.provider : 'deepseek';
           state.ai = {
+            provider: prov,
             deepseekKey: (typeof s.ai.deepseekKey === 'string' ? s.ai.deepseekKey : ''),
-            model: (s.ai.model || 'deepseek-chat')
+            zhipuKey: (typeof s.ai.zhipuKey === 'string' ? s.ai.zhipuKey : ''),
+            moonshotKey: (typeof s.ai.moonshotKey === 'string' ? s.ai.moonshotKey : ''),
+            model: (s.ai.model || AI_PROVIDERS[prov].models[0].id)
           };
         }
         if (s.voiceLang) state.voiceLang = s.voiceLang;
@@ -2272,15 +2285,37 @@
     });
   }
 
+  /* AI 翻译提供方：DeepSeek / 智谱 GLM / 月之暗面 Kimi（均 OpenAI 兼容 /chat/completions） */
+  const AI_PROVIDERS = {
+    deepseek: { label: 'DeepSeek', base: 'https://api.deepseek.com', key: 'deepseekKey', models: [
+      { id: 'deepseek-chat', n: 'DeepSeek-V3 (deepseek-chat)' },
+      { id: 'deepseek-reasoner', n: 'DeepSeek-R1 (deepseek-reasoner)' },
+      { id: 'deepseek-v4-flash-pro', n: 'DeepSeek-V4-Flash-Pro' }
+    ]},
+    zhipu: { label: '智谱 GLM', base: 'https://open.bigmodel.cn/api/paas/v4', key: 'zhipuKey', models: [
+      { id: 'glm-5.2', n: 'GLM-5.2' },
+      { id: 'glm-5.0', n: 'GLM-5.0' },
+      { id: 'glm-4-plus', n: 'GLM-4-Plus' },
+      { id: 'glm-4-flash', n: 'GLM-4-Flash (免费)' }
+    ]},
+    moonshot: { label: '月之暗面 Kimi', base: 'https://api.moonshot.cn/v1', key: 'moonshotKey', models: [
+      { id: 'kimi-k3', n: 'Kimi-K3' },
+      { id: 'kimi-k2', n: 'Kimi-K2' },
+      { id: 'moonshot-v1-8k', n: 'Moonshot-v1-8k' }
+    ]}
+  };
+  function aiProvider() { return AI_PROVIDERS[(state.ai && state.ai.provider)] || AI_PROVIDERS.deepseek; }
+
   function aiTranslate(text, tgt, src) {
-    const key = (state.ai && state.ai.deepseekKey) || '';
+    const prov = aiProvider();
+    const key = (state.ai && state.ai[prov.key]) || '';
     if (!key) throw new Error('nokey');
-    const model = (state.ai && state.ai.model) || 'deepseek-chat';
+    const model = (state.ai && state.ai.model) || prov.models[0].id;
     const tgtName = transLangName(tgt);
     const prompt = 'Translate the following text into ' + tgtName
       + (src ? ' (source: ' + transLangName(src) + ')' : '')
       + '. Output only the translation, nothing else.\n\n' + text;
-    return fetch('https://api.deepseek.com/chat/completions', {
+    return fetch(prov.base + '/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
       body: JSON.stringify({ model: model, messages: [{ role: 'user', content: prompt }], temperature: 0.3 })
@@ -2307,7 +2342,7 @@
       : mymemoryTranslate(text, src, tgt);
     p.then(out => {
       if (!out) { toast(t('transEmpty')); return; }
-      m.tr = { text: out, engine: engine, tgt: tgt, time: Date.now() };
+      m.tr = { text: out, engine: engine, prov: (engine === 'ai' ? state.ai.provider : ''), tgt: tgt, time: Date.now() };
       save(); render();
     }).catch(err => {
       const msg = (err && err.message === 'aikey') ? t('transAIKeyInvalid')
@@ -2331,8 +2366,21 @@
     };
     mk($('transSrcSel'), state.transSrc);
     mk($('transTargetSel'), state.transTarget);
-    $('aiKeyInput').value = (state.ai && state.ai.deepseekKey) || '';
-    $('aiModelInput').value = (state.ai && state.ai.model) || 'deepseek-chat';
+  }
+
+  /* —— AI 配置：提供方下拉 + 对应模型下拉 + 该提供方 Key —— */
+  function buildAIConfig() {
+    const curProv = (state.ai && state.ai.provider) || 'deepseek';
+    $('aiProviderSel').innerHTML = Object.keys(AI_PROVIDERS).map(k =>
+      '<option value="' + k + '"' + (k === curProv ? ' selected' : '') + '>' + escapeHtml(AI_PROVIDERS[k].label) + '</option>').join('');
+    const prov = AI_PROVIDERS[curProv];
+    const modelCur = (state.ai && state.ai.model) || prov.models[0].id;
+    const valid = prov.models.some(m => m.id === modelCur);
+    if (!valid) state.ai.model = prov.models[0].id;
+    $('aiModelSel').innerHTML = prov.models.map(m =>
+      '<option value="' + m.id + '"' + (m.id === state.ai.model ? ' selected' : '') + '>' + escapeHtml(m.n) + '</option>').join('');
+    $('aiKeyInput').value = (state.ai && state.ai[prov.key]) || '';
+    $('aiKeyInput').placeholder = 'sk-…（' + prov.label + '）';
   }
 
   /* ============ 020 · 消息增强（复制/收藏/引用/粘贴/相册发图） ============ */
@@ -2792,8 +2840,9 @@
       render(); save();
     });
 
-    /* 021 翻译：引擎 / 语言 / AI Key 设置 */
+    /* 021 翻译：引擎 / 语言 / AI（提供方 + 模型 + Key）设置 */
     buildTransSelects();
+    buildAIConfig();
     $('transEngineRow').addEventListener('click', e => {
       const b = e.target.closest('button[data-eng]');
       if (!b) return;
@@ -2804,10 +2853,19 @@
     });
     $('transSrcSel').addEventListener('change', e => { state.transSrc = e.target.value; save(); });
     $('transTargetSel').addEventListener('change', e => { state.transTarget = e.target.value; save(); });
-    $('aiKeyInput').addEventListener('change', e => { state.ai.deepseekKey = e.target.value.trim(); save(); });
-    $('aiModelInput').addEventListener('change', e => { state.ai.model = e.target.value.trim() || 'deepseek-chat'; save(); });
+    $('aiProviderSel').addEventListener('change', e => {
+      const prov = e.target.value;
+      if (!AI_PROVIDERS[prov]) return;
+      state.ai.provider = prov;
+      state.ai.model = AI_PROVIDERS[prov].models[0].id;   /* 切提供方后回到该家的默认模型 */
+      buildAIConfig(); save();
+    });
+    $('aiModelSel').addEventListener('change', e => { state.ai.model = e.target.value; save(); });
+    $('aiKeyInput').addEventListener('change', e => {
+      state.ai[aiProvider().key] = e.target.value.trim(); save();
+    });
     $('aiKeyClearBtn').onclick = () => {
-      state.ai.deepseekKey = ''; $('aiKeyInput').value = ''; save();
+      state.ai[aiProvider().key] = ''; $('aiKeyInput').value = ''; save();
       toast(t('aiKeyClear'));
     };
 
