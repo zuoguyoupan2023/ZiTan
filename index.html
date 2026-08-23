@@ -923,7 +923,7 @@
         <p class="hint" data-i18n="hp1">① 身份：顶部按钮切换「听障朋友 / 志愿者」，决定气泡颜色和快捷用语；称呼可在 设置 → 通用 自定义。</p>
         <p class="hint" data-i18n="hp2">② 快捷用语：黄边 = 填入输入框继续编辑，无黄边 = 点一下直接发送；可在 设置 → 预设 增删改。</p>
         <p class="hint" data-i18n="hp3">③ 打字 / 发图：底部输入框打字发送；「+」可从内置相册或手机相册发图；长按气泡可引用对方消息。</p>
-        <p class="hint" data-i18n="hp4">④ 语音输入：点麦克风说话，停止说话后自动结束识别；苹果设备与国内安卓可用浏览器识别，云端识别需在 设置 → 语音 → 语音识别 配置（支持微软 Azure / OpenAI 等）。</p>
+        <p class="hint" data-i18n="hp4">④ 语音输入：点麦克风说话，停止说话后自动结束识别；苹果设备与境外安卓可用浏览器识别，云端识别需在 设置 → 语音 → 语音识别 配置（支持微软 Azure / OpenAI 等）。</p>
         <p class="hint" data-i18n="hp5">⑤ 朗读：开启顶栏喇叭后，发出的消息自动朗读；声音可在 设置 → 语音 → 朗读 选择并试听。</p>
         <p class="hint" data-i18n="hp6">⑥ 大字号：顶栏 A+ / A− 调整全局字号，引用与翻译随正文同步缩放。</p>
         <p class="hint" data-i18n="hp7">⑦ 倒置模式：设置 → 通用 → 文本方向选「倒置·正置混合」，听障朋友发出的文字和图片旋转 180°，对面朋友无需颠倒手机。</p>
@@ -1216,7 +1216,7 @@
       hp1: '① 身份：顶部按钮切换「听障朋友 / 志愿者」，决定气泡颜色和快捷用语；称呼可在 设置 → 通用 自定义。',
       hp2: '② 快捷用语：黄边 = 填入输入框继续编辑，无黄边 = 点一下直接发送；可在 设置 → 预设 增删改。',
       hp3: '③ 打字 / 发图：底部输入框打字发送；「+」可从内置相册或手机相册发图；长按气泡可引用对方消息。',
-      hp4: '④ 语音输入：点麦克风说话，停止说话后自动结束识别；苹果设备与国内安卓可用浏览器识别，云端识别需在 设置 → 语音 → 语音识别 配置（支持微软 Azure / OpenAI 等）。',
+      hp4: '④ 语音输入：点麦克风说话，停止说话后自动结束识别；苹果设备与境外安卓可用浏览器识别，云端识别需在 设置 → 语音 → 语音识别 配置（支持微软 Azure / OpenAI 等）。',
       hp5: '⑤ 朗读：开启顶栏喇叭后，发出的消息自动朗读；声音可在 设置 → 语音 → 朗读 选择并试听。',
       hp6: '⑥ 大字号：顶栏 A+ / A− 调整全局字号，引用与翻译随正文同步缩放。',
       hp7: '⑦ 倒置模式：设置 → 通用 → 文本方向选「倒置·正置混合」，听障朋友发出的文字和图片旋转 180°，对面朋友无需颠倒手机。',
@@ -1363,7 +1363,7 @@
       hp1: '① Identity: switch "Deaf / Volunteer" at the top — it sets bubble colors and quick phrases; rename them in Settings → General.',
       hp2: '② Quick phrases: yellow border = fill into the box to edit; no border = tap to send directly. Edit them in Settings → Presets.',
       hp3: '③ Typing / images: type in the box below; tap "+" to send an image from the built-in or phone gallery; long-press a bubble to quote.',
-      hp4: '④ Voice input: tap the mic and speak — recognition ends automatically after you stop. Apple devices and Android in mainland China can use browser recognition; cloud engines (Azure / OpenAI...) are set in Settings → Voice → Speech recognition.',
+      hp4: '④ Voice input: tap the mic and speak — recognition ends automatically after you stop. Apple devices and Android outside mainland China can use browser recognition; cloud engines (Azure / OpenAI...) are set in Settings → Voice → Speech recognition.',
       hp5: '⑤ Read aloud: turn on the speaker icon to auto-read sent messages; pick voices in Settings → Voice → Read aloud.',
       hp6: '⑥ Font size: A+ / A− in the top bar scales everything — quotes and translations follow the body text.',
       hp7: '⑦ Inverted mode: Settings → General → Text direction "Inverted · mixed" rotates the Deaf person\'s text and images 180° so the other side reads without flipping the phone.',
@@ -2151,10 +2151,11 @@
        地域：浏览器语言 zh + 时区 UTC+8 附近 → 国内；否则国外。
        平台：ipad / ios(iPhone) / macos / android / harmony / windows / other。
        矩阵：
-         · 苹果系(macos/ios/ipad) + other(Linux 等 unknown 随苹果组)：浏览器识别 + 云端识别（国内外一致）
-         · Windows：只云端识别（国内外一致）
-         · 安卓/鸿蒙 中国大陆：浏览器识别 + 云端识别
-         · 安卓/鸿蒙 境外：只云端识别
+         · 苹果系(macos/ios/ipad)：浏览器识别 + 云端识别（国内外一致）
+         · Windows：Edge→两项(Azure后端国内外可用)；Chrome等→境外两项/国内只云端
+         · 安卓/鸿蒙 + other(Linux 等，均属「非苹果」)——中国大陆：只云端识别
+         · 安卓/鸿蒙 + other(Linux 等)——境外：浏览器识别 + 云端识别
+         · 地域最终以网络实测为准：双向 generate_204 竞速 + 12h 缓存（见 startRegionProbe）
          · 模型识别保持全局隐藏（MODEL_ASR_ENABLED=false），不出现在任何列表
      浏览器识别后端（展示用）：
          · iPad/iOS → Apple（Safari 内核）；iOS 上 chrome/edge 实际都是 Safari 内核
@@ -2195,10 +2196,72 @@
     else if (/safari|applewebkit/i.test(ua)) browser = 'safari';
     else if (navigator.vendor && /apple/i.test(navigator.vendor)) browser = 'safari';
 
-    // 地域：语言含 zh 且时区偏 UTC+8 认为国内
+    // 地域初值：语言含 zh 且时区偏 UTC+8 认为国内（同步、零等待，首屏先用它渲染）
     const lang = (navigator.language || '');
     const tzOff = -new Date().getTimezoneOffset() / 60;   // +8 表示 UTC+8
-    const region = (/^zh/i.test(lang) && tzOff >= 7 && tzOff <= 9) ? 'china' : 'overseas';
+    let region = (/^zh/i.test(lang) && tzOff >= 7 && tzOff <= 9) ? 'china' : 'overseas';
+
+    /* ---- 网络实测地域（2026-10）：双向竞速 generate_204，谁先通信谁；结果缓存 12h ----
+       境外信号 google/gstatic 204 快速可达 → overseas；大陆信号 小米/华为 204 快速可达 → china。
+       注意：国内访问 google 多为丢包挂起（只能靠超时判定），所以单测 Google 会让国内首访白等——
+       双向竞速取先到者，两侧都是毫秒级出结论。双侧全不通（极端网络）→ 保留语言+时区初值。
+       该判据本质是「浏览器识别的后端(Google 服务)是否直连可用」：开代理的国内用户会被判境外，
+       而他们的浏览器识别确实可用，逻辑自洽。 */
+    const REGION_CACHE_KEY = 'zitanRegionProbe';
+    const REGION_CACHE_MS  = 12 * 60 * 60 * 1000;
+    const PROBE_TIMEOUT_MS = 2500;
+    const PROBE_OVERSEAS = ['https://www.google.com/generate_204', 'https://www.gstatic.com/generate_204'];
+    const PROBE_CHINA    = ['https://connect.rom.miui.com/generate_204', 'https://connectivitycheck.platform.hicloud.com/generate_204'];
+    const regionListeners = [];
+    function onRegionChange(cb) { regionListeners.push(cb); }
+    function setRegion(r) {
+      if ((r !== 'china' && r !== 'overseas') || r === region) return false;
+      region = r;
+      regionListeners.forEach(cb => { try { cb(); } catch (e) {} });
+      return true;
+    }
+    function probe204(url) {   /* no-cors 只测连通性：true=通 / false=不通或超时；不发送任何数据 */
+      return new Promise(resolve => {
+        let done = false;
+        const finish = v => { if (!done) { done = true; resolve(v); } };
+        const timer = setTimeout(() => finish(false), PROBE_TIMEOUT_MS);
+        try {
+          fetch(url, { mode: 'no-cors', cache: 'no-store' })
+            .then(() => { clearTimeout(timer); finish(true); })
+            .catch(() => { clearTimeout(timer); finish(false); });
+        } catch (e) { clearTimeout(timer); finish(false); }
+      });
+    }
+    function anyProbe(urls) {   /* 任一成功立即 true；全部失败才 false */
+      return new Promise(resolve => {
+        let pending = urls.length, settled = false;
+        urls.forEach(u => probe204(u).then(ok => {
+          if (settled) return;
+          if (ok) { settled = true; resolve(true); }
+          else if (--pending === 0) { settled = true; resolve(false); }
+        }));
+      });
+    }
+    function readRegionCache() {
+      try {
+        const c = JSON.parse(localStorage.getItem(REGION_CACHE_KEY) || 'null');
+        if (c && (c.region === 'china' || c.region === 'overseas') && Date.now() - c.at < REGION_CACHE_MS) return c.region;
+      } catch (e) {}
+      return null;
+    }
+    function startRegionProbe() {   /* init 时调一次：缓存命中直接用；否则竞速探测，结论不同再修正 UI */
+      const cached = readRegionCache();
+      if (cached) { setRegion(cached); return; }
+      /* 输的一方转成永不 settle，让 race 一直等到先成功的一侧 */
+      const pOverseas = anyProbe(PROBE_OVERSEAS).then(ok => ok ? 'overseas' : new Promise(() => {}));
+      const pChina    = anyProbe(PROBE_CHINA).then(ok => ok ? 'china' : new Promise(() => {}));
+      const pFallback = new Promise(res => setTimeout(() => res(null), PROBE_TIMEOUT_MS + 300));
+      Promise.race([pOverseas, pChina, pFallback]).then(r => {
+        if (!r) return;                        /* 双侧都不通：维持初值 */
+        try { localStorage.setItem(REGION_CACHE_KEY, JSON.stringify({ region: r, at: Date.now() })); } catch (e) {}
+        setRegion(r);
+      }).catch(() => {});
+    }
 
     function engineName() {   // 浏览器识别背后的提供方
       if (platform === 'ios') return 'apple';
@@ -2212,12 +2275,16 @@
     function available() {   // 返回可见引擎数组（2026-09 最终矩阵：平台 × 地区）
       let list;
       if (platform === 'windows') {
-        list = ['cloud'];                         /* Windows：只云端识别（国内外一致） */
-      } else if (platform === 'android' || platform === 'harmony') {
-        list = (region === 'china') ? ['browser', 'cloud'] : ['cloud'];
-                                                  /* 安卓/鸿蒙：国内两项，境外只云端 */
+        /* Windows（2026-10 放开）：Edge 的 Web Speech 走微软 Azure 后端（官方策略文档 SpeechRecognitionEnabled
+           实锤），国内外都基本可用 → 永远给浏览器识别；Chrome 等走 Google 后端，按网络探测结果——
+           境外(Google 可达)两项，国内(被墙)只云端 */
+        list = (browser === 'edge' || region !== 'china') ? ['browser', 'cloud'] : ['cloud'];
+      } else if (platform === 'macos' || platform === 'ios' || platform === 'ipad') {
+        list = ['browser', 'cloud'];              /* 苹果系：两项（国内外一致） */
       } else {
-        list = ['browser', 'cloud'];              /* 苹果系(macos/ios/ipad) + other(Linux 等)：两项 */
+        /* 安卓/鸿蒙 + other(Linux 等，均属「非苹果」)：国内只云端；境外浏览器+云端
+           （2026-10 修正：此前国内外条件写反——国内误给 browser、境外反而没有） */
+        list = (region === 'china') ? ['cloud'] : ['browser', 'cloud'];
       }
       /* 云端识别：CLOUD_ASR_ENABLED=false 时从可选列表中去掉 */
       if (!CLOUD_ASR_ENABLED) list = list.filter(e => e !== 'cloud');
@@ -2226,13 +2293,15 @@
       return list;
     }
     function supportsBrowser() {   // 平台矩阵是否含 browser（长按重识别 / 引擎列表用），与 available() 同一套规则
-      if (platform === 'windows') return false;            // Windows：仅云端
-      if (platform === 'android' || platform === 'harmony') return region === 'china';  // 安卓/鸿蒙：仅国内
-      return true;                                         // 苹果系(macos/ios/ipad) + other
+      if (platform === 'windows') return browser === 'edge' || region !== 'china';  // Windows：Edge(Azure后端)永远可用；其余按探测
+      if (platform === 'macos' || platform === 'ios' || platform === 'ipad') return true;  // 苹果系：国内外都有
+      return region !== 'china';                           // 安卓/鸿蒙 + other(Linux 等非苹果)：仅境外
     }
     function isMobile() { return (platform === 'ios' || platform === 'android' || platform === 'harmony'); }
-    return { platform, browser, region, engineName, brName, available, supportsBrowser, isMobile,
-      regionLabel: () => region === 'china' ? 'china' : 'overseas' };
+    return { platform, browser, engineName, brName, available, supportsBrowser, isMobile,
+      get region() { return region; },   /* 实时值：网络探测修正后随之变化（旧代码导出的是快照） */
+      regionLabel: () => region === 'china' ? 'china' : 'overseas',
+      startRegionProbe, onRegionChange };
   })();
 
   const ENGINE_META = {
@@ -2246,9 +2315,11 @@
 
   /* 生成可见引擎列表（settings 里可编辑，chooser 首次选择用同一份） */
   function currentEngine() {
-    if (state.asrEngine !== 'auto') return state.asrEngine;   // 手动指定就直接用它
     const av = EnvDetect.available();
-    return av[0] || 'cloud';   // auto 默认取第一个（苹果系/国内安卓默认 browser；Windows/境外安卓默认 cloud）
+    /* 手动指定的引擎在当前环境仍可用才生效，否则回退列表第一个
+       （例：国内安卓上曾手动选过 browser——矩阵修正后列表已无 browser，不能再沿用） */
+    if (state.asrEngine !== 'auto' && av.indexOf(state.asrEngine) > -1) return state.asrEngine;
+    return av[0] || 'cloud';   // 默认取第一个（苹果系/境外非苹果默认 browser；Windows/国内非苹果默认 cloud）
   }
   function engineDesc(which) {
     return (ENGINE_META[which] && ENGINE_META[which].desc()) || '';
@@ -2379,7 +2450,12 @@
   function openAsrChooser(onConfirm, defaultEng) {
     asrChooseCallback = onConfirm;
     asrChooseDefault = defaultEng || 'model';
-    // legend：显示当前环境
+    fillAsrChooser();
+    $('asrChooseDetail').hidden = true;
+    $('asrChooseOverlay').classList.add('show');
+    showAsrDetail(asrChooseDefault);
+  }
+  function fillAsrChooser() {   /* legend + 引擎列表；region 被网络探测修正且选择器开着时也会重刷 */
     $('asrChooseLegend').textContent = t('asrDidAuto') + (state.uiLang === 'en'
       ? (EnvDetect.regionLabel() === 'china' ? 'China' : 'Overseas') + ' · ' + EnvDetect.brName()
       : (EnvDetect.regionLabel() === 'china' ? '中国' : '国外') + ' · ' + EnvDetect.brName());
@@ -2392,8 +2468,6 @@
         showAsrDetail(b.dataset.eng);
       };
     });
-    $('asrChooseDetail').hidden = true;
-    $('asrChooseOverlay').classList.add('show');
     showAsrDetail(asrChooseDefault);
   }
   function showAsrDetail(which) {
@@ -4091,6 +4165,13 @@
   }
 
   init();
+
+  /* 网络实测地域：启动探测；结论与首屏初值不同时，刷新引擎相关 UI（设置页列表 / 开着的首次选择器） */
+  EnvDetect.onRegionChange(() => {
+    if (!$('asrPane').hidden) renderAsrPane();
+    if ($('asrChooseOverlay').classList.contains('show')) fillAsrChooser();
+  });
+  EnvDetect.startRegionProbe();
 })();
 </script>
 </body>
