@@ -1,0 +1,15 @@
+{
+  "name": "zitan",
+  "private": true,
+  "description": "字谈 —— 浏览器端离线优先的语音对话 PWA（Cloudflare Pages + Functions）",
+  "scripts": {
+    "dev": "wrangler pages dev . --kv ZITAN_KV",
+    "dev:azure": "wrangler pages dev . --kv ZITAN_KV --port 8788"
+  },
+  "devDependencies": {
+    "wrangler": "^4.60.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
