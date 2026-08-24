@@ -302,6 +302,10 @@
     background: var(--panel); color: var(--ink); font-size: 12px; line-height: 1.4; cursor: pointer;
   }
   .vc-btn:disabled { opacity: .55; cursor: default; }
+  /* 028 识别语言行：与体检区同属一个标题下，名称体系统一走 Intl.DisplayNames */
+  .vc-lang-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .vc-lang-row .vc-lang-label { flex: 0 0 auto; font-size: 13px; opacity: .85; }
+  .vc-lang-row select { flex: 1 1 auto; min-width: 0; margin: 0; }
   .vc-row.vc-cur { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
   .vc-grp { margin-bottom: 10px; }
   .vc-grp > summary {
@@ -810,11 +814,13 @@
 
         <!-- 朗读 -->
         <div id="readPane">
-          <div class="sec-title" data-i18n="language">语言</div>
-          <select id="langSel"></select>
-          <!-- 028 声音体检：设备 TTS 能力全景 = 唯一的语音选择入口（分组浏览 / 选用 / 试听）。
-               原「语音」下拉列表已并入此处，避免两份重复清单。 -->
+          <!-- 028 声音体检：设备 TTS 能力全景 = 唯一的语音选择入口（识别语言 / 分组浏览 / 选用 / 试听）。
+               原「语音」列表已并入；「语言」下拉并入此处并正名为「识别语言」（切换会重置为自动挑选）。 -->
           <div class="sec-title" data-i18n="voiceCheckTitle">声音体检</div>
+          <div class="vc-lang-row">
+            <span class="vc-lang-label" data-i18n="vLangLabel">识别语言</span>
+            <select id="langSel"></select>
+          </div>
           <div id="voiceCheckSummary" class="engine-legend"></div>
           <div id="voiceCheckList"></div>
           <button class="pvbtn" id="previewBtn">
@@ -1149,11 +1155,13 @@
       language: '语言', preview: '试听', others: '其他',
       /* 028 声音体检 */
       voiceCheckTitle: '声音体检',
+      vLangLabel: '识别语言',
       vcSummary: '本设备共检测到 {n} 个朗读声音（本地 {local} · 在线 {remote}）。“在线”表示合成发生在厂商服务器，需联网。',
       vcUnsupported: '此浏览器不支持网页朗读（无 speechSynthesis 接口）。',
       vcLocal: '本地', vcOnline: '在线',
       vcUnnamed: '未命名声音', vcUnknownLang: '未知语言', vcUse: '选用',
-      vcAuto: '自动选择（按语言智能挑选）', vcAutoNow: '当前：',
+      vcAuto: '自动选择', vcAutoNow: '当前：',
+      vcAutoHint: '不锁定具体音色：按识别语言智能挑选该语言下最自然的声音（偏好：晓晓、婷婷、美嘉…）。在下方清单里点「选用」可改为固定某个声音。',
       vcGuideEdge: '你正在使用 Edge：语音清单里的「Natural / Online」是微软免费提供的自然语音（联网合成），效果最佳，建议优先选择。',
       vcGuideWinNotEdge: '提示：改用 Microsoft Edge 打开字谈，可免费获得「晓晓」等自然语音（在线合成），朗读效果显著更好。也可以在 设置→时间和语言→语音 中添加更多本地中文声音。',
       vcGuideApple: '提升技巧：打开 系统设置 → 辅助功能 → 朗读内容 → 声音，免费下载中文「增强版／豪华版」声音，自然度明显提升（一次性下载，数百 MB）。',
@@ -1324,11 +1332,13 @@
       language: 'Language', preview: 'Preview', others: 'More',
       /* 028 voice check */
       voiceCheckTitle: 'Voice check',
+      vLangLabel: 'Recognition language',
       vcSummary: '{n} voices detected on this device ({local} local · {remote} online). “Online” means synthesis happens on the vendor\'s server and requires internet.',
       vcUnsupported: 'This browser does not support Web speech synthesis (no speechSynthesis API).',
       vcLocal: 'Local', vcOnline: 'Online',
       vcUnnamed: 'Unnamed voice', vcUnknownLang: 'Unknown language', vcUse: 'Use',
-      vcAuto: 'Auto (smart pick by language)', vcAutoNow: 'now: ',
+      vcAuto: 'Auto', vcAutoNow: 'now: ',
+      vcAutoHint: 'No fixed voice: the most natural voice for the recognition language is picked automatically (preference: Xiaoxiao, Tingting, Meijia…). Click "Use" on any voice below to lock one instead.',
       vcGuideEdge: 'You are on Edge: “Natural / Online” voices in the list are Microsoft\'s free natural voices (cloud-synthesized) — the best quality, pick them first.',
       vcGuideWinNotEdge: 'Tip: open ZiTalk in Microsoft Edge to get free natural voices like Xiaoxiao (online synthesis). You can also add more local Chinese voices in Settings → Time & Language → Speech.',
       vcGuideApple: 'Tip: in Settings → Accessibility → Spoken Content → Voices, download the free Chinese “Enhanced / Premium” voices — a big naturalness boost (one-time, several hundred MB).',
@@ -2246,7 +2256,8 @@
     sel.innerHTML = '';
     LANGS.forEach(x => {
       const o = document.createElement('option');
-      o.value = x.id; o.textContent = (state.uiLang === 'en') ? x.labelEn : x.labelZh;
+      o.value = x.id;
+      o.textContent = vcLangName(x.id);   /* 028 统一名称体系：与分组标题同走 Intl.DisplayNames */
       sel.appendChild(o);
     });
     sel.value = state.voiceLang;
@@ -2282,21 +2293,36 @@
   /* 浏览器内置语言名称库（Intl.DisplayNames，Chrome 81+/Safari 14+ 全支持）：
      覆盖全部 ISO 语言码且随界面语言切换，手写 VC_LANG_NAMES 只作老浏览器兜底 */
   let _vcDnZh = null, _vcDnEn = null;
-  function vcLangName(code) {
+  function vcLangLabel(code) {   /* 纯名称，不带码：'zh-CN' → '中文（中国大陆）' / 'Chinese (Mainland)' */
     try {
       const tag = (state.uiLang === 'en') ? 'en' : 'zh-CN';
       if (tag === 'zh-CN') { if (!_vcDnZh) _vcDnZh = new Intl.DisplayNames(['zh-CN'], { type: 'language' }); }
       else { if (!_vcDnEn) _vcDnEn = new Intl.DisplayNames(['en'], { type: 'language' }); }
       const dn = tag === 'zh-CN' ? _vcDnZh : _vcDnEn;
-      const n = dn.of(code);                     // 例：'bg' → '保加利亚语' / 'Bulgarian'
-      if (n && n.toLowerCase() !== code.toLowerCase()) return n + ' · ' + code;
+      const n = dn.of(code);
+      if (n && n.toLowerCase() !== code.toLowerCase()) return n;
     } catch (e) { /* 不支持或非法码：落入手写表/裸码 */ }
-    const e = VC_LANG_NAMES[code];
-    return e ? (state.uiLang === 'en' ? e[1] : e[0]) + ' · ' + code : code;
+    if (VC_LANG_NAMES[code]) {
+      const e = VC_LANG_NAMES[code];
+      return state.uiLang === 'en' ? e[1] : e[0];
+    }
+    return code;
+  }
+  function vcLangName(code) {
+    return vcLangLabel(code) + ' · ' + code;
   }
   function vcDisplayName(v, idx) {
-    /* 与朗读播放端 pickVoice/autoPick 同源字段；仅多空值兜底 */
-    const nm = (v.name || '').trim();
+    /* 名称净化（028 反馈）：各引擎命名风格不一——微软长名
+       "Microsoft HiuGaai Online (Natural) - Chinese (Cantonese Traditional)"
+       去掉厂商前缀/合成方式/语言尾巴后与苹果短名（婷婷）同级清爽；
+       语言信息已由 lang 码后缀和分组承担，不丢失。 */
+    let nm = (v.name || '').trim();
+    if (nm) {
+      nm = nm.replace(/^Microsoft\s+/i, '')
+             .replace(/\s*Online(\s*\(Natural\))?\s*/gi, '')
+             .replace(/\s*-\s+[^-]*$/, '')        /* 去 "- Chinese (Cantonese Traditional)" 尾巴 */
+             .trim() || (v.name || '').trim();
+    }
     const lg = (v.lang || '').trim();
     let s = nm;
     if (lg) s = s ? (s + ' · ' + lg) : lg;
@@ -2361,7 +2387,9 @@
     autoRow.className = 'vc-row' + (state.voiceURI === '' ? ' vc-cur' : '');
     const autoName = document.createElement('span');
     autoName.className = 'vc-name';
-    autoName.textContent = t('vcAuto') + (voices.length ? '（' + t('vcAutoNow') + (pickVoice() || {}).name + '）' : '');
+    const _pv = pickVoice();
+    autoName.textContent = t('vcAuto') + (_pv && _pv.name ? ' · ' + t('vcAutoNow') + vcDisplayName(_pv, 0) : '');
+    autoName.title = t('vcAutoHint');   /* 详细说明放悬停，避免行内三层括号套娃 */
     autoRow.appendChild(autoName);
     const autoUse = document.createElement('button');
     autoUse.className = 'vc-btn'; autoUse.type = 'button';
