@@ -2299,7 +2299,18 @@
     da: ['丹麦语', 'Danish'], nb: ['挪威语', 'Norwegian'], no: ['挪威语', 'Norwegian'],
     fi: ['芬兰语', 'Finnish'], cs: ['捷克语', 'Czech']
   };
+  /* 浏览器内置语言名称库（Intl.DisplayNames，Chrome 81+/Safari 14+ 全支持）：
+     覆盖全部 ISO 语言码且随界面语言切换，手写 VC_LANG_NAMES 只作老浏览器兜底 */
+  let _vcDnZh = null, _vcDnEn = null;
   function vcLangName(code) {
+    try {
+      const tag = (state.uiLang === 'en') ? 'en' : 'zh-CN';
+      if (tag === 'zh-CN') { if (!_vcDnZh) _vcDnZh = new Intl.DisplayNames(['zh-CN'], { type: 'language' }); }
+      else { if (!_vcDnEn) _vcDnEn = new Intl.DisplayNames(['en'], { type: 'language' }); }
+      const dn = tag === 'zh-CN' ? _vcDnZh : _vcDnEn;
+      const n = dn.of(code);                     // 例：'bg' → '保加利亚语' / 'Bulgarian'
+      if (n && n.toLowerCase() !== code.toLowerCase()) return n + ' · ' + code;
+    } catch (e) { /* 不支持或非法码：落入手写表/裸码 */ }
     const e = VC_LANG_NAMES[code];
     return e ? (state.uiLang === 'en' ? e[1] : e[0]) + ' · ' + code : code;
   }
