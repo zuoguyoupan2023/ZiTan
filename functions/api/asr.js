@@ -225,54 +225,64 @@ export async function onRequestPost(context) {
   if (buf.byteLength > MAX_BODY_BYTES) return json({ error: 'too_long' }, 413);
 
   // 2. 配置检查 + 上游选择（先于扣次数：服务没配好不该烧用户的当日额度）
-  //    upstream 查询参数（025 阶段 A「分开显示」）：tencent / azure 强制指定单一上游；
-  //    缺省 auto = 配了 TENCENT_* 一对 → 走腾讯云，否则回落 Azure（此时 Azure 变量必须配齐）。
-  //    KV 绑定是两种上游共用的每日限流依赖，始终必需。
+  //    upstream 查询参数：tencent / azure 强制指定单一上游；缺省 auto = 腾讯优先，失败自动回落。
+  //    BYOK（025 阶段D）：请求带 X-TC-Id / X-TC-Key → 用户自带腾讯云 Key 经本站代理实时转发，
+  //    服务端只用不存；不计每日免费次数、不写月度耗尽标记（那是开发者自己额度的状态）。
   const url = new URL(request.url);
+  const byokTcId = (request.headers.get('X-TC-Id') || '').trim();
+  const byokTcKey = (request.headers.get('X-TC-Key') || '').trim();
+  const byokTcRegion = (request.headers.get('X-TC-Region') || '').trim();
+  const byok = Boolean(byokTcId && byokTcKey);
   const upParam = (url.searchParams.get('upstream') || '').toLowerCase();
-  const forced = (upParam === 'tencent' || upParam === 'azure') ? upParam : 'auto';
+  const forced = byok ? 'tencent' : ((upParam === 'tencent' || upParam === 'azure') ? upParam : 'auto');
   const tcId = env.TENCENT_SECRET_ID || '';
   const tcKey = env.TENCENT_SECRET_KEY || '';
   const useTencent = Boolean(tcId && tcKey);
   const azKey = env.AZURE_SPEECH_KEY || '';
   const azRegion = String(env.AZURE_SPEECH_REGION || '').trim().toLowerCase();
   const azReady = Boolean(azKey && azRegion && /^[a-z0-9]+$/.test(azRegion));
-  if (!env.ZITAN_KV) return json({ error: 'official_not_configured' }, 503);
-  if (forced === 'tencent' && !useTencent) return json({ error: 'official_not_configured' }, 503);
-  if (forced === 'azure' && !azReady) return json({ error: 'official_not_configured' }, 503);
-  if (forced === 'auto' && !useTencent && !azReady) return json({ error: 'official_not_configured' }, 503);
+  if (!byok && !env.ZITAN_KV) return json({ error: 'official_not_configured' }, 503);
+  if (!byok && forced === 'tencent' && !useTencent) return json({ error: 'official_not_configured' }, 503);
+  if (!byok && forced === 'azure' && !azReady) return json({ error: 'official_not_configured' }, 503);
+  if (!byok && forced === 'auto' && !useTencent && !azReady) return json({ error: 'official_not_configured' }, 503);
 
   // 3. 时长二次校验（防绕过前端 20s 截断）
   const secs = wavSeconds(buf);
   if (secs !== null && secs > MAX_SECONDS + 1) return json({ error: 'too_long' }, 413);
 
   // 4. 每设备每日计数（KV 读→判→写；无原子自增，并发下极小概率多计 1 次，可接受，
-  //    量大再换 Durable Object。先计数后转发：失败的尝试也占额，防止重试刷穿免费额度）
-  const limit = parseInt(env.ZITAN_DAILY_LIMIT || '', 10) || DAILY_LIMIT_DEFAULT;
+  //    量大再换 Durable Object。先计数后转发：失败的尝试也占额，防止重试刷穿免费额度。
+  //    BYOK 用户自带 Key → 不占字谈每日免费次数，跳过计数。）
   const deviceId = await getDeviceId(request, env);
-  const qkey = 'quota:' + todayYmd() + ':' + deviceId;
-  let used = 0;
-  try {
-    const raw = await env.ZITAN_KV.get(qkey);
-    used = raw ? (parseInt(raw, 10) || 0) : 0;
-  } catch (e) { /* KV 抖动时放行本次但照常写入，避免整站不可用 */ }
-  if (used >= limit) return json({ error: 'quota_exceeded' }, 429, 0);
-  const remaining = Math.max(0, limit - used - 1);
-  try {
-    await env.ZITAN_KV.put(qkey, String(used + 1), { expirationTtl: 48 * 3600 });
-  } catch (e) { /* 同上 */ }
+  let remaining = null;
+  if (!byok) {
+    const limit = parseInt(env.ZITAN_DAILY_LIMIT || '', 10) || DAILY_LIMIT_DEFAULT;
+    const qkey = 'quota:' + todayYmd() + ':' + deviceId;
+    let used = 0;
+    try {
+      const raw = await env.ZITAN_KV.get(qkey);
+      used = raw ? (parseInt(raw, 10) || 0) : 0;
+    } catch (e) { /* KV 抖动时放行本次但照常写入，避免整站不可用 */ }
+    if (used >= limit) return json({ error: 'quota_exceeded' }, 429, 0);
+    remaining = Math.max(0, limit - used - 1);
+    try {
+      await env.ZITAN_KV.put(qkey, String(used + 1), { expirationTtl: 48 * 3600 });
+    } catch (e) { /* 同上 */ }
+  }
 
   // 5. 语言参数（白名单校验，默认 zh-CN）——腾讯 / Azure 两个上游共用
   const langParam = url.searchParams.get('language') || '';
   const lang = /^[a-z]{2}-[A-Za-z]{2,4}$/.test(langParam) ? langParam : 'zh-CN';
 
-  // 5.0 月度额度状态（L2 被动探测）：读耗尽标记，auto 据此回落、forced 据此快速失败
-  const tcMarked = useTencent ? await isMarkedExhausted(env, 'tencent') : false;
-  const azMarked = azReady ? await isMarkedExhausted(env, 'azure') : false;
+  // 5.0 月度额度状态（L2 被动探测）：读耗尽标记，auto 据此回落、forced 据此快速失败。
+  //     BYOK 用的是用户自己的额度，与开发者月度状态无关，跳过读取与标记。
+  const tcMarked = (!byok && useTencent) ? await isMarkedExhausted(env, 'tencent') : false;
+  const azMarked = (!byok && azReady) ? await isMarkedExhausted(env, 'azure') : false;
 
-  // 选路：forced 强制单一上游；auto = 腾讯优先 → Azure 回落（025 阶段 B）
+  // 选路：BYOK 固定走腾讯（用户的 Key）；forced 强制单一上游；auto = 腾讯优先 → Azure 回落
   let plan;
-  if (forced === 'tencent') plan = ['tencent'];
+  if (byok) plan = ['tencent'];
+  else if (forced === 'tencent') plan = ['tencent'];
   else if (forced === 'azure') plan = ['azure'];
   else {
     plan = [];
@@ -285,15 +295,20 @@ export async function onRequestPost(context) {
   if (plan.indexOf('tencent') !== -1 && buf.byteLength >= 600 * 1024)
     return json({ error: 'too_long' }, 413, remaining, 'tencent');
 
+  // BYOK：凭据取请求头；官方：凭据取环境变量
+  const effTcId = byok ? byokTcId : tcId;
+  const effTcKey = byok ? byokTcKey : tcKey;
+  const effRegion = byok ? (byokTcRegion || env.TENCENT_ASR_REGION) : env.TENCENT_ASR_REGION;
+
   // 按计划依次尝试；auto 下第一家额度类失败 → 标记并落下一家（对用户无感）
   let last = null;
   for (let i = 0; i < plan.length; i++) {
     const up = plan[i];
     const r = (up === 'tencent')
-      ? await callTencent(buf, lang, deviceId, tcId, tcKey, env.TENCENT_ASR_REGION)
+      ? await callTencent(buf, lang, deviceId, effTcId, effTcKey, effRegion)
       : await callAzure(buf, lang, azKey, azRegion);
     if (r.ok) return json({ text: r.text }, 200, remaining, up);
-    if (r.exhausted) await markExhausted(env, up);
+    if (r.exhausted && !byok) await markExhausted(env, up);
     console.error('[asr]', up, 'failed:', r.detail);   // 详情只进日志，不回传前端
     last = r;
   }
