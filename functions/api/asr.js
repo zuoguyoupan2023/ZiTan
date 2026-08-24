@@ -5,10 +5,11 @@
 //       并按「每设备每天 25 次、单次 ≤20s」限流，保护每月免费额度（Azure F0 = 5 小时/月）。
 //       Key 只存在于 Cloudflare 环境变量，永不下发前端、永不写入日志。
 //
-// 上游选择（025 方案）：
-//   配置了 TENCENT_SECRET_ID + TENCENT_SECRET_KEY → 优行走腾讯云一句话识别（SentenceRecognition，
-//   TC3-HMAC-SHA256 签名）；两者任缺其一或都没配 → 走原 Azure STT REST（零成本兜底）。
-//   腾讯失败直接 502 upstream_error（详情只进日志），第一版不做自动回落（见 025 §9 v2）。
+// 上游选择（025 阶段 B）：
+//   ?upstream=auto（缺省）→ 腾讯优先；腾讯被标记「本月额度耗尽」或未配置 → 自动回落 Azure；
+//   ?upstream=tencent / azure → 强制单一上游（用户在设置里选「只用 xx」）。
+//   月度额度无余额 API 可查：仅当上游返回额度类错误时写入 KV 标记 upmark:{vendor}（TTL 10 分钟自愈，
+//   兼防瞬时 QPS 误标锁死）；auto 模式据此回落，GET /api/asr/upstreams 据此输出 ok/exhausted/unconfigured。
 //
 // 部署前（Cloudflare 控制台 / Pages 项目，详见 022 文档「阶段 3 操作手册」+ 025 §三/§七）：
 //   1. Settings → Environment variables（Encrypt 加密保存）：
@@ -23,22 +24,37 @@
 //        ZITAN_KV = ZITAN_QUOTA（计数用，TTL 48h 自动清理）
 //   3. 本地联调：根目录建 .dev.vars 写入同名变量（已在 .gitignore），npx wrangler pages dev .
 //
-// 响应约定：
-//   成功 → 200 { text } + 响应头 X-Quota-Remaining: <今日剩余次数>
+// 响应约定（POST /api/asr）：
+//   成功 → 200 { text } + X-Quota-Remaining: <今日剩余> + X-Upstream: <实际使用的上游>
 //   429 { error: 'quota_exceeded' }          当天额度用完（前端文案 zitanQuotaMaxed）
 //   503 { error: 'official_not_configured' } 未配 Key/KV（前端文案 zitanCloudDown）
-//   413 { error: 'too_long' }                音频超 20s（前端文案 zitanTooLong）
-//   502 { error: 'upstream_error' }          上游（腾讯/Azure）失败（详情只进日志）
+//   413 { error: 'too_long' }                音频超 20s / 超腾讯 600KB（前端文案 zitanTooLong）
+//   503 { error: 'upstream_exhausted' }      上游月度免费额度耗尽（前端文案 zitanUpstreamMaxed，引导切换）
+//   502 { error: 'upstream_error' }          上游其它失败（详情只进日志）
 
-const DAILY_LIMIT_DEFAULT = 25;        // 与前端 index.html 的 ZITAN_DAILY_LIMIT 保持一致
+const DAILY_LIMIT_DEFAULT = 30;        // 与前端 index.html 的 ZITAN_DAILY_LIMIT 保持一致
 const MAX_BODY_BYTES = 2 * 1024 * 1024; // 20s 的 16k 单声道 WAV ≈ 640KB，上限放宽到 2MB
 const MAX_SECONDS = 20;                 // 单次最长秒数（按 WAV 头精确校验，防绕过前端）
 
+// L2 月度额度被动探测（025 阶段 B）：两家厂商都无余额查询 API，
+// 只能在上游返回"额度类"错误时把该上游标记为耗尽，auto 据此回落、状态接口据此显示。
+// 标记 TTL 仅 10 分钟：真耗尽时每 10 分钟浪费一次探针请求无妨；瞬时 QPS 误标可快速自愈。
+const UPSTREAM_MARK_TTL = 600;
+const QUOTA_ERR_RE = /LimitExceeded|ResourceInsufficient|Arrears|InsufficientBalance/i;
+
+function isMarkedExhausted(env, vendor) {
+  return env.ZITAN_KV.get('upmark:' + vendor).then(v => v === 'exhausted').catch(() => false);
+}
+function markExhausted(env, vendor) {
+  return env.ZITAN_KV.put('upmark:' + vendor, 'exhausted', { expirationTtl: UPSTREAM_MARK_TTL }).catch(() => {});
+}
+
 const JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' };
 
-function json(obj, status, remaining) {
+function json(obj, status, remaining, upstream) {
   const headers = new Headers(JSON_HEADERS);
   if (typeof remaining === 'number') headers.set('X-Quota-Remaining', String(remaining));
+  if (upstream) headers.set('X-Upstream', upstream);
   return new Response(JSON.stringify(obj), { status: status, headers: headers });
 }
 
@@ -120,6 +136,81 @@ function bufToBase64(buf) {           // Workers 无 btoa(ArrayBuffer) 重载，
   return btoa(bin);
 }
 
+// ---- 上游调用（统一返回 {ok, text?, exhausted?, detail}；exhausted=额度类失败，供标记与回落）----
+
+async function callTencent(buf, lang, deviceId, tcId, tcKey, region) {
+  // 腾讯侧硬限制：音频原始数据 < 600KB（16k 单声道 WAV ≈ 19.2s，比代理 20s 更严）
+  if (buf.byteLength >= 600 * 1024)
+    return { ok: false, detail: 'audio >=600KB (tencent limit)' };
+  const eng = /^en-/i.test(lang) ? '16k_en'
+            : (/^zh/i.test(lang) ? '16k_zh' : '16k_multi-lang');   // multi-lang 需账号开通，见 025 §7
+  const payloadObj = {
+    ProjectId: 0,                    // 默认项目
+    SubServiceType: 2,               // 一句话识别
+    EngSerViceType: eng,
+    SourceType: 1,                   // 直接上传音频数据（Base64）
+    VoiceFormat: 'wav',
+    UsrAudioKey: deviceId + '-' + Date.now(),
+    Data: bufToBase64(buf),          // ⚠️ 字段名是 Data 非 Audio（025 §4.3 初稿笔误，实测修正）
+    DataLen: buf.byteLength          // 原始字节数（base64 编码前），SourceType=1 时必填
+  };
+  const payload = JSON.stringify(payloadObj);
+  const ts = Math.floor(Date.now() / 1000);
+  let res, jt = null;
+  try {
+    res = await fetch('https://' + TC_HOST + '/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',   // 必须与签名里的逐字一致
+        'X-TC-Action': 'SentenceRecognition',
+        'X-TC-Version': '2019-06-14',
+        'X-TC-Region': String(region || 'ap-shanghai'),
+        'X-TC-Timestamp': String(ts),
+        'Authorization': await tc3Authorization(tcId, tcKey, 'SentenceRecognition', payload, ts)
+      },
+      body: payload
+    });
+    jt = await res.json().catch(() => null);
+  } catch (e) {
+    return { ok: false, detail: 'fetch failed: ' + (e && e.message) };
+  }
+  const err = jt && jt.Response && jt.Response.Error;
+  if (!res.ok || err || !jt) {
+    const code = (err && err.Code) || '';
+    return { ok: false, exhausted: QUOTA_ERR_RE.test(code),
+             detail: res.status + ' ' + code + ': ' + (err && err.Message) };
+  }
+  return { ok: true, text: (jt.Response.Result || '').trim() };
+}
+
+async function callAzure(buf, lang, azKey, azRegion) {
+  let res, j = null;
+  try {
+    res = await fetch('https://' + azRegion + '.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=' + encodeURIComponent(lang), {
+      method: 'POST',
+      headers: {
+        'Ocp-Apim-Subscription-Key': azKey,
+        'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
+        'Accept': 'application/json'
+      },
+      body: buf
+    });
+    j = await res.json().catch(() => null);
+  } catch (e) {
+    return { ok: false, detail: 'fetch failed: ' + (e && e.message) };
+  }
+  if (!res.ok || !j) {
+    const code = (j && j.error && j.error.code) || '';
+    const msg = (j && j.error && j.error.message) || '';
+    // F0 月额耗尽 → 403（401 是 Key 无效、429 是瞬时限流，都不标）；10 分钟自愈兜底误判
+    return { ok: false, exhausted: res.status === 403,
+             detail: res.status + ' ' + code + ' ' + msg };
+  }
+  // NoMatch / InitialSilenceTimeout 等状态一律按「没听清」返回空文本
+  const text = (j.RecognitionStatus === 'Success' && j.DisplayText) ? j.DisplayText : '';
+  return { ok: true, text: text };
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
 
@@ -134,17 +225,22 @@ export async function onRequestPost(context) {
   if (buf.byteLength > MAX_BODY_BYTES) return json({ error: 'too_long' }, 413);
 
   // 2. 配置检查 + 上游选择（先于扣次数：服务没配好不该烧用户的当日额度）
-  //    025 方案：配了 TENCENT_* 一对 → 走腾讯云；未配齐 → 走 Azure（此时 Azure 变量必须配齐）。
-  //    KV 绑定是两种上游共用的每日限流依赖，始终必需；两边都没配才判「官方云端暂不可用」。
+  //    upstream 查询参数（025 阶段 A「分开显示」）：tencent / azure 强制指定单一上游；
+  //    缺省 auto = 配了 TENCENT_* 一对 → 走腾讯云，否则回落 Azure（此时 Azure 变量必须配齐）。
+  //    KV 绑定是两种上游共用的每日限流依赖，始终必需。
+  const url = new URL(request.url);
+  const upParam = (url.searchParams.get('upstream') || '').toLowerCase();
+  const forced = (upParam === 'tencent' || upParam === 'azure') ? upParam : 'auto';
   const tcId = env.TENCENT_SECRET_ID || '';
   const tcKey = env.TENCENT_SECRET_KEY || '';
   const useTencent = Boolean(tcId && tcKey);
   const azKey = env.AZURE_SPEECH_KEY || '';
   const azRegion = String(env.AZURE_SPEECH_REGION || '').trim().toLowerCase();
+  const azReady = Boolean(azKey && azRegion && /^[a-z0-9]+$/.test(azRegion));
   if (!env.ZITAN_KV) return json({ error: 'official_not_configured' }, 503);
-  if (!useTencent && (!azKey || !azRegion || !/^[a-z0-9]+$/.test(azRegion))) {
-    return json({ error: 'official_not_configured' }, 503);
-  }
+  if (forced === 'tencent' && !useTencent) return json({ error: 'official_not_configured' }, 503);
+  if (forced === 'azure' && !azReady) return json({ error: 'official_not_configured' }, 503);
+  if (forced === 'auto' && !useTencent && !azReady) return json({ error: 'official_not_configured' }, 503);
 
   // 3. 时长二次校验（防绕过前端 20s 截断）
   const secs = wavSeconds(buf);
@@ -167,81 +263,42 @@ export async function onRequestPost(context) {
   } catch (e) { /* 同上 */ }
 
   // 5. 语言参数（白名单校验，默认 zh-CN）——腾讯 / Azure 两个上游共用
-  const url = new URL(request.url);
   const langParam = url.searchParams.get('language') || '';
   const lang = /^[a-z]{2}-[A-Za-z]{2,4}$/.test(langParam) ? langParam : 'zh-CN';
 
-  // 5a. 腾讯云一句话识别上游（025 §4.3）：配置了 TENCENT_* 一对即优先生效
-  if (useTencent) {
-    // 腾讯侧硬限制：音频原始数据 < 600KB（16k 单声道 WAV ≈ 19.2s，比代理 20s 更严），
-    // 极端长录音在此提前拦下，复用现有 413 too_long 契约与前端文案
-    if (buf.byteLength >= 600 * 1024) return json({ error: 'too_long' }, 413, remaining);
-    // 语言 → 引擎类型（一句话识别）
-    const eng = /^en-/i.test(lang) ? '16k_en'
-              : (/^zh/i.test(lang) ? '16k_zh' : '16k_multi-lang');   // multi-lang 需账号开通，见 025 §7
-    const payloadObj = {
-      ProjectId: 0,                    // 默认项目
-      SubServiceType: 2,               // 一句话识别
-      EngSerViceType: eng,
-      SourceType: 1,                   // 直接上传音频数据（Base64）
-      VoiceFormat: 'wav',
-      UsrAudioKey: deviceId + '-' + Date.now(),
-      Data: bufToBase64(buf),          // ⚠️ 字段名是 Data 非 Audio（025 §4.3 初稿笔误，实测修正）
-      DataLen: buf.byteLength          // 原始字节数（base64 编码前），SourceType=1 时必填
-    };
-    const payload = JSON.stringify(payloadObj);
-    const ts = Math.floor(Date.now() / 1000);
-    let upstreamTc, jt = null;
-    try {
-      upstreamTc = await fetch('https://' + TC_HOST + '/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json; charset=utf-8',   // 必须与签名里的逐字一致
-          'X-TC-Action': 'SentenceRecognition',
-          'X-TC-Version': '2019-06-14',
-          'X-TC-Region': String(env.TENCENT_ASR_REGION || 'ap-shanghai'),
-          'X-TC-Timestamp': String(ts),
-          'Authorization': await tc3Authorization(tcId, tcKey, 'SentenceRecognition', payload, ts)
-        },
-        body: payload
-      });
-      jt = await upstreamTc.json().catch(() => null);
-    } catch (e) {
-      console.error('[asr] tencent fetch failed:', e && e.message);
-      return json({ error: 'upstream_error' }, 502, remaining);
-    }
-    const tcErr = jt && jt.Response && jt.Response.Error;
-    if (!upstreamTc.ok || tcErr || !jt) {
-      console.error('[asr] tencent http', upstreamTc.status, tcErr && (tcErr.Code + ': ' + tcErr.Message));
-      return json({ error: 'upstream_error' }, 502, remaining);
-    }
-    return json({ text: (jt.Response.Result || '').trim() }, 200, remaining);
+  // 5.0 月度额度状态（L2 被动探测）：读耗尽标记，auto 据此回落、forced 据此快速失败
+  const tcMarked = useTencent ? await isMarkedExhausted(env, 'tencent') : false;
+  const azMarked = azReady ? await isMarkedExhausted(env, 'azure') : false;
+
+  // 选路：forced 强制单一上游；auto = 腾讯优先 → Azure 回落（025 阶段 B）
+  let plan;
+  if (forced === 'tencent') plan = ['tencent'];
+  else if (forced === 'azure') plan = ['azure'];
+  else {
+    plan = [];
+    if (useTencent && !tcMarked) plan.push('tencent');
+    if (azReady && !azMarked) plan.push('azure');
+    if (!plan.length) plan.push(useTencent ? 'tencent' : 'azure'); // 全被标记：仍发探针请求，标记 10 分钟过期后自愈
   }
 
-  // 5b. Azure 上游（原有逻辑不动；未配 TENCENT_* 时走这里）
-  let upstream, j = null;
-  try {
-    upstream = await fetch('https://' + azRegion + '.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=' + encodeURIComponent(lang), {
-      method: 'POST',
-      headers: {
-        'Ocp-Apim-Subscription-Key': azKey,
-        'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
-        'Accept': 'application/json'
-      },
-      body: buf
-    });
-    j = await upstream.json().catch(() => null);
-  } catch (e) {
-    console.error('[asr] azure fetch failed:', e && e.message);
-    return json({ error: 'upstream_error' }, 502, remaining);
-  }
-  if (!upstream.ok || !j) {
-    // 详情（配额耗尽/Key 无效等）只进 Workers 日志，不回传前端
-    console.error('[asr] azure http', upstream.status, j && (j.error && j.error.message));
-    return json({ error: 'upstream_error' }, 502, remaining);
-  }
+  // 腾讯侧硬限制：音频原始数据 < 600KB —— 计划含腾讯时先拦，复用 413 too_long 契约
+  if (plan.indexOf('tencent') !== -1 && buf.byteLength >= 600 * 1024)
+    return json({ error: 'too_long' }, 413, remaining, 'tencent');
 
-  // 6. 成功：NoMatch / InitialSilenceTimeout 等状态一律按「没听清」返回空文本
-  const text = (j.RecognitionStatus === 'Success' && j.DisplayText) ? j.DisplayText : '';
-  return json({ text: text }, 200, remaining);
+  // 按计划依次尝试；auto 下第一家额度类失败 → 标记并落下一家（对用户无感）
+  let last = null;
+  for (let i = 0; i < plan.length; i++) {
+    const up = plan[i];
+    const r = (up === 'tencent')
+      ? await callTencent(buf, lang, deviceId, tcId, tcKey, env.TENCENT_ASR_REGION)
+      : await callAzure(buf, lang, azKey, azRegion);
+    if (r.ok) return json({ text: r.text }, 200, remaining, up);
+    if (r.exhausted) await markExhausted(env, up);
+    console.error('[asr]', up, 'failed:', r.detail);   // 详情只进日志，不回传前端
+    last = r;
+  }
+  // 全部候选失败：最后一家败于额度类 → upstream_exhausted（前端提示切换/等待），否则通用错误
+  const upUsed = plan[plan.length - 1];
+  if (last && last.exhausted) return json({ error: 'upstream_exhausted' }, 503, remaining, upUsed);
+  return json({ error: 'upstream_error' }, 502, remaining, upUsed);
 }
