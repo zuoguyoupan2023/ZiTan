@@ -295,7 +295,21 @@
   .vc-row { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 6px; }
   .vc-row .vc-name { flex: 1 1 auto; font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .vc-row .vc-tag { flex: 0 0 auto; font-size: 11px; line-height: 1; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); opacity: .85; }
-  .vc-row .vc-play { flex: 0 0 auto; }
+  /* 注意：行内按钮不能用 .pvbtn（其全局样式 width:100% + margin-top，会把行内其他元素全部挤没） */
+  .vc-btn {
+    flex: 0 0 auto; display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--panel); color: var(--ink); font-size: 12px; line-height: 1.4; cursor: pointer;
+  }
+  .vc-btn:disabled { opacity: .55; cursor: default; }
+  .vc-row.vc-cur { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+  .vc-grp { margin-bottom: 10px; }
+  .vc-grp > summary {
+    cursor: pointer; font-size: 13px; font-weight: 600; padding: 6px 4px;
+    list-style-position: inside; user-select: none;
+  }
+  .vc-grp > summary::marker { color: var(--ink); }
+  .vc-grp[open] > summary { opacity: .75; }
 
   /* 023 设置卡片固定高度：切换一级标签时宽高不变，内容少不萎缩，内容多内部滚动 */
   #settingsOverlay .card { height: min(84vh, 680px); }
@@ -1139,6 +1153,7 @@
       vcSummary: '本设备共检测到 {n} 个朗读声音（本地 {local} · 在线 {remote}）。“在线”表示合成发生在厂商服务器，需联网。',
       vcUnsupported: '此浏览器不支持网页朗读（无 speechSynthesis 接口）。',
       vcLocal: '本地', vcOnline: '在线',
+      vcUnnamed: '未命名声音', vcUnknownLang: '未知语言', vcUse: '选用',
       vcGuideEdge: '你正在使用 Edge：语音清单里的「Natural / Online」是微软免费提供的自然语音（联网合成），效果最佳，建议优先选择。',
       vcGuideWinNotEdge: '提示：改用 Microsoft Edge 打开字谈，可免费获得「晓晓」等自然语音（在线合成），朗读效果显著更好。也可以在 设置→时间和语言→语音 中添加更多本地中文声音。',
       vcGuideApple: '提升技巧：打开 系统设置 → 辅助功能 → 朗读内容 → 声音，免费下载中文「增强版／豪华版」声音，自然度明显提升（一次性下载，数百 MB）。',
@@ -1312,6 +1327,7 @@
       vcSummary: '{n} voices detected on this device ({local} local · {remote} online). “Online” means synthesis happens on the vendor\'s server and requires internet.',
       vcUnsupported: 'This browser does not support Web speech synthesis (no speechSynthesis API).',
       vcLocal: 'Local', vcOnline: 'Online',
+      vcUnnamed: 'Unnamed voice', vcUnknownLang: 'Unknown language', vcUse: 'Use',
       vcGuideEdge: 'You are on Edge: “Natural / Online” voices in the list are Microsoft\'s free natural voices (cloud-synthesized) — the best quality, pick them first.',
       vcGuideWinNotEdge: 'Tip: open ZiTalk in Microsoft Edge to get free natural voices like Xiaoxiao (online synthesis). You can also add more local Chinese voices in Settings → Time & Language → Speech.',
       vcGuideApple: 'Tip: in Settings → Accessibility → Spoken Content → Voices, download the free Chinese “Enhanced / Premium” voices — a big naturalness boost (one-time, several hundred MB).',
@@ -2271,6 +2287,70 @@
     if (p === 'harmony') return t('vcGuideHarmony');
     return '';
   }
+  /* 语言码 → 界面语言名称（分组标题用；未收录的语言直接显示代码） */
+  const VC_LANG_NAMES = {
+    zh: ['中文', 'Chinese'], yue: ['粤语', 'Cantonese'], en: ['英语', 'English'],
+    ja: ['日语', 'Japanese'], ko: ['韩语', 'Korean'], de: ['德语', 'German'],
+    fr: ['法语', 'French'], es: ['西班牙语', 'Spanish'], pt: ['葡萄牙语', 'Portuguese'],
+    it: ['意大利语', 'Italian'], ru: ['俄语', 'Russian'], ar: ['阿拉伯语', 'Arabic'],
+    hi: ['印地语', 'Hindi'], th: ['泰语', 'Thai'], vi: ['越南语', 'Vietnamese'],
+    nl: ['荷兰语', 'Dutch'], pl: ['波兰语', 'Polish'], tr: ['土耳其语', 'Turkish'],
+    id: ['印尼语', 'Indonesian'], ms: ['马来语', 'Malay'], sv: ['瑞典语', 'Swedish'],
+    da: ['丹麦语', 'Danish'], nb: ['挪威语', 'Norwegian'], no: ['挪威语', 'Norwegian'],
+    fi: ['芬兰语', 'Finnish'], cs: ['捷克语', 'Czech']
+  };
+  function vcLangName(code) {
+    const e = VC_LANG_NAMES[code];
+    return e ? (state.uiLang === 'en' ? e[1] : e[0]) + ' · ' + code : code;
+  }
+  function vcDisplayName(v, idx) {
+    /* 与上方语音列表完全同构的名字构造（makeVoiceRow 用 v.name+' · '+v.lang），仅多空值兜底 */
+    const nm = (v.name || '').trim();
+    const lg = (v.lang || '').trim();
+    let s = nm;
+    if (lg) s = s ? (s + ' · ' + lg) : lg;
+    if (!s && v.voiceURI) {
+      try { s = decodeURIComponent(String(v.voiceURI).split('/').pop()) || ''; } catch (e) { s = String(v.voiceURI); }
+    }
+    return s || (t('vcUnnamed') + ' #' + idx);
+  }
+  function vcMakeRow(v, idx) {
+    const row = document.createElement('div');
+    row.className = 'vc-row';
+    const isCur = state.voiceURI && v.voiceURI === state.voiceURI;   /* 当前使用中的声音 */
+    const nameEl = document.createElement('span');
+    nameEl.className = 'vc-name';
+    nameEl.textContent = vcDisplayName(v, idx);
+    /* 悬停可查原始元数据：若界面仍显示异常，把这里的内容发来即可定位 */
+    nameEl.title = 'name=' + JSON.stringify(v.name || '') + '\nlang=' + JSON.stringify(v.lang || '')
+      + '\nvoiceURI=' + (v.voiceURI || '(empty)') + '\nlocalService=' + v.localService;
+    if (isCur) row.classList.add('vc-cur');
+    const tag = document.createElement('span');
+    tag.className = 'vc-tag';
+    tag.textContent = v.localService ? t('vcLocal') : t('vcOnline');   /* 本地/在线 = 合成发生在哪 */
+    const useBtn = document.createElement('button');
+    useBtn.className = 'vc-btn'; useBtn.type = 'button';
+    if (isCur) { useBtn.innerHTML = ic('check', 12); useBtn.disabled = true; }
+    else {
+      useBtn.textContent = t('vcUse');
+      useBtn.onclick = () => {          /* 跨语言直接选用：与上方语音列表同一存储字段，实时联动 */
+        state.voiceURI = v.voiceURI; save(); renderVoicePane();
+      };
+    }
+    const btn = document.createElement('button');
+    btn.className = 'vc-btn'; btn.type = 'button';
+    btn.innerHTML = ic('play', 12);
+    btn.onclick = () => {
+      try {
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(vcSampleFor(v.lang));
+        u.voice = v; u.lang = v.lang || ''; u.rate = 1;
+        speechSynthesis.speak(u);                /* 点谁读谁：用该声音合成试听句 */
+      } catch (e) {}
+    };
+    row.appendChild(nameEl); row.appendChild(tag); row.appendChild(useBtn); row.appendChild(btn);
+    return row;
+  }
   function renderVoiceCheck() {
     const sum = $('voiceCheckSummary'), list = $('voiceCheckList'), guide = $('voiceCheckGuide');
     if (!sum || !list) return;
@@ -2288,30 +2368,29 @@
       list.innerHTML = '<div class="empty-voices">' + t('noVoice') + '</div>';
       kickVoices();   /* 首次为空：触发一次静音 speak，voiceschanged 会带回列表并重渲染 */
     } else {
-      vs.forEach(v => {
-        const row = document.createElement('div');
-        row.className = 'vc-row';
-        const nameEl = document.createElement('span');
-        nameEl.className = 'vc-name';
-        nameEl.textContent = v.name + ' · ' + (v.lang || '?');
-        nameEl.title = v.name;                       /* 长名悬停可见 */
-        const tag = document.createElement('span');
-        tag.className = 'vc-tag';
-        tag.textContent = v.localService ? t('vcLocal') : t('vcOnline');  /* 本地/在线 = 合成发生在哪 */
-        const btn = document.createElement('button');
-        btn.className = 'pvbtn vc-play'; btn.type = 'button';
-        btn.innerHTML = ic('play', 12);
-        btn.onclick = () => {
-          try {
-            speechSynthesis.cancel();
-            const u = new SpeechSynthesisUtterance(vcSampleFor(v.lang));
-            u.voice = v; u.lang = v.lang || ''; u.rate = 1;
-            speechSynthesis.speak(u);                /* 点谁读谁：用该声音合成试听句 */
-          } catch (e) {}
-        };
-        row.appendChild(nameEl); row.appendChild(tag); row.appendChild(btn);
-        list.appendChild(row);
+      /* 028 反馈改进：按语言主码分组折叠——几百个声音混排无法阅读。
+         当前朗读语言的组默认展开，其余收起；无语言信息的归入「未知」组放最后。 */
+      const curKey = ((state.voiceLang || 'zh').split('-')[0] || 'zz').toLowerCase();
+      const groups = {};
+      vs.forEach((v, i) => {
+        const lg = (v.lang || '').trim();
+        const key = lg ? lg.split(/[-_]/)[0].toLowerCase() : 'zz';
+        (groups[key] = groups[key] || { items: [] }).items.push({ v, i });
       });
+      Object.keys(groups)
+        .sort((a, b) => (a === curKey ? -1 : b === curKey ? 1 : a < b ? -1 : 1))
+        .forEach(key => {
+          const g = groups[key];
+          const det = document.createElement('details');
+          det.className = 'vc-grp';
+          if (key === curKey) det.open = true;       /* 只默认展开用户当前语言 */
+          const sm = document.createElement('summary');
+          sm.textContent = (key === 'zz' ? t('vcUnknownLang') : vcLangName(key)) + '　' + g.items.length;
+          det.appendChild(sm);
+          g.items.sort((a, b) => vcDisplayName(a.v, a.i).localeCompare(vcDisplayName(b.v, b.i)))
+            .forEach(it => det.appendChild(vcMakeRow(it.v, it.i)));
+          list.appendChild(det);
+        });
     }
     guide.textContent = voiceCheckGuideText();
   }
