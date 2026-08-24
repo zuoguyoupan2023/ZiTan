@@ -812,16 +812,15 @@
         <div id="readPane">
           <div class="sec-title" data-i18n="language">语言</div>
           <select id="langSel"></select>
-          <div class="sec-title" data-i18n="voice">语音</div>
-          <div id="voiceList"></div>
+          <!-- 028 声音体检：设备 TTS 能力全景 = 唯一的语音选择入口（分组浏览 / 选用 / 试听）。
+               原「语音」下拉列表已并入此处，避免两份重复清单。 -->
+          <div class="sec-title" data-i18n="voiceCheckTitle">声音体检</div>
+          <div id="voiceCheckSummary" class="engine-legend"></div>
+          <div id="voiceCheckList"></div>
           <button class="pvbtn" id="previewBtn">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
             <span data-i18n="preview">试听</span>
           </button>
-          <!-- 028 声音体检：设备 TTS 能力全景（谁在发声 / 有哪些声音 / 怎么变好听） -->
-          <div class="sec-title" data-i18n="voiceCheckTitle">声音体检</div>
-          <div id="voiceCheckSummary" class="engine-legend"></div>
-          <div id="voiceCheckList"></div>
           <p class="hint" id="voiceCheckGuide" style="margin-top:8px;"></p>
         </div>
 
@@ -1154,6 +1153,7 @@
       vcUnsupported: '此浏览器不支持网页朗读（无 speechSynthesis 接口）。',
       vcLocal: '本地', vcOnline: '在线',
       vcUnnamed: '未命名声音', vcUnknownLang: '未知语言', vcUse: '选用',
+      vcAuto: '自动选择（按语言智能挑选）', vcAutoNow: '当前：',
       vcGuideEdge: '你正在使用 Edge：语音清单里的「Natural / Online」是微软免费提供的自然语音（联网合成），效果最佳，建议优先选择。',
       vcGuideWinNotEdge: '提示：改用 Microsoft Edge 打开字谈，可免费获得「晓晓」等自然语音（在线合成），朗读效果显著更好。也可以在 设置→时间和语言→语音 中添加更多本地中文声音。',
       vcGuideApple: '提升技巧：打开 系统设置 → 辅助功能 → 朗读内容 → 声音，免费下载中文「增强版／豪华版」声音，自然度明显提升（一次性下载，数百 MB）。',
@@ -1328,6 +1328,7 @@
       vcUnsupported: 'This browser does not support Web speech synthesis (no speechSynthesis API).',
       vcLocal: 'Local', vcOnline: 'Online',
       vcUnnamed: 'Unnamed voice', vcUnknownLang: 'Unknown language', vcUse: 'Use',
+      vcAuto: 'Auto (smart pick by language)', vcAutoNow: 'now: ',
       vcGuideEdge: 'You are on Edge: “Natural / Online” voices in the list are Microsoft\'s free natural voices (cloud-synthesized) — the best quality, pick them first.',
       vcGuideWinNotEdge: 'Tip: open ZiTalk in Microsoft Edge to get free natural voices like Xiaoxiao (online synthesis). You can also add more local Chinese voices in Settings → Time & Language → Speech.',
       vcGuideApple: 'Tip: in Settings → Accessibility → Spoken Content → Voices, download the free Chinese “Enhanced / Premium” voices — a big naturalness boost (one-time, several hundred MB).',
@@ -2249,27 +2250,6 @@
       sel.appendChild(o);
     });
     sel.value = state.voiceLang;
-
-    const list = $('voiceList');
-    list.innerHTML = '';
-    if (!voices.length) {
-      kickVoices();  /* 用户手势里触发一次加载，成功后 voiceschanged 会自动重渲染 */
-      list.innerHTML = '<div class="empty-voices">' + t('noVoice') + '</div>';
-      return;
-    }
-    const langVoices = voicesFor(state.voiceLang);
-    if (!langVoices.length) { list.innerHTML = '<div class="empty-voices">' + t('noVoiceLang') + '</div>'; return; }
-    const auto = autoPick(state.voiceLang);
-    list.appendChild(makeVoiceRow(t('autoVoice') + ' (' + (auto ? auto.name : '') + ')', state.voiceURI === '', null));
-    langVoices.forEach(v => list.appendChild(makeVoiceRow(v.name + ' · ' + v.lang, state.voiceURI === v.voiceURI, v)));
-  }
-  function makeVoiceRow(name, on, v) {
-    const row = document.createElement('div');
-    row.className = 'vrow' + (on ? ' on' : '');
-    row.innerHTML = '<span class="vname"></span><span class="vcheck">' + ic('check', 12) + '</span>';
-    row.querySelector('.vname').textContent = name;
-    row.onclick = () => { state.voiceURI = v ? v.voiceURI : ''; renderVoicePane(); };
-    return row;
   }
 
   /* ============ 028 声音体检：设备 TTS 能力全景 ============
@@ -2315,7 +2295,7 @@
     return e ? (state.uiLang === 'en' ? e[1] : e[0]) + ' · ' + code : code;
   }
   function vcDisplayName(v, idx) {
-    /* 与上方语音列表完全同构的名字构造（makeVoiceRow 用 v.name+' · '+v.lang），仅多空值兜底 */
+    /* 与朗读播放端 pickVoice/autoPick 同源字段；仅多空值兜底 */
     const nm = (v.name || '').trim();
     const lg = (v.lang || '').trim();
     let s = nm;
@@ -2375,6 +2355,23 @@
     sum.textContent = t('vcSummary')
       .replace('{n}', vs.length).replace('{local}', localN).replace('{remote}', vs.length - localN);
     list.innerHTML = '';
+    /* 「自动选择」入口（原上方语音列表的「自动」项）：state.voiceURI === '' 即自动模式，
+       朗读时按语言智能挑最合适的声音（autoPick 的偏好序：晓晓/婷婷…）。 */
+    const autoRow = document.createElement('div');
+    autoRow.className = 'vc-row' + (state.voiceURI === '' ? ' vc-cur' : '');
+    const autoName = document.createElement('span');
+    autoName.className = 'vc-name';
+    autoName.textContent = t('vcAuto') + (voices.length ? '（' + t('vcAutoNow') + (pickVoice() || {}).name + '）' : '');
+    autoRow.appendChild(autoName);
+    const autoUse = document.createElement('button');
+    autoUse.className = 'vc-btn'; autoUse.type = 'button';
+    if (state.voiceURI === '') { autoUse.innerHTML = ic('check', 12); autoUse.disabled = true; }
+    else {
+      autoUse.textContent = t('vcUse');
+      autoUse.onclick = () => { state.voiceURI = ''; save(); renderVoicePane(); };
+    }
+    autoRow.appendChild(autoUse);
+    list.appendChild(autoRow);
     if (!vs.length) {
       list.innerHTML = '<div class="empty-voices">' + t('noVoice') + '</div>';
       kickVoices();   /* 首次为空：触发一次静音 speak，voiceschanged 会带回列表并重渲染 */
