@@ -307,13 +307,9 @@
   .vc-lang-row .vc-lang-label { flex: 0 0 auto; font-size: 13px; opacity: .85; }
   .vc-lang-row select { flex: 1 1 auto; min-width: 0; margin: 0; }
   .vc-row.vc-cur { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
-  .vc-grp { margin-bottom: 10px; }
-  .vc-grp > summary {
-    cursor: pointer; font-size: 13px; font-weight: 600; padding: 6px 4px;
-    list-style-position: inside; user-select: none;
-  }
-  .vc-grp > summary::marker { color: var(--ink); }
-  .vc-grp[open] > summary { opacity: .75; }
+  /* 「自动」开关：贴按钮条右端，点亮表示未锁定音色（自动逻辑生效中） */
+  .mode-btns .mbtn.vc-auto-btn { margin-left: auto; opacity: .8; }
+  .mode-btns .mbtn.vc-auto-btn.on { opacity: 1; }
 
   /* 023 设置卡片固定高度：切换一级标签时宽高不变，内容少不萎缩，内容多内部滚动 */
   #settingsOverlay .card { height: min(84vh, 680px); }
@@ -821,8 +817,11 @@
             <span class="vc-lang-label" data-i18n="vLangLabel">识别语言</span>
             <select id="langSel"></select>
           </div>
-          <div id="voiceCheckSummary" class="engine-legend"></div>
-          <div id="voiceCheckList"></div>
+           <div id="voiceCheckSummary" class="engine-legend"></div>
+           <!-- 028 反馈：语言大类用按钮条横向排列（自动换行），点选后下方只列该类音色；
+                「自动」是逻辑不是条目——作为小开关放在按钮条右端，点亮=未锁定任何音色 -->
+           <div id="voiceGroupBar" class="mode-btns"></div>
+           <div id="voiceCheckList"></div>
           <button class="pvbtn" id="previewBtn">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
             <span data-i18n="preview">试听</span>
@@ -1160,7 +1159,7 @@
       vcUnsupported: '此浏览器不支持网页朗读（无 speechSynthesis 接口）。',
       vcLocal: '本地', vcOnline: '在线',
       vcUnnamed: '未命名声音', vcUnknownLang: '未知语言', vcUse: '选用',
-      vcAuto: '自动选择', vcAutoNow: '当前：',
+      vcAuto: '自动', vcAutoNow: '当前：',
       vcAutoHint: '不锁定具体音色：按识别语言智能挑选该语言下最自然的声音（偏好：晓晓、婷婷、美嘉…）。在下方清单里点「选用」可改为固定某个声音。',
       vcGuideEdge: '你正在使用 Edge：语音清单里的「Natural / Online」是微软免费提供的自然语音（联网合成），效果最佳，建议优先选择。',
       vcGuideWinNotEdge: '提示：改用 Microsoft Edge 打开字谈，可免费获得「晓晓」等自然语音（在线合成），朗读效果显著更好。也可以在 设置→时间和语言→语音 中添加更多本地中文声音。',
@@ -2257,7 +2256,10 @@
     LANGS.forEach(x => {
       const o = document.createElement('option');
       o.value = x.id;
-      o.textContent = vcLangName(x.id);   /* 028 统一名称体系：与分组标题同走 Intl.DisplayNames */
+      /* 识别语言下拉用项目自定义短标签（「中国香港」）：Intl 的 CLDR 官方全称
+        （「中文（中国香港特别行政区）」）在窄行里过长。分组标题仍走 Intl（无此问题）。 */
+      o.textContent = (state.uiLang === 'en') ? x.labelEn : x.labelZh;
+      o.title = vcLangName(x.id);   /* 悬停可见标准名称+代码，与分组体系呼应 */
       sel.appendChild(o);
     });
     sel.value = state.voiceLang;
@@ -2311,11 +2313,11 @@
   function vcLangName(code) {
     return vcLangLabel(code) + ' · ' + code;
   }
-  function vcDisplayName(v, idx) {
-    /* 名称净化（028 反馈）：各引擎命名风格不一——微软长名
+  function vcShortName(v, idx) {
+    /* 仅净化名，无语言码后缀（自动行等场合避免 "当前：HiuGaai · zh-HK" 与上下文重复）。
+       名称净化（028 反馈）：各引擎命名风格不一——微软长名
        "Microsoft HiuGaai Online (Natural) - Chinese (Cantonese Traditional)"
-       去掉厂商前缀/合成方式/语言尾巴后与苹果短名（婷婷）同级清爽；
-       语言信息已由 lang 码后缀和分组承担，不丢失。 */
+       去掉厂商前缀/合成方式/语言尾巴后与苹果短名（婷婷）同级清爽。 */
     let nm = (v.name || '').trim();
     if (nm) {
       nm = nm.replace(/^Microsoft\s+/i, '')
@@ -2323,13 +2325,14 @@
              .replace(/\s*-\s+[^-]*$/, '')        /* 去 "- Chinese (Cantonese Traditional)" 尾巴 */
              .trim() || (v.name || '').trim();
     }
-    const lg = (v.lang || '').trim();
-    let s = nm;
-    if (lg) s = s ? (s + ' · ' + lg) : lg;
-    if (!s && v.voiceURI) {
-      try { s = decodeURIComponent(String(v.voiceURI).split('/').pop()) || ''; } catch (e) { s = String(v.voiceURI); }
+    if (!nm && v.voiceURI) {
+      try { nm = decodeURIComponent(String(v.voiceURI).split('/').pop()) || ''; } catch (e) { nm = String(v.voiceURI); }
     }
-    return s || (t('vcUnnamed') + ' #' + idx);
+    return nm || (t('vcUnnamed') + ' #' + idx);
+  }
+  function vcDisplayName(v, idx) {
+    const lg = (v.lang || '').trim();
+    return lg ? (vcShortName(v, idx) + ' · ' + lg) : vcShortName(v, idx);
   }
   function vcMakeRow(v, idx) {
     const row = document.createElement('div');
@@ -2368,66 +2371,68 @@
     row.appendChild(nameEl); row.appendChild(tag); row.appendChild(useBtn); row.appendChild(btn);
     return row;
   }
+  /* 语言大组归并（028 反馈）：粤语(yue) 与所有 zh-* 变体同属「中文」组，其余按主码 */
+  function vcGroupKey(lang) {
+    const c = (lang || '').trim().split(/[-_]/)[0].toLowerCase();
+    return c === 'yue' ? 'zh' : (c || 'zz');
+  }
+  let vcBrowseGroup = null;   /* 当前浏览的语言大组；null=未初始化（取识别语言主码）。浏览与选用互不干扰 */
   function renderVoiceCheck() {
-    const sum = $('voiceCheckSummary'), list = $('voiceCheckList'), guide = $('voiceCheckGuide');
+    const sum = $('voiceCheckSummary'), bar = $('voiceGroupBar'),
+          list = $('voiceCheckList'), guide = $('voiceCheckGuide');
     if (!sum || !list) return;
     if (!('speechSynthesis' in window)) {
       sum.textContent = t('vcUnsupported');
-      list.innerHTML = ''; guide.textContent = '';
+      bar.innerHTML = ''; list.innerHTML = ''; guide.textContent = '';
       return;
     }
     const vs = refreshVoices();
     const localN = vs.filter(v => v.localService).length;
     sum.textContent = t('vcSummary')
       .replace('{n}', vs.length).replace('{local}', localN).replace('{remote}', vs.length - localN);
-    list.innerHTML = '';
-    /* 「自动选择」入口（原上方语音列表的「自动」项）：state.voiceURI === '' 即自动模式，
-       朗读时按语言智能挑最合适的声音（autoPick 的偏好序：晓晓/婷婷…）。 */
-    const autoRow = document.createElement('div');
-    autoRow.className = 'vc-row' + (state.voiceURI === '' ? ' vc-cur' : '');
-    const autoName = document.createElement('span');
-    autoName.className = 'vc-name';
-    const _pv = pickVoice();
-    autoName.textContent = t('vcAuto') + (_pv && _pv.name ? ' · ' + t('vcAutoNow') + vcDisplayName(_pv, 0) : '');
-    autoName.title = t('vcAutoHint');   /* 详细说明放悬停，避免行内三层括号套娃 */
-    autoRow.appendChild(autoName);
-    const autoUse = document.createElement('button');
-    autoUse.className = 'vc-btn'; autoUse.type = 'button';
-    if (state.voiceURI === '') { autoUse.innerHTML = ic('check', 12); autoUse.disabled = true; }
-    else {
-      autoUse.textContent = t('vcUse');
-      autoUse.onclick = () => { state.voiceURI = ''; save(); renderVoicePane(); };
-    }
-    autoRow.appendChild(autoUse);
-    list.appendChild(autoRow);
+    bar.innerHTML = ''; list.innerHTML = '';
     if (!vs.length) {
       list.innerHTML = '<div class="empty-voices">' + t('noVoice') + '</div>';
       kickVoices();   /* 首次为空：触发一次静音 speak，voiceschanged 会带回列表并重渲染 */
-    } else {
-      /* 028 反馈改进：按语言主码分组折叠——几百个声音混排无法阅读。
-         当前朗读语言的组默认展开，其余收起；无语言信息的归入「未知」组放最后。 */
-      const curKey = ((state.voiceLang || 'zh').split('-')[0] || 'zz').toLowerCase();
-      const groups = {};
-      vs.forEach((v, i) => {
-        const lg = (v.lang || '').trim();
-        const key = lg ? lg.split(/[-_]/)[0].toLowerCase() : 'zz';
-        (groups[key] = groups[key] || { items: [] }).items.push({ v, i });
-      });
-      Object.keys(groups)
-        .sort((a, b) => (a === curKey ? -1 : b === curKey ? 1 : a < b ? -1 : 1))
-        .forEach(key => {
-          const g = groups[key];
-          const det = document.createElement('details');
-          det.className = 'vc-grp';
-          if (key === curKey) det.open = true;       /* 只默认展开用户当前语言 */
-          const sm = document.createElement('summary');
-          sm.textContent = (key === 'zz' ? t('vcUnknownLang') : vcLangName(key)) + '　' + g.items.length;
-          det.appendChild(sm);
-          g.items.sort((a, b) => vcDisplayName(a.v, a.i).localeCompare(vcDisplayName(b.v, b.i)))
-            .forEach(it => det.appendChild(vcMakeRow(it.v, it.i)));
-          list.appendChild(det);
-        });
+      guide.textContent = voiceCheckGuideText();
+      return;
     }
+    /* 028 反馈：语言大类改为按钮条导航（横向排列自动换行），点选后下方只列该类音色。
+       粤语并入中文组；当前选中音色所属的组按钮带 ✓ 标识（跨组可见）。 */
+    const curKey = vcGroupKey(state.voiceLang);
+    const groups = {};
+    vs.forEach((v, i) => (groups[vcGroupKey(v.lang)] = groups[vcGroupKey(v.lang)] || []).push({ v, i }));
+    const keys = Object.keys(groups)
+      .filter(k => k !== 'zh')                       /* 中文固定排最前，其余按键名排序 */
+      .sort((a, b) => (a === 'zz' ? 1 : b === 'zz' ? -1 : a < b ? -1 : 1));
+    if (groups.zh) keys.unshift('zh');
+    if (!vcBrowseGroup || !groups[vcBrowseGroup]) vcBrowseGroup = groups[curKey] ? curKey : keys[0];
+    const curVoiceGroup = state.voiceURI && vs.some(v => v.voiceURI === state.voiceURI)
+      ? vcGroupKey((vs.find(v => v.voiceURI === state.voiceURI) || {}).lang) : null;
+    keys.forEach(key => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'mbtn' + (key === vcBrowseGroup ? ' on' : '');
+      b.textContent = (key === 'zz' ? t('vcUnknownLang') : vcLangLabel(key))
+        + ' ' + groups[key].length
+        + (key === curVoiceGroup ? ' ✓' : '');
+      b.title = key === 'zz' ? t('vcUnknownLang') : vcLangName(key);
+      b.onclick = () => { vcBrowseGroup = key; renderVoiceCheck(); };
+      bar.appendChild(b);
+    });
+    /* 「自动」开关：自动是逻辑不是清单条目——未锁定音色时朗读按语言智能挑选；
+       锁定后此开关熄灭，点它清除锁定回到自动。放在按钮条右端与其余按钮区分。 */
+    const autoBtn = document.createElement('button');
+    autoBtn.type = 'button';
+    autoBtn.className = 'mbtn vc-auto-btn' + (state.voiceURI === '' ? ' on' : '');
+    autoBtn.textContent = t('vcAuto');
+    autoBtn.title = t('vcAutoHint');
+    autoBtn.onclick = () => { if (state.voiceURI !== '') { state.voiceURI = ''; save(); renderVoicePane(); } };
+    bar.appendChild(autoBtn);
+    /* 音色列表：只渲染当前浏览组的成员，行内沿用 选用/试听 与选中描边样式 */
+    groups[vcBrowseGroup]
+      .sort((a, b) => vcDisplayName(a.v, a.i).localeCompare(vcDisplayName(b.v, b.i)))
+      .forEach(it => list.appendChild(vcMakeRow(it.v, it.i)));
     guide.textContent = voiceCheckGuideText();
   }
 
