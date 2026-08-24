@@ -810,13 +810,9 @@
 
         <!-- 朗读 -->
         <div id="readPane">
-          <!-- 028 声音体检：设备 TTS 能力全景 = 唯一的语音选择入口（识别语言 / 分组浏览 / 选用 / 试听）。
-               原「语音」列表已并入；「语言」下拉并入此处并正名为「识别语言」（切换会重置为自动挑选）。 -->
+          <!-- 028 声音体检：设备 TTS 能力全景 = 唯一的语音选择入口（分组浏览 / 选用 / 试听）。
+               「识别语言」下拉已移至「语音识别」页（它控制的是识别上传语言，与朗读浏览无关）。 -->
           <div class="sec-title" data-i18n="voiceCheckTitle">声音体检</div>
-          <div class="vc-lang-row">
-            <span class="vc-lang-label" data-i18n="vLangLabel">识别语言</span>
-            <select id="langSel"></select>
-          </div>
            <div id="voiceCheckSummary" class="engine-legend"></div>
            <!-- 028 反馈：语言大类用按钮条横向排列（自动换行），点选后下方只列该类音色；
                 「自动」是逻辑不是条目——作为小开关放在按钮条右端，点亮=未锁定任何音色 -->
@@ -834,6 +830,11 @@
         <div class="sec-title" data-i18n="asrEngine">识别引擎</div>
         <div id="asrEngineDesc" class="engine-legend" data-i18n="asrLegend">按当前设备/地区自动给出可用识别方式</div>
         <div id="asrEngineList"></div>
+        <!-- 028：识别语言从朗读页移入此处（云端识别上传语言；切换会重置朗读音色为自动挑选） -->
+        <div class="vc-lang-row" style="margin-top:10px;">
+          <span class="vc-lang-label" data-i18n="vLangLabel">识别语言</span>
+          <select id="langSel"></select>
+        </div>
 
         <!-- 024 隐私与合规提醒（字符串里的换行 + pre-line 渲染成多行） -->
         <div class="privacy-note" data-i18n="privacyAsrNote">【隐私与合规提醒】
@@ -1160,6 +1161,7 @@
       vcLocal: '本地', vcOnline: '在线',
       vcUnnamed: '未命名声音', vcUnknownLang: '未知语言', vcUse: '选用',
       vcAuto: '自动', vcAutoNow: '当前：',
+      vcMore: '更多', vcCollapse: '收起',
       vcAutoHint: '不锁定具体音色：按识别语言智能挑选该语言下最自然的声音（偏好：晓晓、婷婷、美嘉…）。在下方清单里点「选用」可改为固定某个声音。',
       vcGuideEdge: '你正在使用 Edge：语音清单里的「Natural / Online」是微软免费提供的自然语音（联网合成），效果最佳，建议优先选择。',
       vcGuideWinNotEdge: '提示：改用 Microsoft Edge 打开字谈，可免费获得「晓晓」等自然语音（在线合成），朗读效果显著更好。也可以在 设置→时间和语言→语音 中添加更多本地中文声音。',
@@ -1337,6 +1339,7 @@
       vcLocal: 'Local', vcOnline: 'Online',
       vcUnnamed: 'Unnamed voice', vcUnknownLang: 'Unknown language', vcUse: 'Use',
       vcAuto: 'Auto', vcAutoNow: 'now: ',
+      vcMore: 'More', vcCollapse: 'Collapse',
       vcAutoHint: 'No fixed voice: the most natural voice for the recognition language is picked automatically (preference: Xiaoxiao, Tingting, Meijia…). Click "Use" on any voice below to lock one instead.',
       vcGuideEdge: 'You are on Edge: “Natural / Online” voices in the list are Microsoft\'s free natural voices (cloud-synthesized) — the best quality, pick them first.',
       vcGuideWinNotEdge: 'Tip: open ZiTalk in Microsoft Edge to get free natural voices like Xiaoxiao (online synthesis). You can also add more local Chinese voices in Settings → Time & Language → Speech.',
@@ -2251,15 +2254,18 @@
   function renderVoicePane() {
     renderVoiceCheck();   /* 028 声音体检：与语音选择同屏渲染（voiceschanged 到达时一并刷新） */
     refreshVoices();
+  }
+  /* 028：识别语言下拉（已移至「语音识别」页）——控制云端识别上传语言与自动挑声偏好；
+     切换会重置朗读音色为自动（见 langSel.onchange）。选项用项目短标签，悬停显示标准名+代码。 */
+  function fillLangSel() {
     const sel = $('langSel');
+    if (!sel) return;
     sel.innerHTML = '';
     LANGS.forEach(x => {
       const o = document.createElement('option');
       o.value = x.id;
-      /* 识别语言下拉用项目自定义短标签（「中国香港」）：Intl 的 CLDR 官方全称
-        （「中文（中国香港特别行政区）」）在窄行里过长。分组标题仍走 Intl（无此问题）。 */
       o.textContent = (state.uiLang === 'en') ? x.labelEn : x.labelZh;
-      o.title = vcLangName(x.id);   /* 悬停可见标准名称+代码，与分组体系呼应 */
+      o.title = vcLangName(x.id);
       sel.appendChild(o);
     });
     sel.value = state.voiceLang;
@@ -2377,6 +2383,7 @@
     return c === 'yue' ? 'zh' : (c || 'zz');
   }
   let vcBrowseGroup = null;   /* 当前浏览的语言大组；null=未初始化（取识别语言主码）。浏览与选用互不干扰 */
+  let vcShowAllLangs = false; /* 语言按钮条展开态：false=只显五个常用+更多 */
   function renderVoiceCheck() {
     const sum = $('voiceCheckSummary'), bar = $('voiceGroupBar'),
           list = $('voiceCheckList'), guide = $('voiceCheckGuide');
@@ -2409,7 +2416,16 @@
     if (!vcBrowseGroup || !groups[vcBrowseGroup]) vcBrowseGroup = groups[curKey] ? curKey : keys[0];
     const curVoiceGroup = state.voiceURI && vs.some(v => v.voiceURI === state.voiceURI)
       ? vcGroupKey((vs.find(v => v.voiceURI === state.voiceURI) || {}).lang) : null;
-    keys.forEach(key => {
+    /* 028 反馈：默认只直显五个常用语言（中英法西俄），其余收进「更多」；展开后末尾变「收起」 */
+    const VC_PRIMARY = ['zh', 'en', 'fr', 'es', 'ru'];
+    let shownKeys;
+    if (vcShowAllLangs || keys.length <= VC_PRIMARY.length + 1) {
+      shownKeys = keys.slice();
+    } else {
+      shownKeys = VC_PRIMARY.filter(k => groups[k]);
+      if (vcBrowseGroup && !shownKeys.includes(vcBrowseGroup)) shownKeys.push(vcBrowseGroup);
+    }
+    shownKeys.forEach(key => {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'mbtn' + (key === vcBrowseGroup ? ' on' : '');
@@ -2420,6 +2436,14 @@
       b.onclick = () => { vcBrowseGroup = key; renderVoiceCheck(); };
       bar.appendChild(b);
     });
+    if (keys.length > shownKeys.length || vcShowAllLangs) {   /* 更多/收起（始终在语言按钮之后） */
+      const moreBtn = document.createElement('button');
+      moreBtn.type = 'button';
+      moreBtn.className = 'mbtn';
+      moreBtn.textContent = vcShowAllLangs ? t('vcCollapse') : (t('vcMore') + ' (' + (keys.length - shownKeys.length) + ')');
+      moreBtn.onclick = () => { vcShowAllLangs = !vcShowAllLangs; renderVoiceCheck(); };
+      bar.appendChild(moreBtn);
+    }
     /* 「自动」开关：自动是逻辑不是清单条目——未锁定音色时朗读按语言智能挑选；
        锁定后此开关熄灭，点它清除锁定回到自动。放在按钮条右端与其余按钮区分。 */
     const autoBtn = document.createElement('button');
@@ -2729,6 +2753,7 @@
   }
 
   function renderAsrPane() {
+    fillLangSel();   /* 028：识别语言下拉已移到本页，随页渲染 */
     const cur = state.asrEngine === 'auto' ? '' : state.asrEngine;
     renderEngineList('asrEngineList', (which) => {
       state.asrEngine = which; save(); renderAsrPane();
