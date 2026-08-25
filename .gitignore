@@ -20,3 +20,12 @@
 
 # Wrangler 本地联调密钥（024：AZURE_SPEECH_KEY 等，绝不入 git）
 .dev.vars
+
+# Wrangler 本地联调运行时目录（配置/缓存重定向，防污染宿主）
+.wrangler-tmp/
+
+# Wrangler 本地状态（KV 模拟数据等，自动生成不入 git）
+.wrangler/
+
+# 本地依赖与 Miniflare 模拟器数据（node_modules/.mf/cf.json 等自动生成）
+node_modules/
