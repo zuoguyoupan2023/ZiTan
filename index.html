@@ -3296,7 +3296,7 @@
   };
   /* —— 滚动偏好：字号 / 速度。存独立 localStorage 键，重开页面自动恢复 —— */
   let scrollPxPerFrame = 0.5, scrollFs = 1, scrollSpd = 'mid';
-  const SPD_MAP = { slow: 0.25, mid: 0.5, fast: 1 }; /* px/帧 ≈ 15 / 30 / 60 px/s */
+  const SPD_MAP = { slow: 0.6, mid: 1.2, fast: 2.2 }; /* px/帧 ≈ 36 / 72 / 132 px/s（整体提速版） */
   function applyScrollPrefs() {
     presenter.style.setProperty('--sfs', scrollFs);
     $('pFsVal').textContent = Math.round(scrollFs * 100) + '%';
