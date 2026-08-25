@@ -277,7 +277,7 @@
     flex: 1; display: flex; align-items: center; justify-content: center;
     padding: 0 6vw; text-align: center;
   }
-  #presenter .big { font-size: calc(6.5vh * var(--fs)); line-height: 1.35; word-break: break-word; max-width: 100%; font-weight: 600; }
+  #presenter .big { font-size: calc(6.5vh * var(--fs)); line-height: 1.35; word-break: break-word; max-width: 100%; font-weight: 600; white-space: normal; }
   .pfoot {
     display: flex; align-items: center; justify-content: center; gap: 10px;
     padding: 0 14px calc(18px + env(safe-area-inset-bottom));
@@ -300,13 +300,42 @@
   #presenter .pcenter { overflow: hidden; }
   #presenter .pscroll { display: none; align-items: center; white-space: nowrap; will-change: transform; }
   #presenter.scrolling .pscroll { display: flex; }
+  #presenter.scrolling .pcenter { justify-content: flex-start; } /* 滚动时轨道贴左放置，避免整体居中把长文本挤出屏幕左缘 */
   #presenter.scrolling .big { display: none; }
-  #presenter.scrolling .pnav, #presenter.scrolling .pfoot { visibility: hidden; }
+  #presenter.scrolling .pnav, #presenter.scrolling .pfoot { display: none; } /* 滚动时彻底移出布局，文本区占满全屏 */
+  /* 滚动模式：上下按钮悬浮，不占布局高度，字号得以最大化利用屏幕 */
+  #presenter.scrolling .ptop {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 6;
+    background: linear-gradient(to bottom, var(--panel), transparent);
+    pointer-events: none;
+  }
+  #presenter.scrolling .ptop > * { pointer-events: auto; } /* 悬浮层本身不挡点击，按钮仍可点 */
+  #presenter:not(.land) #pScrollT { display: none; } /* 滚动只在横屏：竖屏时直接隐藏按钮 */
   #presenter .pscroll .sitem {
     display: inline-block; white-space: nowrap;
-    font-size: calc(5vh * var(--fs)); line-height: 1.4; font-weight: 600;
-    padding-right: 14vw; /* 条与条之间的空档 */
+    font-size: var(--sfpx, 80px); /* 字号由 JS 按可视区高度动态算，保证完整显示不被遮挡 */
+    line-height: 1.02; font-weight: 600;
+    padding-right: 0.6em; /* 条与条之间的空档随字号缩放 */
   }
+  /* 滚动模式控制条：字号 + 速度 */
+  #presenter .pctl {
+    display: none; align-items: center; justify-content: center; gap: 8px;
+    padding: 10px 14px calc(16px + env(safe-area-inset-bottom));
+  }
+  #presenter.scrolling .pctl {
+    display: flex;
+    position: absolute; bottom: 0; left: 0; right: 0; z-index: 6;
+    background: linear-gradient(to top, var(--panel), transparent);
+    pointer-events: none;
+  }
+  #presenter.scrolling .pctl > * { pointer-events: auto; }
+  #presenter .pctl button {
+    border: none; background: var(--bg); color: var(--ink);
+    font-size: 14px; font-weight: 700; padding: 8px 12px; border-radius: 10px; cursor: pointer;
+  }
+  #presenter .pctl button.on { background: var(--accent); color: #fff; }
+  #presenter .pctl .fval { min-width: 46px; text-align: center; color: var(--muted); font-size: 13px; }
+  #presenter .pctl .vsep { width: 1px; height: 22px; background: var(--line); }
 
   /* ===== 浮层 / 卡片 ===== */
   .overlay {
@@ -844,6 +873,15 @@
       </button>
       <span class="hint">右上角退出</span>
     </div>
+    <div class="pctl" id="pCtl">
+      <button id="pFsDn">A−</button>
+      <span class="fval" id="pFsVal">100%</span>
+      <button id="pFsUp">A+</button>
+      <span class="vsep"></span>
+      <button class="spd" data-spd="slow" data-i18n="slow">慢</button>
+      <button class="spd on" data-spd="mid" data-i18n="mid">中</button>
+      <button class="spd" data-spd="fast" data-i18n="fast">快</button>
+    </div>
   </div>
 
   <!-- 设置 -->
@@ -1244,6 +1282,7 @@
       micNoPermission: '麦克风权限被拒绝，请在浏览器设置里允许', micTimeout: '识别服务无响应（当前浏览器可能不支持原生识别）',
       exit: '退出', prev: '上一条', next: '下一条',
       land: '横屏', port: '竖屏', scrollOn: '滚动', scrollOff: '固定',
+      slow: '慢', mid: '中', fast: '快',
       presets: '预设', voice: '语音', fill: '填入', sendDirect: '直接发',
       add: '添加', newPhrase: '输入新用语',
       presetHint: '黄边 = 填入输入框继续写；无黄边 = 点一下直接发。点文字可编辑，点标签可切换，× 删除。',
@@ -1428,6 +1467,7 @@
       micNoPermission: 'Microphone permission denied — allow it in browser settings', micTimeout: 'Recognition unresponsive (this browser may not support native speech)',
       exit: 'Exit', prev: 'Previous', next: 'Next',
       land: 'Landscape', port: 'Portrait', scrollOn: 'Auto-scroll', scrollOff: 'Fixed',
+      slow: 'Slow', mid: 'Mid', fast: 'Fast',
       presets: 'Presets', voice: 'Voice', fill: 'Fill', sendDirect: 'Send',
       add: 'Add', newPhrase: 'New phrase',
       presetHint: 'Yellow = fill in box; plain = send now. Tap text to edit, tap the label to switch, × to delete.',
@@ -3191,21 +3231,28 @@
   function buildScroll() {
     const tr = $('pTrack');
     tr.textContent = '';
-    state.messages.forEach(m => {
-      const d = document.createElement('div');
-      d.className = 'sitem'; d.textContent = m.text;
-      tr.appendChild(d);
-    });
+    /* 只滚动当前正在展示的这一条消息，而不是把全部消息拼在一起滚 */
+    const m = state.messages[state.viewing];
+    if (!m) return;
+    const d = document.createElement('div');
+    d.className = 'sitem'; d.textContent = m.text;
+    tr.appendChild(d);
   }
   function startScroll() {
     if (!state.messages.length) return;
     stopPresenterPlay();
     buildScroll();
-    const box = $('pScroll');
+    const box = $('pScroll'), holder = box.parentElement;
+    /* 轨道贴左（flex-start）后，把「第一个字」推进到画面水平正中心：
+       x0 = 视口宽/2 − 左内边距（轨道起始位在 padding 内边缘） */
+    const padL = parseFloat(getComputedStyle(holder).paddingLeft) || 0;
+    const x0 = Math.max(0, holder.clientWidth * 0.5 - padL);
+    box.dataset.x0 = x0;
     delete box.dataset.x;
-    box.style.transform = 'translateX(0)';
+    box.style.transform = 'translateX(' + x0 + 'px)';
     scrollPaused = false;
     presenter.classList.add('scrolling');
+    applyScrollFontSize();
     setScrollBtn();
     tickScroll();
   }
@@ -3216,8 +3263,8 @@
       if (!presenter.classList.contains('scrolling')) return;
       if (!scrollPaused) {
         let x = parseFloat(box.dataset.x || '0');
-        x -= 0.5; /* 每帧约 0.5px ≈ 30px/s，向左匀速移动 */
-        if (-x > box.scrollWidth) x = holder.clientWidth; /* 全部移出后从右侧重新进入，循环 */
+        x -= scrollPxPerFrame; /* 向左匀速移动，速度由控制条决定 */
+        if (-x > box.scrollWidth) x = parseFloat(box.dataset.x0 || '0'); /* 全部移出后回到「首字居中」起点重新滚 */
         box.style.transform = 'translateX(' + x + 'px)';
         box.dataset.x = x;
       }
@@ -3240,16 +3287,47 @@
   }
   $('pOrient').onclick = () => {
     presenter.classList.toggle('land');
-    /* 滚动只存在于横屏：切回竖屏时自动退出滚动 */
+    /* 滚动只存在于横屏：切回竖屏时自动退出滚动（按钮本身在竖屏已隐藏，此为保险） */
     if (!presenter.classList.contains('land') && presenter.classList.contains('scrolling')) stopScroll();
     setOrientBtn();
   };
   $('pScrollT').onclick = () => {
-    if (presenter.classList.contains('scrolling')) { stopScroll(); return; }
-    presenter.classList.add('land'); /* 滚动只在横屏：自动进入横屏再开始滚动 */
-    setOrientBtn();
-    startScroll();
+    presenter.classList.contains('scrolling') ? stopScroll() : startScroll();
   };
+  /* —— 滚动偏好：字号 / 速度。存独立 localStorage 键，重开页面自动恢复 —— */
+  let scrollPxPerFrame = 0.5, scrollFs = 1, scrollSpd = 'mid';
+  const SPD_MAP = { slow: 0.6, mid: 1.2, fast: 2.2 }; /* px/帧 ≈ 36 / 72 / 132 px/s（整体提速版） */
+  function applyScrollPrefs() {
+    presenter.style.setProperty('--sfs', scrollFs);
+    $('pFsVal').textContent = Math.round(scrollFs * 100) + '%';
+    document.querySelectorAll('#pCtl .spd').forEach(b => b.classList.toggle('on', b.dataset.spd === scrollSpd));
+    scrollPxPerFrame = SPD_MAP[scrollSpd] || 0.5;
+    applyScrollFontSize();
+  }
+  /* 字号按「当前可视区高度」算：先扣除顶部按钮排与底部控制条占用的空间，
+     文本在垂直方向必然完整显示，绝不会被上下区域遮挡或溢出 */
+  function applyScrollFontSize() {
+    const holder = document.querySelector('#presenter .pcenter');
+    const raw = holder.clientHeight;
+    const px = Math.max(24, Math.round((raw || 360) * 0.8 * scrollFs));
+    presenter.style.setProperty('--sfpx', px + 'px');
+  }
+  function savePresenterPrefs() {
+    try { localStorage.setItem('zitan-presenter', JSON.stringify({ sfs: scrollFs, spd: scrollSpd })); } catch (e) {}
+  }
+  $('pFsDn').onclick = () => { scrollFs = Math.max(0.4, +(scrollFs - 0.1).toFixed(2)); applyScrollPrefs(); savePresenterPrefs(); };
+  $('pFsUp').onclick = () => { scrollFs = Math.min(1.6, +(scrollFs + 0.1).toFixed(2)); applyScrollPrefs(); savePresenterPrefs(); };
+  document.querySelectorAll('#pCtl .spd').forEach(b => {
+    b.onclick = () => { scrollSpd = b.dataset.spd; applyScrollPrefs(); savePresenterPrefs(); };
+  });
+  (function initPresenterPrefs() {
+    try {
+      const p = JSON.parse(localStorage.getItem('zitan-presenter')) || {};
+      if (typeof p.sfs === 'number') scrollFs = Math.min(1.6, Math.max(0.4, p.sfs));
+      if (SPD_MAP[p.spd]) scrollSpd = p.spd;
+    } catch (e) {}
+    applyScrollPrefs();
+  })();
   document.querySelector('#presenter .pcenter').addEventListener('click', () => {
     if (!presenter.classList.contains('scrolling')) return;
     scrollPaused = !scrollPaused;
