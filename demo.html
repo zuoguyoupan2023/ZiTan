@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Azure TTS 情感标签测试台</title>
+<!--
+  demo build az-7 · 配套文档：001-azure.md
+  az-7：Key/Region/口令三项全部可留空——留空时 /api/tts-demo 自动落服务端环境变量
+       AZURE_SPEECH_KEY/REGION（本地=.dev.vars，线上=Pages 变量）；口令校验 TTS_DEMO_TOKEN。
+  az-6：合成改走 REST 代理通道（/api/tts-demo，本地 functions）——用户网络到微软
+       WebSocket 端点不通而 REST 正常；SDK/WS 仅留作诊断对照。
+  az-5：SDK 错误对象完整序列化（修复报错显示 [object Object] 的问题）。
+  az-3：分阶段连接诊断——状态栏实时显示「① WSS 握手+鉴权 → ② 已连上 → ③ 合成中」，
+       失败时标注卡在哪个阶段 + 按报错关键词给出疑似原因（网络 / Key / 限流 / style）。
+  az-4：「🩺 一键诊断」按钮——打印 SDK 来源 / 配置 / localStorage 可用性 /
+       裸 WebSocket 直连探测（区分「网络不通」与「到达后被拒」）。
+  用途：本地测试 Azure TTS 音色 × express-as 情感标签组合效果。
+  安全声明：Key 仅存本机 localStorage，供个人自测；正式产品严禁照抄，
+           必须服务端持 Key 代理（见 000-device-tts.md §五架构图）。
+-->
+<style>
+  :root {
+    --bg: #10141a; --panel: #1a2029; --panel2: #222a35; --line: #303b49;
+    --ink: #e6ebf2; --muted: #8b98a8; --accent: #4da3ff; --ok: #34c759;
+    --err: #ff5d5d; --warn: #ffb340; --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 14px/1.55 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; padding: 16px; }
+  h1 { font-size: 18px; margin: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .build-tag { font-size: 11px; opacity: .5; user-select: none; font-weight: normal; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+            padding: 14px 16px; margin-top: 12px; }
+  .sec-title { font-size: 13px; font-weight: 700; color: var(--muted); letter-spacing: .05em; margin-bottom: 10px; }
+  input[type=password], input[type=text], textarea, select {
+    background: var(--panel2); color: var(--ink); border: 1.5px solid var(--line);
+    border-radius: 9px; padding: 8px 10px; font-size: 14px; outline: none; width: 100%;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 96px; font-family: inherit; }
+  button {
+    background: var(--accent); color: #06121f; border: none; border-radius: 9px;
+    padding: 9px 16px; font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+  button:hover { filter: brightness(1.1); }
+  button:disabled { opacity: .4; cursor: not-allowed; filter: none; }
+  button.ghost { background: var(--panel2); color: var(--ink); border: 1.5px solid var(--line); font-weight: 500; }
+  button.danger { background: transparent; color: var(--err); border: 1.5px solid var(--err); font-weight: 500; }
+  button.mini { padding: 5px 10px; font-size: 12px; }
+
+  /* 设置区 */
+  #setupGrid { display: grid; grid-template-columns: 1.2fr 1fr 1fr auto auto; gap: 10px; align-items: end; }
+  #setupGrid label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  #connDot { font-size: 12px; color: var(--muted); margin-left: 10px; }
+  #connDot.ok { color: var(--ok); } #connDot.err { color: var(--err); }
+
+  /* 主布局 */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  @media (max-width: 900px) { .cols, #setupGrid { grid-template-columns: 1fr; } }
+
+  /* 音色库 */
+  .vg-name { font-size: 12px; color: var(--muted); margin: 12px 0 6px; }
+  .vg-name:first-child { margin-top: 0; }
+  .vgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .vcard {
+    background: var(--panel2); border: 1.5px solid var(--line); border-radius: 10px;
+    padding: 9px 11px; cursor: pointer; transition: border-color .15s;
+  }
+  .vcard:hover { border-color: var(--accent); }
+  .vcard.on { border-color: var(--accent); background: rgba(77,163,255,.12); }
+  .vcard b { display: block; font-size: 14px; }
+  .vcard small { color: var(--muted); font-size: 11px; }
+  .badge { display: inline-block; font-size: 10px; background: var(--line); color: var(--ink);
+           border-radius: 99px; padding: 1px 7px; margin-top: 4px; }
+
+  /* 试听队列 */
+  .qrow { background: var(--panel2); border: 1.5px solid var(--line); border-radius: 10px;
+          padding: 10px 12px; margin-bottom: 8px; }
+  .qhead { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .qhead b { font-size: 14px; }
+  .qhead .sp { flex: 1; }
+  .qctl { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .qctl select { width: auto; min-width: 130px; padding: 6px 8px; font-size: 13px; }
+  .qctl .deg { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .qctl input[type=range] { accent-color: var(--accent); }
+  .empty-tip { color: var(--muted); font-size: 13px; padding: 8px 2px; }
+
+  /* 右栏 */
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  .row .grow { flex: 1; }
+  .slider-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+  .slider-row input[type=range] { accent-color: var(--accent); flex: 1; }
+  .slider-row output { min-width: 52px; text-align: right; font-variant-numeric: tabular-nums; }
+  pre#ssmlBox {
+    background: #0b0e13; border: 1px solid var(--line); border-radius: 9px; padding: 10px;
+    font: 11px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; color: #9fb3c8;
+    max-height: 180px; overflow: auto; white-space: pre-wrap; word-break: break-all;
+  }
+  #status { margin-top: 10px; font-size: 13px; min-height: 20px; white-space: pre-wrap; word-break: break-all; }
+  #status.info { color: var(--muted); } #status.ok { color: var(--ok); }
+  #status.err { color: var(--err); } #status.busy { color: var(--warn); }
+  .hint-line { font-size: 12px; color: var(--muted); margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎙️ Azure TTS 情感标签测试台 <span class="build-tag">demo build az-7</span><span id="connDot"></span></h1>
+
+  <!-- ══════════ 设置区 ══════════ -->
+  <section id="setupSec">
+    <div class="sec-title">设置 · 三项全部可留空（留空 = 使用服务端环境变量 AZURE_SPEECH_*；手填则仅存本机浏览器）</div>
+    <div id="setupGrid">
+      <div><label for="keyInp">Subscription Key（可留空）</label>
+        <input type="password" id="keyInp" placeholder="留空 = 用服务端环境变量" autocomplete="off"></div>
+      <div><label for="regionInp">Region（可留空 = 用环境变量区域）</label>
+        <input type="text" id="regionInp" list="regionList" placeholder="如 southeastasia">
+        <datalist id="regionList">
+          <option value="eastasia"><option value="southeastasia"><option value="japaneast">
+          <option value="koreacentral"><option value="eastus"><option value="eastus2">
+          <option value="westus"><option value="westus2"><option value="westus3">
+          <option value="centralus"><option value="westeurope"><option value="northeurope">
+          <option value="uksouth"><option value="centralindia"><option value="australiaeast">
+        </datalist></div>
+      <div><label for="tokenInp">口令（仅线上启用了保护时需要）</label>
+        <input type="password" id="tokenInp" placeholder="TTS_DEMO_TOKEN 的值" autocomplete="off"></div>
+      <button id="saveBtn">保存</button>
+      <button id="clearBtn" class="danger">清除</button>
+    </div>
+    <div class="row">
+      <button id="testBtn" class="ghost mini">🔌 连接测试</button>
+      <button id="diagBtn" class="ghost mini">🩺 一键诊断</button>
+      <span class="hint-line">Key / Region 来自 Azure Portal 的 Speech Service 资源页；401 多半是两者不匹配。</span>
+    </div>
+  </section>
+
+  <div class="cols">
+    <!-- ══════════ 左栏：音色库 + 试听队列 ══════════ -->
+    <section>
+      <div class="sec-title">音色库（点击加入下方试听队列）</div>
+      <div id="voiceLib"></div>
+    </section>
+    <section>
+      <div class="sec-title">试听队列（每项可独立配情感标签）</div>
+      <div id="queueBox"><div class="empty-tip">还没有选音色 —— 从左侧挑几个。</div></div>
+    </section>
+  </div>
+
+  <!-- ══════════ 底部：文本 + 控制 ══════════ -->
+  <section>
+    <div class="sec-title">文本（喂给队列里所有音色，便于横向对比）</div>
+    <textarea id="txt" maxlength="2000">太好了！我们真的做到了！
+……唉，别提了，这次彻底搞砸了。
+你小声一点，它就在门外。
+各位观众朋友们，欢迎收看今晚的特别报道。</textarea>
+    <div class="row">
+      <div class="slider-row grow">语速<input type="range" id="rateR" min="-50" max="100" value="0"><output id="rateO">+0%</output></div>
+      <div class="slider-row grow">音调<input type="range" id="pitchR" min="-50" max="50" value="0"><output id="pitchO">+0Hz</output></div>
+      <span class="hint-line" id="charCnt"></span>
+    </div>
+    <div class="row">
+      <button id="playAllBtn">▶ 播放整个队列</button>
+      <button id="stopBtn" class="ghost" disabled>⏹ 停止</button>
+      <button id="dlBtn" class="ghost" disabled>⬇ 下载上一段 MP3</button>
+      <span class="sp grow"></span>
+      <span class="hint-line">发送内容预览：</span>
+    </div>
+    <pre id="ssmlBox">（选择音色后自动生成 SSML）</pre>
+    <div id="status" class="info"></div>
+  </section>
+</div>
+
+<!-- Speech SDK：同源本地文件优先（绕开 Edge 跟踪防护对公共 CDN 的拦截），CDN 仅作回退 -->
+<script>
+  window.__sdkReady = new Promise((resolve, reject) => {
+    const urls = [
+      'vendor/azure-speech-sdk.bundle.js',
+      'https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle.js',
+      'https://unpkg.com/microsoft-cognitiveservices-speech-sdk/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle.js'
+    ];
+    (function load(i) {
+      if (i >= urls.length) return reject(new Error('Speech SDK 加载失败：本地与两个 CDN 均不可达'));
+      const s = document.createElement('script');
+      s.src = urls[i];
+      s.onload = () => { try { if (window.SpeechSDK) { window.__sdkFrom = urls[i]; return resolve(window.SpeechSDK); } } catch (e) {} load(i + 1); };
+      s.onerror = () => load(i + 1);
+      document.head.appendChild(s);
+    })(0);
+  });
+</script>
+
+<script>
+'use strict';
+/* ═══════════ 数据：音色 × Styles × Roles（口径见 001-azure.md §四） ═══════════ */
+const FEMALE_ROLES = ['youngadultfemale','olderadultfemale','seniorfemale'];
+const MALE_ROLES   = ['youngadultmale','olderadultmale','seniormale'];
+const XX_ROLES     = ['girl','boy','youngadultfemale','youngadultmale','olderadultfemale','olderadultmale','seniorfemale','seniormale'];
+const VOICES = [
+  { id:'zh-CN-XiaoxiaoNeural', name:'晓晓', g:'女', note:'旗舰 · 情感最全', lang:'zh-CN', degree:true,
+    styles:['affectionate','angry','assistant','calm','chat','chat-casual','cheerful','customerservice','disgruntled','fearful','friendly','gentle','lyrical','newscast','poetry-reading','sad','serious','sorry','whisper'],
+    roles:XX_ROLES },
+  { id:'zh-CN-XiaoyiNeural', name:'晓伊', g:'女', note:'', lang:'zh-CN',
+    styles:['affectionate','angry','assistant','cheerful','disgruntled','fearful','gentle','lyrical','sad','serious'], roles:[] },
+  { id:'zh-CN-XiaohanNeural', name:'晓涵', g:'女', note:'', lang:'zh-CN', degree:true,
+    styles:['affectionate','angry','calm','cheerful','disgruntled','embarrassed','fearful','gentle','sad','serious'], roles:[] },
+  { id:'zh-CN-XiaomoNeural', name:'晓墨', g:'女', note:'戏精 · 独占 envious', lang:'zh-CN', degree:true,
+    styles:['affectionate','angry','calm','cheerful','depressed','disgruntled','embarrassed','envious','fearful','gentle','sad','serious'], roles:XX_ROLES },
+  { id:'zh-CN-XiaoxuanNeural', name:'晓萱', g:'女', note:'', lang:'zh-CN', degree:true,
+    styles:['angry','calm','cheerful','depressed','disgruntled','fearful','gentle','serious'], roles:FEMALE_ROLES },
+  { id:'zh-CN-XiaoruiNeural', name:'晓睿', g:'女', note:'', lang:'zh-CN', degree:true,
+    styles:['angry','calm','fearful','sad'], roles:[] },
+  { id:'zh-CN-XiaoshuangNeural', name:'晓双', g:'童', note:'儿童声', lang:'zh-CN', degree:true,
+    styles:['chat','chat-casual'], roles:[] },
+  { id:'zh-CN-YunxiNeural', name:'云希', g:'男', note:'男声首选', lang:'zh-CN', degree:true,
+    styles:['angry','assistant','chat','cheerful','depressed','disgruntled','embarrassed','fearful','narration-relaxed','newscast','sad','serious','sorry','whisper'],
+    roles:MALE_ROLES },
+  { id:'zh-CN-YunjianNeural', name:'云健', g:'男', note:'解说/纪录片', lang:'zh-CN',
+    styles:['narration-professional','narration-relaxed','sports-commentation','sports-commentation-excited'], roles:MALE_ROLES },
+  { id:'zh-CN-YunyangNeural', name:'云扬', g:'男', note:'新闻播音', lang:'zh-CN', degree:true,
+    styles:['customerservice','narration-professional','newscast-casual'], roles:[] },
+  { id:'zh-CN-YunyeNeural', name:'云野', g:'男', note:'', lang:'zh-CN', degree:true,
+    styles:['angry','calm','cheerful','disgruntled','embarrassed','fearful','sad','serious'], roles:MALE_ROLES },
+  { id:'zh-CN-YunxiaNeural', name:'云夏', g:'童', note:'男孩童声', lang:'zh-CN', styles:[], roles:[] },
+  { id:'zh-CN-XiaoxiaoMultilingualNeural', name:'晓晓·多语种', g:'女', note:'一套音色多国语言', lang:'zh-CN', degree:true,
+    styles:['affectionate','angry','assistant','calm','chat','cheerful','customerservice','disgruntled','fearful','gentle','lyrical','newscast','poetry-reading','sad','serious','sorry','whisper'], roles:XX_ROLES },
+  { id:'en-US-AriaNeural', name:'Aria', g:'F', note:'en-US', lang:'en-US',
+    styles:['chat','cheerful','customerservice','empathetic','narration-professional','newscast-casual','newscast-formal'], roles:[] },
+  { id:'en-US-JennyNeural', name:'Jenny', g:'F', note:'en-US', lang:'en-US',
+    styles:['assistant','chat','customerservice','newscast'], roles:[] },
+  { id:'en-US-GuyNeural', name:'Guy', g:'M', note:'en-US 新闻', lang:'en-US', styles:['newscast'], roles:[] },
+  { id:'en-US-SaraNeural', name:'Sara', g:'F', note:'en-US', lang:'en-US',
+    styles:['angry','cheerful','sad'], roles:[] },
+];
+const GROUPS = [ ['中文女声', v=>v.lang==='zh-CN'&&v.g==='女'],
+                 ['中文男声', v=>v.lang==='zh-CN'&&v.g==='男'],
+                 ['童声 / 多语种 / 英文', v=>!(v.lang==='zh-CN'&&(v.g==='女'||v.g==='男'))] ];
+const DEFAULT_TEXT = '太好了！我们真的做到了！\n……唉，别提了，这次彻底搞砸了。\n你小声一点，它就在门外。\n各位观众朋友们，欢迎收看今晚的特别报道。';
+
+/* ═══════════ 工具 ═══════════ */
+const $ = id => document.getElementById(id);
+const escXml = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const voiceById = id => VOICES.find(v => v.id === id);
+function status(kind, msg) { const el = $('status'); el.className = kind; el.textContent = msg; }
+function setConn(kind, msg) { const el = $('connDot'); el.className = kind || ''; el.textContent = msg || ''; }
+let cfg = null;            // {key, region, token}
+let queue = [];            // [{voiceId, style, degree, role}]
+let lastBlob = null;
+let stopFlag = false;
+
+/* ═══════════ 设置区 ═══════════ */
+/* az-7：Key/Region 可全部留空 = 使用服务端环境变量 AZURE_SPEECH_*（本地 .dev.vars / 线上 Pages 变量）；
+   口令 token 仅在部署端配置了 TTS_DEMO_TOKEN 时需要。手填项仍只存本机浏览器。 */
+function saveCfg(showTip) {
+  const key = $('keyInp').value.trim(), region = $('regionInp').value.trim(), token = $('tokenInp').value.trim();
+  if ((!!key) !== (!!region)) { setConn('err', '⚠ Key 和 Region 要么都填，要么都留空（走服务端环境变量）'); return false; }
+  cfg = { key, region, token };
+  try { localStorage.setItem('azureTtsDemoCfg', JSON.stringify(cfg)); } catch (e) {}
+  refreshBtns();
+  setConn('', '');
+  if (showTip !== false) status('ok', key ? '已保存手填配置（本机 localStorage）。' : '已保存：将使用服务端环境变量 AZURE_SPEECH_*。');
+  return true;
+}
+function loadCfg() {
+  try {
+    const s = JSON.parse(localStorage.getItem('azureTtsDemoCfg') || 'null');
+    if (s) {
+      $('keyInp').value = s.key || ''; $('regionInp').value = s.region || ''; $('tokenInp').value = s.token || '';
+      cfg = { key: s.key || '', region: s.region || '', token: s.token || '' };
+      setConn('ok', '● 已载入本机保存的配置' + (cfg.key ? '' : '（走服务端环境变量）'));
+    }
+  } catch (e) {}
+}
+function refreshBtns() {
+  const ok = !!$('txt').value.trim() && queue.length > 0;
+  $('playAllBtn').disabled = !ok || stopFlag === 'busy';
+  $('testBtn').disabled = false;   /* az-7：合成走本地函数代理，无需前端预检 Key */
+}
+
+/* ═══════════ 音色库渲染 ═══════════ */
+function renderLib() {
+  const lib = $('voiceLib');
+  lib.innerHTML = '';
+  GROUPS.forEach(([gname, pred]) => {
+    const list = VOICES.filter(pred);
+    if (!list.length) return;
+    const h = document.createElement('div'); h.className = 'vg-name'; h.textContent = gname;
+    lib.appendChild(h);
+    const grid = document.createElement('div'); grid.className = 'vgrid';
+    list.forEach(v => {
+      const card = document.createElement('div');
+      card.className = 'vcard'; card.dataset.vid = v.id;
+      card.innerHTML = `<b>${v.name} <small>${v.g}</small></b><small>${v.note || '&nbsp;'}</small>`
+        + `<span class="badge">${v.styles.length} styles${v.roles.length ? ' · role' : ''}</span>`;
+      card.onclick = () => toggleVoice(v.id);
+      grid.appendChild(card);
+    });
+    lib.appendChild(grid);
+  });
+}
+function syncCardHl() {
+  document.querySelectorAll('.vcard').forEach(c =>
+    c.classList.toggle('on', queue.some(q => q.voiceId === c.dataset.vid)));
+}
+
+/* ═══════════ 试听队列 ═══════════ */
+function toggleVoice(id) {
+  const i = queue.findIndex(q => q.voiceId === id);
+  if (i >= 0) queue.splice(i, 1);
+  else {
+    const v = voiceById(id);
+    queue.push({ voiceId: id,
+      style: v.styles.includes('cheerful') ? 'cheerful' : (v.styles[0] || ''),
+      degree: 1, role: '' });
+  }
+  renderQueue(); syncCardHl(); persistQueue();
+}
+function renderQueue() {
+  const box = $('queueBox');
+  if (!queue.length) { box.innerHTML = '<div class="empty-tip">还没有选音色 —— 从左侧挑几个。</div>'; refreshBtns(); return; }
+  box.innerHTML = '';
+  queue.forEach((q, idx) => {
+    const v = voiceById(q.voiceId);
+    const row = document.createElement('div'); row.className = 'qrow';
+    const styleOpts = v.styles.map(s =>
+      `<option value="${s}"${s === q.style ? ' selected' : ''}>${s}</option>`).join('');
+    const roleOpts = '<option value="">role: 默认</option>' + v.roles.map(r =>
+      `<option value="${r}"${r === q.role ? ' selected' : ''}>${r}</option>`).join('');
+    row.innerHTML =
+      `<div class="qhead"><b>${v.name}</b><small style="color:var(--muted)">${v.id}</small><span class="sp"></span>` +
+      `<button class="mini ghost" data-a="one">▶ 单独试听</button>` +
+      `<button class="mini danger" data-a="rm">✕</button></div>` +
+      `<div class="qctl">` +
+      (v.styles.length
+        ? `<select data-f="style">${styleOpts}</select>` +
+          `<span class="deg">强度<input type="range" min="0.01" max="2" step="0.01" value="${q.degree}" style="width:90px"><output>${(+q.degree).toFixed(2)}</output></span>`
+        : `<span class="deg">该音色无已知 style，可在下方 SSML 预览手动验证</span>`) +
+      (v.roles.length ? `<select data-f="role">${roleOpts}</select>` : '') +
+      `</div>`;
+    row.querySelector('[data-a=rm]').onclick = () => { queue.splice(idx, 1); renderQueue(); syncCardHl(); persistQueue(); };
+    row.querySelector('[data-a=one]').onclick = () => playQueue(idx, idx);
+    const st = row.querySelector('[data-f=style]');
+    if (st) {
+      st.onchange = () => { q.style = st.value; updatePreview(); persistQueue(); };
+      const dg = row.querySelector('input[type=range]');
+      dg.oninput = () => { q.degree = +dg.value; dg.nextElementSibling.textContent = (+dg.value).toFixed(2); updatePreview(); persistQueue(); };
+    }
+    const rl = row.querySelector('[data-f=role]');
+    if (rl) rl.onchange = () => { q.role = rl.value; updatePreview(); persistQueue(); };
+    box.appendChild(row);
+  });
+  refreshBtns(); updatePreview();
+}
+function persistQueue() { try { localStorage.setItem('azureTtsDemoQueue', JSON.stringify(queue)); } catch (e) {} }
+function restoreQueue() {
+  try {
+    const s = JSON.parse(localStorage.getItem('azureTtsDemoQueue') || 'null');
+    if (Array.isArray(s)) queue = s.filter(q => voiceById(q.voiceId));
+  } catch (e) {}
+}
+
+/* ═══════════ SSML ═══════════ */
+function buildSSML(q, text) {
+  const v = voiceById(q.voiceId);
+  let inner = escXml(text);
+  const rate = +$('rateR').value, pitch = +$('pitchR').value;
+  if (rate !== 0 || pitch !== 0)
+    inner = `<prosody rate="${rate >= 0 ? '+' : ''}${rate}%" pitch="${pitch >= 0 ? '+' : ''}${pitch}st">${inner}</prosody>`;
+  if (q.style)
+    inner = `<mstts:express-as style="${escXml(q.style)}"` +
+      (v.degree ? ` styledegree="${q.degree}"` : '') +
+      (q.role ? ` role="${escXml(q.role)}"` : '') + `>${inner}</mstts:express-as>`;
+  return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${v.lang}">\n  <voice name="${v.id}">\n    ${inner}\n  </voice>\n</speak>`;
+}
+function updatePreview() {
+  const t = $('txt').value.trim();
+  if (!queue.length || !t) { $('ssmlBox').textContent = '（选择音色并输入文本后自动生成 SSML）'; refreshBtns(); return; }
+  $('ssmlBox').textContent = buildSSML(queue[0], t) + (queue.length > 1 ? `\n\n<!-- …其余 ${queue.length - 1} 个音色同构，仅 voice/style 不同 -->` : '');
+  $('charCnt').textContent = `${t.length} 字符 × ${queue.length} 项 ≈ ${t.length * queue.length} 字符额度`;
+  refreshBtns();
+}
+
+/* ═══════════ 合成与播放 ═══════════ */
+/* az-3：分阶段诊断——sessionStarted=已连上并鉴权，synthesisStarted=服务端开始合成。
+   失败卡在哪一阶段，就能区分「网络不通」还是「Key/SSML 被拒」。 */
+let currentPhase = '';
+function classifyError(msg) {
+  const m = String(msg);
+  if (/401|403|unauthorized|authorization/i.test(m)) return '疑似：Key 无效，或 Region 与资源不匹配（回 Portal 核对）';
+  if (/1006|timeout|timed out|network|connect|dns|websocket.*closed|unable to contact/i.test(m)) return '疑似：本机到该 Region 的网络不通（代理/防火墙/DNS；换网络或换 Region 再试）';
+  if (/429|quota|limit|throttl/i.test(m)) return '疑似：限流或免费额度耗尽';
+  if (/style/i.test(m)) return '疑似：该音色不支持所选 style（对照 001-azure.md §四）';
+  if (/ssml|xml/i.test(m)) return '疑似：SSML 结构问题';
+  return '';
+}
+/* az-6：合成通道切换——你的网络到微软 WebSocket 端点不通（实测多区域零响应），
+   而 HTTPS REST 正常。改为：浏览器 → 本地函数 /api/tts-demo → 微软 REST v1 → 音频流。
+   Key 仍只在你本机流转，不出机器。 */
+function synthOnce(ssml) {
+  return (async () => {
+    currentPhase = '① 经服务端函数请求微软 REST 合成';
+    const r = await fetch('/api/tts-demo', {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' },
+        (cfg && cfg.token) ? { 'X-Demo-Token': cfg.token } : {}),
+      body: JSON.stringify({
+        ssml,
+        key: (cfg && cfg.key) || '',
+        region: (cfg && cfg.region) || ''   /* 双留空 ⇒ 服务端自动落 AZURE_SPEECH_* 环境变量 */
+      })
+    });
+    if (r.status === 403) throw new Error(`[${currentPhase}] 口令缺失或不匹配（403）——请在设置里填写 TTS_DEMO_TOKEN 对应的口令`);
+    if (!r.ok) {
+      const t = await r.text();
+      const hint = classifyError(t);
+      throw new Error(`[${currentPhase}] HTTP ${r.status} ${t.slice(0, 300)}${hint ? '\n👉 ' + hint : ''}`);
+    }
+    const buf = await r.arrayBuffer();
+    if (!buf || buf.byteLength < 100) throw new Error(`[${currentPhase}] 返回音频为空`);
+    return new Blob([buf], { type: 'audio/mpeg' });
+  })();
+}
+/* az-5：SDK 错误对象可能是任意结构（曾打出 [object Object]），完整序列化 */
+function errToStr(e) {
+  if (e == null) return '(空错误)';
+  if (typeof e === 'string') return e;
+  if (typeof e.message === 'string' && e.message) return e.message;
+  try { const s = JSON.stringify(e); if (s && s !== '{}' && s !== '[]') return s; } catch (_) {}
+  try { return String(e); } catch (_) { return '(不可序列化错误)'; }
+}
+function playBlob(blob) {
+  return new Promise((resolve, reject) => {
+    const a = new Audio(URL.createObjectURL(blob));
+    currentAudio = a;
+    a.onended = () => resolve(); a.onerror = () => reject(new Error('音频播放失败'));
+    a.play().catch(reject);
+  });
+}
+let currentAudio = null;
+async function playQueue(from, to) {
+  const t = $('txt').value.trim();
+  if (!t) { status('err', '先输入要朗读的文本。'); return; }
+  stopFlag = false; $('stopBtn').disabled = false; $('playAllBtn').disabled = true;
+  try {
+    for (let i = from; i <= to; i++) {
+      if (stopFlag) break;
+      const q = queue[i], v = voiceById(q.voiceId);
+      status('busy', `合成中 ${i + 1}/${to + 1} · ${v.name}` + (q.style ? ` · ${q.style}${q.role ? ' · role=' + q.role : ''}` : ''));
+      const blob = await synthOnce(buildSSML(q, t), ph => status('busy', `${ph} · ${i + 1}/${to + 1} · ${v.name}`));
+      lastBlob = blob; $('dlBtn').disabled = false;
+      if (stopFlag) break;
+      status('busy', `播放中 ${i + 1}/${to + 1} · ${v.name}`);
+      await playBlob(blob);
+    }
+    status(stopFlag ? 'info' : 'ok', stopFlag ? '已停止。' : `队列播放完毕（${to - from + 1} 项）。`);
+  } catch (e) {
+    status('err', '❌ ' + e.message);
+  } finally {
+    stopFlag = false; $('stopBtn').disabled = true; refreshBtns();
+  }
+}
+
+/* ═══════════ 事件绑定 ═══════════ */
+$('saveBtn').onclick = () => saveCfg(true);
+$('clearBtn').onclick = () => {
+  try { localStorage.removeItem('azureTtsDemoCfg'); localStorage.removeItem('azureTtsDemoQueue'); } catch (e) {}
+  $('keyInp').value = $('regionInp').value = $('tokenInp').value = ''; cfg = null; setConn('', ''); refreshBtns();
+  status('info', '已清除本机保存的配置（合成将尝试走服务端环境变量）。');
+};
+$('testBtn').onclick = async () => {
+  status('busy', '① 正在经服务端函数请求微软 REST 合成' + (cfg && cfg.region ? ' · region=' + cfg.region : '（区域取自服务端环境变量）') + ' …');
+  try {
+    const keepQ = queue.slice(); queue = [];
+    const blob = await synthOnce(buildSSML(
+      { voiceId: 'zh-CN-XiaoxiaoNeural', style: 'cheerful', degree: 1, role: '' },
+      '你好，Azure 情感标签测试台连接成功！'));
+    queue = keepQ;
+    lastBlob = blob; $('dlBtn').disabled = false;
+    setConn('ok', '● 连接正常'); status('ok', '✅ 连接成功，正在播放测试句（晓晓 · cheerful）。');
+    await playBlob(blob);
+  } catch (e) {
+    setConn('err', '● 连接失败'); status('err', '❌ ' + e.message);
+  }
+};
+$('playAllBtn').onclick = () => { if (queue.length) playQueue(0, queue.length - 1); };
+/* az-4 一键诊断：SDK 来源 / 配置 / localStorage / 裸 WSS 连通性，一次打印全部 */
+function probeWSS(region) {
+  return new Promise(res => {
+    let settled = false;
+    const t0 = Date.now();
+    const done = msg => { if (!settled) { settled = true; clearTimeout(timer); res(msg + '（耗时 ' + (Date.now() - t0) + 'ms）'); } };
+    const timer = setTimeout(() => { try { ws.close(); } catch (e) {} done('⏱ 5 秒零响应——网络层不通（代理 / 防火墙嫌疑最大）'); }, 5000);
+    let ws;
+    try { ws = new WebSocket('wss://' + region + '.tts.speech.microsoft.com/cognitiveservices/websocket/v1'); }
+    catch (e) { return done('构造失败: ' + e.message); }
+    ws.onopen = () => { try { ws.close(); } catch (e) {} done('✅ 握手直接成功（少见但好）——网络完全可达'); };
+    ws.onerror = () => {};
+    ws.onclose = ev => {
+      const dt = Date.now() - t0;
+      if (dt < 3000) done('⚡ 秒拒(code ' + ev.code + ')——已到达微软服务端并被正常拒绝 ⇒ 网络是通的，问题在 Key/配置层');
+      else done('✖ 断开(code ' + ev.code + ')——疑似网络层被拦');
+    };
+  });
+}
+$('diagBtn').onclick = async () => {
+  status('busy', '诊断中…');
+  const L = [];
+  L.push('[1] SDK 加载来源: ' + (window.__sdkFrom || '(未加载!)'));
+  L.push('[2] 配置: ' + (cfg
+    ? 'region=' + cfg.region + ' · key=' + cfg.key.slice(0, 6) + '…(共' + cfg.key.length + '位)'
+    : '未保存（点过「保存」吗？）'));
+  let lsOK = true;
+  try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); } catch (e) { lsOK = false; }
+  L.push('[3] localStorage: ' + (lsOK ? '可读写' : '不可读写(!)'));
+  const region = cfg ? cfg.region : $('regionInp').value.trim();
+  if (!region || !window.WebSocket) {
+    L.push('[4] WSS 探测: 跳过（无 region 或浏览器不支持）');
+  } else {
+    L.push('[4] 裸 WebSocket 直连 wss://' + region + '.tts.speech.microsoft.com …');
+    L.push('    ' + await probeWSS(region));
+  }
+  L.push('—— 把以上几行原样发给开发者 ——');
+  status('info', L.join('\n'));
+};
+$('stopBtn').onclick = () => { stopFlag = true; if (currentAudio) { currentAudio.pause(); } };
+$('dlBtn').onclick = () => {
+  if (!lastBlob) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(lastBlob); a.download = 'azure-tts-demo.mp3';
+  a.click(); URL.revokeObjectURL(a.href);
+};
+$('txt').addEventListener('input', updatePreview);
+[['rateR','rateO',v=>`${+v>=0?'+':''}${v}%`],['pitchR','pitchO',v=>`${+v>=0?'+':''}${v}st`]].forEach(([r,o,f]) => {
+  $(r).addEventListener('input', () => { $(o).textContent = f($(r).value); updatePreview(); });
+});
+
+/* ═══════════ 启动 ═══════════ */
+/* az-7：查询服务端环境变量/口令状态，未手填 Key 时给出明确提示 */
+function fetchEnvStatus() {
+  fetch('/api/tts-demo').then(r => r.json()).then(d => {
+    if (!(cfg && cfg.key) && d.envKey)
+      setConn('ok', '● 未手填 Key —— 将使用服务端环境变量' + (d.envRegion ? '（' + d.envRegion + '）' : ''));
+    if (d.needToken && !(cfg && cfg.token))
+      status('info', '提示：该部署已启用口令保护，请在设置里填写口令后再合成。');
+  }).catch(() => {});
+}
+window.__sdkReady.then(() => {
+  renderLib(); restoreQueue(); renderQueue(); syncCardHl(); loadCfg(); updatePreview(); fetchEnvStatus();
+  status('info', '就绪。三项设置都可留空（走服务端环境变量）；或手填后点「连接测试」。');
+}).catch(e => {
+  status('err', '❌ ' + e.message + '（检查网络或代理后刷新重试）');
+});
+</script>
+</body>
+</html>
