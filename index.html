@@ -300,6 +300,7 @@
   #presenter .pcenter { overflow: hidden; }
   #presenter .pscroll { display: none; align-items: center; white-space: nowrap; will-change: transform; }
   #presenter.scrolling .pscroll { display: flex; }
+  #presenter.scrolling .pcenter { justify-content: flex-start; } /* 滚动时轨道贴左放置，避免整体居中把长文本挤出屏幕左缘 */
   #presenter.scrolling .big { display: none; }
   #presenter.scrolling .pnav, #presenter.scrolling .pfoot { display: none; } /* 滚动时彻底移出布局，文本区占满全屏 */
   /* 滚动模式：上下按钮悬浮，不占布局高度，字号得以最大化利用屏幕 */
@@ -3242,7 +3243,11 @@
     stopPresenterPlay();
     buildScroll();
     const box = $('pScroll'), holder = box.parentElement;
-    const x0 = holder.clientWidth * 0.5; /* 首个字从横屏水平中心出发，左侧留白，右侧内容随滚动逐渐露出 */
+    /* 轨道贴左（flex-start）后，把「第一个字」推进到画面水平正中心：
+       x0 = 视口宽/2 − 左内边距（轨道起始位在 padding 内边缘） */
+    const padL = parseFloat(getComputedStyle(holder).paddingLeft) || 0;
+    const x0 = Math.max(0, holder.clientWidth * 0.5 - padL);
+    box.dataset.x0 = x0;
     delete box.dataset.x;
     box.style.transform = 'translateX(' + x0 + 'px)';
     scrollPaused = false;
@@ -3259,7 +3264,7 @@
       if (!scrollPaused) {
         let x = parseFloat(box.dataset.x || '0');
         x -= scrollPxPerFrame; /* 向左匀速移动，速度由控制条决定 */
-        if (-x > box.scrollWidth) x = holder.clientWidth * 0.5; /* 全部移出后回到中心重新进入，循环 */
+        if (-x > box.scrollWidth) x = parseFloat(box.dataset.x0 || '0'); /* 全部移出后回到「首字居中」起点重新滚 */
         box.style.transform = 'translateX(' + x + 'px)';
         box.dataset.x = x;
       }
