@@ -306,6 +306,7 @@
   .vc-lang-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
   .vc-lang-row .vc-lang-label { flex: 0 0 auto; font-size: 13px; opacity: .85; }
   .vc-lang-row select { flex: 1 1 auto; min-width: 0; margin: 0; }
+  .vc-lang-row input[type="text"] { flex: 1 1 auto; min-width: 0; margin: 0; }
   .vc-row.vc-cur { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
   /* 「自动」开关：贴按钮条右端，点亮表示未锁定音色（自动逻辑生效中） */
   .mode-btns .mbtn.vc-auto-btn { margin-left: auto; opacity: .8; }
@@ -814,6 +815,12 @@
                「识别语言」下拉已移至「语音识别」页（它控制的是识别上传语言，与朗读浏览无关）。 -->
           <div class="sec-title" data-i18n="voiceCheckTitle">声音体检</div>
            <div id="voiceCheckSummary" class="engine-legend"></div>
+           <!-- 028 反馈：试听文本明文化+可编辑；留空则按音色语言自动匹配例句 -->
+           <div class="vc-lang-row">
+             <span class="vc-lang-label" data-i18n="vcPrevLabel">试听文本</span>
+             <input id="vcPreviewInput" type="text">
+             <button class="vc-btn" id="vcSampleReset" type="button" data-i18n="vcReset">默认</button>
+           </div>
            <!-- 028 反馈：语言大类用按钮条横向排列（自动换行），点选后下方只列该类音色；
                 「自动」是逻辑不是条目——作为小开关放在按钮条右端，点亮=未锁定任何音色 -->
            <div id="voiceGroupBar" class="mode-btns"></div>
@@ -1162,6 +1169,8 @@
       vcUnnamed: '未命名声音', vcUnknownLang: '未知语言', vcUse: '选用',
       vcAuto: '自动', vcAutoNow: '当前：',
       vcMore: '更多', vcCollapse: '收起',
+      vcPrevLabel: '试听文本', vcReset: '默认',
+      vcMismatch: '提醒：当前音色 {v} 是「{lang}」声音，试听文本可能无法正常朗读，建议换成{lang}文本再试。',
       vcAutoHint: '不锁定具体音色：按识别语言智能挑选该语言下最自然的声音（偏好：晓晓、婷婷、美嘉…）。在下方清单里点「选用」可改为固定某个声音。',
       vcGuideEdge: '你正在使用 Edge：语音清单里的「Natural / Online」是微软免费提供的自然语音（联网合成），效果最佳，建议优先选择。',
       vcGuideWinNotEdge: '提示：改用 Microsoft Edge 打开字谈，可免费获得「晓晓」等自然语音（在线合成），朗读效果显著更好。也可以在 设置→时间和语言→语音 中添加更多本地中文声音。',
@@ -1340,6 +1349,8 @@
       vcUnnamed: 'Unnamed voice', vcUnknownLang: 'Unknown language', vcUse: 'Use',
       vcAuto: 'Auto', vcAutoNow: 'now: ',
       vcMore: 'More', vcCollapse: 'Collapse',
+      vcPrevLabel: 'Preview text', vcReset: 'Default',
+      vcMismatch: 'Heads-up: voice {v} is a {lang} voice — this text may not read properly. Try {lang} text for a fair preview.',
       vcAutoHint: 'No fixed voice: the most natural voice for the recognition language is picked automatically (preference: Xiaoxiao, Tingting, Meijia…). Click "Use" on any voice below to lock one instead.',
       vcGuideEdge: 'You are on Edge: “Natural / Online” voices in the list are Microsoft\'s free natural voices (cloud-synthesized) — the best quality, pick them first.',
       vcGuideWinNotEdge: 'Tip: open ZiTalk in Microsoft Edge to get free natural voices like Xiaoxiao (online synthesis). You can also add more local Chinese voices in Settings → Time & Language → Speech.',
@@ -2273,8 +2284,37 @@
 
   /* ============ 028 声音体检：设备 TTS 能力全景 ============
      把「谁在发声」的黑箱拆开：全量声音清单 + 逐个试听 + 按平台给优化指引（详见 028 文档 §四）。 */
-  function vcSampleFor(lang) {   /* 试听例句：按声音语言挑一句自然的 */
-    return /^zh/i.test(lang || '') ? '你好，这是当前朗读声音的试听。' : 'Hello, this is a preview of this voice.';
+  function vcSampleFor(lang) {
+    /* 试听例句：优先复用 LANGS 里按语言定制的例句（精确 id → 主码匹配），最后英文兜底。
+       例：zh-CN→您好… / ja-JP→こんにちは / en-US→Hello…（LANGS.sample 已含多语种） */
+    const lg = (lang || '').trim();
+    const main = vcGroupKey(lg);
+    const exact = LANGS.find(x => x.id.toLowerCase() === lg.toLowerCase().replace(/_/g, '-'));
+    if (exact) return exact.sample;
+    const rough = LANGS.find(x => x.id.split('-')[0].toLowerCase() === main);
+    if (rough) return rough.sample;
+    return 'Hello, this is a preview of this voice.';
+  }
+  /* 脚本检测：判断试听文本的书写系统，与音色语言不匹配时提醒（028 反馈：
+     中文文本选法语音色这类组合可能被逐字拼读/跳过，效果不可靠）。 */
+  function detectTextScript(text) {
+    if (/\p{Script=Hangul}/u.test(text)) return 'ko';
+    if (/\p{Script=Hiragana}|\p{Script=Katakana}/u.test(text)) return 'ja';
+    if (/\p{Script=Han}/u.test(text)) return 'Han';          /* 中日共用汉字，先查假名再认汉 */
+    if (/\p{Script=Cyrillic}/u.test(text)) return 'Cyrl';
+    if (/\p{Script=Arabic}/u.test(text)) return 'Arab';
+    if (/\p{Script=Thai}/u.test(text)) return 'Thai';
+    if (/\p{Script=Devanagari}/u.test(text)) return 'Deva';
+    if (/\p{Script=Hebrew}/u.test(text)) return 'Hebr';
+    if (/[A-Za-zÀ-ÿĀ-ž]/.test(text)) return 'Latin';
+    return '';
+  }
+  function voiceExpectedScript(v) {
+    /* 音色 lang → 期望书写系统；拉丁转写系（法语等）统一 Latin */
+    const c = ((v && v.lang) || '').split(/[-_]/)[0].toLowerCase();
+    if (c === 'yue') return 'Han';
+    return { zh:'Han', ja:'ja', ko:'ko', ru:'Cyrl', uk:'Cyrl', bg:'Cyrl', sr:'Cyrl',
+             ar:'Arab', fa:'Arab', ur:'Arab', he:'Hebr', th:'Thai', hi:'Deva' }[c] || 'Latin';
   }
   function voiceCheckGuideText() {
     const p = EnvDetect.platform;
@@ -2368,8 +2408,20 @@
     btn.innerHTML = ic('play', 12);
     btn.onclick = () => {
       try {
+        /* 028 反馈：试听文本优先取输入框（明文可编辑），留空回落到音色语言匹配的默认例句 */
+        const box = $('vcPreviewInput');
+        const custom = (box && box.value || '').trim();
+        const text = custom || vcSampleFor(v.lang);
+        const exp = voiceExpectedScript(v);
+        const got = detectTextScript(text);
+        if (got && exp !== 'Latin' && got !== exp && !(exp === 'ja' && got === 'Han')) {
+          /* 书写系统不匹配 → 动态提醒（仍照常播放，让用户自行判断效果） */
+          toast(t('vcMismatch')
+            .replace('{v}', vcShortName(v, idx))
+            .replace('{lang}', vcLangLabel((v.lang || '').split(/[-_]/)[0])));
+        }
         speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(vcSampleFor(v.lang));
+        const u = new SpeechSynthesisUtterance(text);
         u.voice = v; u.lang = v.lang || ''; u.rate = 1;
         speechSynthesis.speak(u);                /* 点谁读谁：用该声音合成试听句 */
       } catch (e) {}
@@ -2384,6 +2436,25 @@
   }
   let vcBrowseGroup = null;   /* 当前浏览的语言大组；null=未初始化（取识别语言主码）。浏览与选用互不干扰 */
   let vcShowAllLangs = false; /* 语言按钮条展开态：false=只显五个常用+更多 */
+  /* 028 反馈：默认试听文本跟随「识别语言」下拉（不是界面语言——界面只有中英两种）。
+     内置中英法俄西五语例句；其他识别语言一律英语兜底——反正输入框明文可改。
+     触发时机：切换识别语言 / 点「默认」/ 首屏。 */
+  const PREVIEW_SAMPLES = {
+    zh: '您好，这是朗读声音的试听。',
+    en: 'Hello, this is a preview of the current voice.',
+    fr: 'Bonjour, ceci est un essai de la voix actuelle.',
+    ru: 'Привет, это пробное озвучивание текущего голоса.',
+    es: 'Hola, esta es una prueba de la voz actual.'
+  };
+  function previewSampleFor(langCode) {
+    const main = (langCode || state.voiceLang || '').split('-')[0].toLowerCase();
+    return PREVIEW_SAMPLES[main] || PREVIEW_SAMPLES.en;
+  }
+  function syncPreviewSample(force, langCode) {   /* 填充默认试听文本：langCode 缺省=识别语言；force=覆盖用户已改内容 */
+    const box = $('vcPreviewInput');
+    if (!box) return;
+    if (force || !box.value.trim()) box.value = previewSampleFor(langCode || state.voiceLang);
+  }
   function renderVoiceCheck() {
     const sum = $('voiceCheckSummary'), bar = $('voiceGroupBar'),
           list = $('voiceCheckList'), guide = $('voiceCheckGuide');
@@ -2433,7 +2504,12 @@
         + ' ' + groups[key].length
         + (key === curVoiceGroup ? ' ✓' : '');
       b.title = key === 'zz' ? t('vcUnknownLang') : vcLangName(key);
-      b.onclick = () => { vcBrowseGroup = key; renderVoiceCheck(); };
+      b.onclick = () => {
+        vcBrowseGroup = key;
+        /* 028 反馈：点哪个语言组，试听文本就填充该语言的默认句（未知语言组不动文本） */
+        if (key !== 'zz') syncPreviewSample(true, key);
+        renderVoiceCheck();
+      };
       bar.appendChild(b);
     });
     if (keys.length > shownKeys.length || vcShowAllLangs) {   /* 更多/收起（始终在语言按钮之后） */
@@ -3803,6 +3879,7 @@
     renderPresetList();
     if (!$('readPane').hidden) renderVoicePane();
     if (!$('asrPane').hidden) renderAsrPane();
+    /* 028：试听文本跟随识别语言而非界面语言，界面切换不动文本框 */
   }
   function setUiLang(lang) {
     if (state.uiLang === lang) return;
@@ -4324,12 +4401,33 @@
     };
     $('addText').addEventListener('keydown', e => { if (e.key === 'Enter') $('addBtn').click(); });
 
-    $('langSel').onchange = e => { state.voiceLang = e.target.value; state.voiceURI = ''; renderVoicePane(); };
+    $('langSel').onchange = e => {
+      state.voiceLang = e.target.value; state.voiceURI = '';
+      syncPreviewSample(true);   /* 028：切换识别语言 → 试听文本填充该语言的默认句（中英法俄西，其余英语） */
+      renderVoicePane();
+    };
     $('previewBtn').onclick = () => {
-      const entry = LANGS.find(x => x.id === state.voiceLang) || LANGS[0];
-      if (speak(entry.sample, () => $('previewBtn').classList.remove('playing'))) {
+      /* 028 反馈：文本优先取输入框，留空回落识别语言例句（中英法俄西，其余英语）；
+         音色与文本书写系统不匹配时动态提醒 */
+      const box = $('vcPreviewInput');
+      const custom = (box && box.value || '').trim();
+      const text = custom || previewSampleFor();
+      const v = pickVoice();
+      if (v) {
+        const exp = voiceExpectedScript(v), got = detectTextScript(text);
+        if (got && exp !== 'Latin' && got !== exp && !(exp === 'ja' && got === 'Han')) {
+          toast(t('vcMismatch').replace('{v}', vcShortName(v, 0))
+            .replace('{lang}', vcLangLabel((v.lang || '').split(/[-_]/)[0])));
+        }
+      }
+      if (speak(text, () => $('previewBtn').classList.remove('playing'))) {
         $('previewBtn').classList.add('playing');
       }
+    };
+    /* 「默认」按钮：还原为识别语言配套例句（028 反馈：中英法俄西五语，其余英语） */
+    $('vcSampleReset').onclick = () => {
+      const box = $('vcPreviewInput'); if (!box) return;
+      syncPreviewSample(true);
     };
 
     /* 设置里：使用说明 / 清空 */
@@ -4553,6 +4651,7 @@
   }
 
   init();
+  syncPreviewSample(true);   /* 028：首屏把试听文本填为识别语言默认句（明文可见可改） */
 
   /* 网络实测地域：启动探测；结论与首屏初值不同时，刷新引擎相关 UI（设置页列表 / 开着的首次选择器） */
   EnvDetect.onRegionChange(() => {
