@@ -437,6 +437,10 @@
   .asr-progress { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; margin: 6px 0; }
   .asr-progress > i { display: block; height: 100%; width: 0%; background: var(--accent); transition: width .3s; }
   .asr-cloud-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  /* 030 根因修复（问题2「空行」）：作者样式的 display:flex 会压过浏览器对 [hidden]
+     的默认 display:none——#zitanQuotaRow 的 hidden 属性因此从未生效，空盒占一行。
+     此全局规则保证任何带 hidden 的元素真正消失。 */
+  [hidden] { display: none !important; }
   /* 028 反馈：自填字段加动态标签（SecretId/Region…），避免只靠 placeholder 区分 */
   .asr-cloud-row .fld-label {
     flex: 0 0 auto; align-self: center; font-size: 12px; line-height: 1.3;
@@ -844,7 +848,7 @@
         <div class="sec-title" data-i18n="asrEngine">识别引擎</div>
         <div id="asrEngineDesc" class="engine-legend" data-i18n="asrLegend">按当前设备/地区自动给出可用识别方式</div>
         <!-- 028 诊断锚点：每次改版手动更新 build 号；页面上看不到它=浏览器拿的是旧缓存 -->
-        <div style="font-size:11px;opacity:.55;margin-top:2px;user-select:none;">UI build 028-8</div>
+        <div style="font-size:11px;opacity:.55;margin-top:2px;user-select:none;">UI build 028-9</div>
         <div id="asrEngineList"></div>
         <!-- 028：识别语言从朗读页移入此处（云端识别上传语言；切换会重置朗读音色为自动挑选） -->
         <div class="vc-lang-row" style="margin-top:10px;">
@@ -2939,20 +2943,24 @@
       updateZitanQuotaText();
       refreshUpstreamBadges();
       updateQuotaRowVisibility();
+    }
+    const ov = ownPaneVendor();
+    const meta = cloudVendorMeta(ov);
+    /* 030 反馈修复：提示文本跟随「当前可见的面板」，而不是跟随存储的 vendor——
+       否则自填厂商（如火山引擎）激活时切到官方面板，volc 的额度说明会窜台挂过来。
+       showCloudSrcTab 切换时会把 tab 写入 localStorage 并重跑本函数，正好闭环。 */
+    let viewingOwn = false;
+    try { viewingOwn = localStorage.getItem('zitanCloudSrcTab') === 'own'; } catch (e) {}
+    if (viewingOwn) {
+      setTxt('cloudHint', t('cloudHint'));
+      setTxt('cloudFreeHint', (meta && meta.freeHint) ? meta.freeHint() : '');
+    } else {
       const hintKey = up === 'azure' ? 'cloudHintZitanAz' : (up === 'tencent' ? 'cloudHintZitanTc' : 'cloudHintZitanAuto');
       const freeKey = up === 'azure' ? 'cloudFreeHintZitanAz' : (up === 'tencent' ? 'cloudFreeHintZitanTc' : 'cloudFreeHintZitanAuto');
       setTxt('cloudFreeHint', t(freeKey));
-      setTxt('cloudHint', t(hintKey));   /* 通用提示里“去填 Key”的说法对官方通道不适用 */
-      /* 030 根因修复：这里原先提前 return，导致下方标签同步永远不执行。
-         现在不再 return，统一落到下方的自填面板同步。 */
-    } else {
-      const meta0 = cloudVendorMeta(v);
-      setTxt('cloudHint', t('cloudHint'));
-      if (meta0 && meta0.freeHint) setTxt('cloudFreeHint', meta0.freeHint());
+      setTxt('cloudHint', t(hintKey));   /* 官方面板下不显示“去填 Key”类说法 */
     }
-    /* 自填面板：无论哪个分支都按「显示厂商」同步字段标签/占位符（028 反馈需求） */
-    const ov = ownPaneVendor();
-    const meta = cloudVendorMeta(ov);
+    /* 自填面板字段标签/占位符：无论哪个分支都按「显示厂商」同步（028 反馈需求） */
     if (meta && meta.keyLabel) setTxt('cloudKeyLabel', meta.keyLabel());
     if (meta && meta.extraLabel) setTxt('cloudExtraLabel', meta.extraLabel());
     setPh('cloudApiKey', (ov === 'tencent') ? t('tcIdPh') : t('cloudKeyPh'));
