@@ -301,7 +301,14 @@
   #presenter .pscroll { display: none; align-items: center; white-space: nowrap; will-change: transform; }
   #presenter.scrolling .pscroll { display: flex; }
   #presenter.scrolling .big { display: none; }
-  #presenter.scrolling .pnav, #presenter.scrolling .pfoot { visibility: hidden; }
+  #presenter.scrolling .pnav, #presenter.scrolling .pfoot { display: none; } /* 滚动时彻底移出布局，文本区占满全屏 */
+  /* 滚动模式：上下按钮悬浮，不占布局高度，字号得以最大化利用屏幕 */
+  #presenter.scrolling .ptop {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 6;
+    background: linear-gradient(to bottom, var(--panel), transparent);
+    pointer-events: none;
+  }
+  #presenter.scrolling .ptop > * { pointer-events: auto; } /* 悬浮层本身不挡点击，按钮仍可点 */
   #presenter:not(.land) #pScrollT { display: none; } /* 滚动只在横屏：竖屏时直接隐藏按钮 */
   #presenter .pscroll .sitem {
     display: inline-block; white-space: nowrap;
@@ -314,7 +321,13 @@
     display: none; align-items: center; justify-content: center; gap: 8px;
     padding: 10px 14px calc(16px + env(safe-area-inset-bottom));
   }
-  #presenter.scrolling .pctl { display: flex; }
+  #presenter.scrolling .pctl {
+    display: flex;
+    position: absolute; bottom: 0; left: 0; right: 0; z-index: 6;
+    background: linear-gradient(to top, var(--panel), transparent);
+    pointer-events: none;
+  }
+  #presenter.scrolling .pctl > * { pointer-events: auto; }
   #presenter .pctl button {
     border: none; background: var(--bg); color: var(--ink);
     font-size: 14px; font-weight: 700; padding: 8px 12px; border-radius: 10px; cursor: pointer;
