@@ -437,6 +437,13 @@
   .asr-progress { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; margin: 6px 0; }
   .asr-progress > i { display: block; height: 100%; width: 0%; background: var(--accent); transition: width .3s; }
   .asr-cloud-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  /* 028 反馈：自填字段加动态标签（SecretId/Region…），避免只靠 placeholder 区分 */
+  .asr-cloud-row .fld-label {
+    flex: 0 0 auto; align-self: center; font-size: 12px; line-height: 1.3;
+    opacity: .75; min-width: 4.5em; text-align: right; user-select: none;
+  }
+  /* 空提示段落不再占位；徽章区内容为空时由 JS 隐藏整行 */
+  .hint:empty { display: none; }
   .asr-cloud-row select, .asr-cloud-row input {
     flex: 1; min-width: 0; border: 1.5px solid var(--line); border-radius: 10px;
     background: var(--panel); color: var(--ink); padding: 9px 10px; font-size: 14px;
@@ -836,6 +843,8 @@
         <div id="asrPane" hidden>
         <div class="sec-title" data-i18n="asrEngine">识别引擎</div>
         <div id="asrEngineDesc" class="engine-legend" data-i18n="asrLegend">按当前设备/地区自动给出可用识别方式</div>
+        <!-- 028 诊断锚点：每次改版手动更新 build 号；页面上看不到它=浏览器拿的是旧缓存 -->
+        <div style="font-size:11px;opacity:.55;margin-top:2px;user-select:none;">UI build 028-8</div>
         <div id="asrEngineList"></div>
         <!-- 028：识别语言从朗读页移入此处（云端识别上传语言；切换会重置朗读音色为自动挑选） -->
         <div class="vc-lang-row" style="margin-top:10px;">
@@ -843,15 +852,7 @@
           <select id="langSel"></select>
         </div>
 
-        <!-- 024 隐私与合规提醒（字符串里的换行 + pre-line 渲染成多行） -->
-        <div class="privacy-note" data-i18n="privacyAsrNote">【隐私与合规提醒】
-无论使用哪种识别方式，你的语音都可能离开本机：
-• 浏览器识别：由设备系统转写，或上传至 Apple / Google / Microsoft 的服务器处理；
-• 云端识别：录音会上传至「字谈官方」代理的微软 Azure，或你自己填写的厂商（OpenAI 等）的服务器完成转写；
-• 字谈只做实时转发：不保存你上传的音频、不另作他用、不用于训练；
-• 请遵守你所在地区的法律与各服务商条款：录制他人前请先征得对方同意，勿录制、上传涉及他人隐私或违法违规的内容。
-继续使用即表示你已知悉上述处理方式，并同意相应服务商的服务条款与隐私政策。</div>
-
+        <!-- 028 反馈：隐私与合规提醒移至语音识别页最底部（先配置、后告知） -->
         <!-- 024：线下模型（SenseVoice 下载/进度条）已彻底移除——模型识别全局停用，不再提供下载入口 -->
 
         <div id="asrCloudWrap">
@@ -865,7 +866,7 @@
           <!-- 官方面板：按钮选模式，无需任何 Key 输入（额度已在开发者后台配置） -->
           <div id="zitanPane">
             <div class="mode-btns" id="zitanModeBtns"></div>
-            <div class="asr-cloud-row" id="zitanQuotaRow">
+            <div class="asr-cloud-row" id="zitanQuotaRow" hidden>
               <div>
                 <div id="zitanUpstreamBadges" style="font-size:12px;opacity:.85;margin-bottom:4px;"></div>
                 <span class="zitan-quota" id="zitanQuotaText"></span>
@@ -877,9 +878,11 @@
           <div id="ownPane" hidden>
             <div class="mode-btns" id="ownVendorBtns"></div>
             <div class="asr-cloud-row" id="cloudKeyRow">
+              <span class="fld-label" id="cloudKeyLabel">Key</span>
               <input id="cloudApiKey" type="password" placeholder="" data-i18n-ph="cloudKeyPh">
             </div>
             <div class="asr-cloud-row" id="cloudExtraRow">
+              <span class="fld-label" id="cloudExtraLabel">参数</span>
               <input id="cloudExtra" type="text" placeholder="">
             </div>
             <div class="ai-keybar" id="cloudBtnBar">
@@ -888,9 +891,22 @@
             </div>
           </div>
 
-          <p class="hint" data-i18n="cloudHint">云端识别会把音频发送到对应厂商服务器。未配置时，点麦克风选择云端会提醒你去填写。</p>
           <p class="hint" id="cloudFreeHint"></p>
+          <!-- 028 反馈：合规隐私提醒固定在区块最底部 -->
+          <!-- 030 根因修复：此元素一直被 JS 以 $('cloudHint') 引用，但从未有 id——
+               getElementById 返回 null，syncCloudExtraUI 每次都在字段标签同步之前抛
+               TypeError 中断（028 多轮修复“无效”的真正原因）。现补上 id。 -->
+          <p class="hint" id="cloudHint" data-i18n="cloudHint">云端识别会把音频发送到对应厂商服务器。未配置时，点麦克风选择云端会提醒你去填写。</p>
         </div>
+
+        <!-- 024 隐私与合规提醒（字符串换行 + pre-line 渲染多行）；028 反馈：固定在语音识别页最底部 -->
+        <div class="privacy-note" data-i18n="privacyAsrNote">【隐私与合规提醒】
+无论使用哪种识别方式，你的语音都可能离开本机：
+• 浏览器识别：由设备系统转写，或上传至 Apple / Google / Microsoft 的服务器处理；
+• 云端识别：录音会上传至「字谈官方」代理的微软 Azure，或你自己填写的厂商（OpenAI 等）的服务器完成转写；
+• 字谈只做实时转发：不保存你上传的音频、不另作他用、不用于训练；
+• 请遵守你所在地区的法律与各服务商条款：录制他人前请先征得对方同意，勿录制、上传涉及他人隐私或违法违规的内容。
+继续使用即表示你已知悉上述处理方式，并同意相应服务商的服务条款与隐私政策。</div>
       </div>
       </div>
 
@@ -1261,6 +1277,9 @@
       cloudVendorAliyun: '阿里云智能语音（试用期内每日免费 2 小时）',
       cloudVendorVolc: '火山引擎豆包语音（每应用免费 20 小时）',
       cloudVendorOpenai: 'OpenAI Whisper（无免费额度，约 $0.006/分钟）',
+      /* 028 自填字段标签（随厂商动态显示在输入框左侧） */
+      fldApiKey: 'API 密钥', fldRegion: '区域', fldSecretId: 'SecretId', fldSecretKey: 'SecretKey',
+      fldModel: '模型', fldAppKey: 'AppKey', fldAppId: 'APP ID',
       cloudExtraPhAzure: '区域（如 eastasia / japaneast）',
       cloudExtraPhOpenai: '模型（默认 whisper-1，可填 gpt-4o-mini-transcribe）',
       cloudExtraPhAliyun: 'AppKey（需后端代理调用，暂未接入）',
@@ -1441,6 +1460,9 @@
       cloudVendorAliyun: 'Aliyun Speech (2 hrs free / day during trial)',
       cloudVendorVolc: 'Volcengine Doubao (20 hrs free per app)',
       cloudVendorOpenai: 'OpenAI Whisper (no free tier, ~$0.006/min)',
+      /* 028 own-key field labels (shown left of inputs, per vendor) */
+      fldApiKey: 'API Key', fldRegion: 'Region', fldSecretId: 'SecretId', fldSecretKey: 'SecretKey',
+      fldModel: 'Model', fldAppKey: 'AppKey', fldAppId: 'App ID',
       cloudExtraPhAzure: 'Region (e.g. eastasia / japaneast)',
       cloudExtraPhOpenai: 'Model (default whisper-1, or gpt-4o-mini-transcribe)',
       cloudExtraPhAliyun: 'AppKey (requires server proxy, not wired yet)',
@@ -2751,13 +2773,27 @@
     { id: 'zitan-auto',    freeHint: () => t('cloudFreeHintZitanAuto') },
     { id: 'zitan-tencent', freeHint: () => t('cloudFreeHintZitanTc') },
     { id: 'zitan-azure',   freeHint: () => t('cloudFreeHintZitanAz') },
-    { id: 'azure',   extraPh: () => t('cloudExtraPhAzure'),  freeHint: () => t('cloudFreeHintAzure') },
-    { id: 'tencent', extraPh: () => t('cloudExtraPhTc'),     freeHint: () => t('cloudFreeHintTcOwn') },
-    { id: 'openai',  extraPh: () => t('cloudExtraPhOpenai'), freeHint: () => t('cloudFreeHintOpenai') },
-    { id: 'aliyun',  extraPh: () => t('cloudExtraPhAliyun'), freeHint: () => t('cloudFreeHintAliyun') },
-    { id: 'volc',    extraPh: () => t('cloudExtraPhVolc'),   freeHint: () => t('cloudFreeHintVolc') }
+    /* keyLabel/extraLabel：自填两行输入框的动态字段标签（028 反馈：不同云端字段名不一样） */
+    { id: 'azure',   keyLabel: () => t('fldApiKey'),   extraLabel: () => t('fldRegion'),
+      extraPh: () => t('cloudExtraPhAzure'),  freeHint: () => t('cloudFreeHintAzure') },
+    { id: 'tencent', keyLabel: () => t('fldSecretId'), extraLabel: () => t('fldSecretKey'),
+      extraPh: () => t('cloudExtraPhTc'),     freeHint: () => t('cloudFreeHintTcOwn') },
+    { id: 'openai',  keyLabel: () => t('fldApiKey'),   extraLabel: () => t('fldModel'),
+      extraPh: () => t('cloudExtraPhOpenai'), freeHint: () => t('cloudFreeHintOpenai') },
+    { id: 'aliyun',  keyLabel: () => t('fldAppKey'),   extraLabel: () => t('fldAppId'),
+      extraPh: () => t('cloudExtraPhAliyun'), freeHint: () => t('cloudFreeHintAliyun') },
+    { id: 'volc',    keyLabel: () => t('fldAppId'),    extraLabel: () => t('fldAppKey'),
+      extraPh: () => t('cloudExtraPhVolc'),   freeHint: () => t('cloudFreeHintVolc') }
   ];
   function cloudVendorMeta(id) { return CLOUD_VENDORS.find(v => v.id === id) || null; }
+  /* 030：自填面板的「显示用」厂商。官方通道激活时 state.vendor 是 zitan-* id，
+     在 OWN_VENDORS 里匹配不到（按钮全不高亮、标签无从同步）——映射到等效真实厂商：
+     zitan-azure → azure，其余官方 → tencent；仅影响显示，不改存储。 */
+  function ownPaneVendor() {
+    const v = (state.cloud && state.cloud.vendor) || 'azure';
+    if (cloudVendorMeta(v)) return v;
+    return (officialUpstream() === 'azure') ? 'azure' : 'tencent';
+  }
 
   /* 025 官方通道判定：zitan-auto / zitan-tencent / zitan-azure 三个条目；旧存储值归入腾讯条目。
      返回值：'auto' | 'tencent' | 'azure' | null（非官方通道） */
@@ -2813,7 +2849,8 @@
   }
   function refreshUpstreamBadges() {
     fetch('/api/asr/upstreams').then(r => r.ok ? r.json() : null)
-      .then(d => { if (d) renderUpstreamBadges(d); }).catch(() => {});
+      .then(d => { if (d) { renderUpstreamBadges(d); updateQuotaRowVisibility(); } })
+      .catch(() => { updateQuotaRowVisibility(); });   /* 失败时徽章为空 → 隐藏整行，不留空白带 */
   }
   /* 024 官方通道设备号：首次生成 UUID 存 localStorage，之后每次请求经 X-Device-Id 带给服务端计数 */
   function zitanDeviceId() {
@@ -2847,7 +2884,9 @@
       b.type = 'button';
       b.className = 'mbtn' + (id === cur ? ' on' : '');
       b.textContent = labels[id]();
-      b.onclick = () => { if (id !== cur) onPick(id); };
+      /* 030：去掉 id!==cur 拦截——自填面板的「显示厂商」(ownPaneVendor) 可能≠存储厂商
+         （官方通道激活时），此时点高亮按钮也必须能真正选中 */
+      b.onclick = () => { onPick(id); };
       container.appendChild(b);
     });
   }
@@ -2860,6 +2899,9 @@
     const zp = $('zitanPane'), op = $('ownPane');
     if (zp) zp.hidden = !zitanOn;
     if (op) op.hidden = zitanOn;
+    /* 030：切子标签即时重同步（提示文案随可见面板切换；标签/占位符保持与厂商一致） */
+    if (!CLOUD_ASR_ENABLED) return;
+    syncCloudExtraUI();
   }
   function renderCloudConfig() {
     const wrap = $('asrCloudWrap');
@@ -2875,7 +2917,7 @@
     buildModeButtons($('zitanModeBtns'), ZITAN_MODES.map(m => m.id),
       Object.fromEntries(ZITAN_MODES.map(m => [m.id, m.label])), v,
       (id) => { state.cloud.vendor = id; save(); renderCloudConfig(); });
-    buildModeButtons($('ownVendorBtns'), OWN_VENDORS, OWN_LABELS, v, (id) => {
+    buildModeButtons($('ownVendorBtns'), OWN_VENDORS, OWN_LABELS, ownPaneVendor(), (id) => {
       state.cloud.vendor = id; save(); renderCloudConfig();
       if (id === 'aliyun' || id === 'volc') toast(t('cloudNeedProxy'));   /* 占位厂商：提示未接入 */
       else if (!state.cloud.apiKey) { try { $('cloudApiKey').focus(); } catch (e) {} }
@@ -2885,25 +2927,45 @@
     syncCloudExtraUI();
   }
   function syncCloudExtraUI() {
+    /* 030 防御：本函数曾因 $('cloudHint') 为 null 抛 TypeError 中断，
+       导致后面的字段标签同步从未执行（028 多轮修复“无效”的真正原因）。
+       所有赋值一律判空——元素缺失最多跳过该项，绝不再炸断整段同步。 */
+    const setTxt = (id, s) => { const el = $(id); if (el) el.textContent = s; };
+    const setPh  = (id, s) => { const el = $(id); if (el) el.placeholder = s; };
     const v = state.cloud.vendor || 'azure';
     const up = officialUpstream();
     const official = (up !== null);         /* 025 官方通道：无需 Key/区域，显示徽章与今日剩余 */
     if (official) {
       updateZitanQuotaText();
       refreshUpstreamBadges();
+      updateQuotaRowVisibility();
       const hintKey = up === 'azure' ? 'cloudHintZitanAz' : (up === 'tencent' ? 'cloudHintZitanTc' : 'cloudHintZitanAuto');
       const freeKey = up === 'azure' ? 'cloudFreeHintZitanAz' : (up === 'tencent' ? 'cloudFreeHintZitanTc' : 'cloudFreeHintZitanAuto');
-      $('cloudFreeHint').textContent = t(freeKey);
-      $('cloudHint').textContent = t(hintKey);   /* 通用提示里“去填 Key”的说法对官方通道不适用 */
-      return;
+      setTxt('cloudFreeHint', t(freeKey));
+      setTxt('cloudHint', t(hintKey));   /* 通用提示里“去填 Key”的说法对官方通道不适用 */
+      /* 030 根因修复：这里原先提前 return，导致下方标签同步永远不执行。
+         现在不再 return，统一落到下方的自填面板同步。 */
+    } else {
+      const meta0 = cloudVendorMeta(v);
+      setTxt('cloudHint', t('cloudHint'));
+      if (meta0 && meta0.freeHint) setTxt('cloudFreeHint', meta0.freeHint());
     }
-    const meta = cloudVendorMeta(v);
-    $('cloudHint').textContent = t('cloudHint');
-    $('cloudApiKey').placeholder = (v === 'tencent') ? t('tcIdPh') : t('cloudKeyPh');
-    if (meta && meta.extraPh) {
-      $('cloudExtra').placeholder = meta.extraPh();
-      $('cloudFreeHint').textContent = meta.freeHint();
-    }
+    /* 自填面板：无论哪个分支都按「显示厂商」同步字段标签/占位符（028 反馈需求） */
+    const ov = ownPaneVendor();
+    const meta = cloudVendorMeta(ov);
+    if (meta && meta.keyLabel) setTxt('cloudKeyLabel', meta.keyLabel());
+    if (meta && meta.extraLabel) setTxt('cloudExtraLabel', meta.extraLabel());
+    setPh('cloudApiKey', (ov === 'tencent') ? t('tcIdPh') : t('cloudKeyPh'));
+    if (meta && meta.extraPh) setPh('cloudExtra', meta.extraPh());
+    /* 030 诊断锚点（排查“多轮修改无效”时保留）：Console 里可核对本函数是否执行、算出什么值 */
+    console.log('[cloud-ui] sync vendor=' + v + ' ownView=' + ov + ' official=' + official
+      + ' keyLabel="' + (($('cloudKeyLabel') || {}).textContent || '') + '"');
+  }
+  /* 028 反馈：徽章/剩余次数内容为空时隐藏整行——否则官方面板会多一条空白带 */
+  function updateQuotaRowVisibility() {
+    const row = $('zitanQuotaRow');
+    if (!row) return;
+    row.hidden = !$('zitanUpstreamBadges').textContent.trim() && !$('zitanQuotaText').textContent.trim();
   }
   /* 024：线下模型下载相关（refreshAsrStatus / startAsrDownload / 进度状态）已随 UI 一并移除 */
 
