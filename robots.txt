@@ -1,0 +1,5 @@
+# 字谈 ZiTan —— 允许所有搜索引擎与 AI 抓取引擎
+User-agent: *
+Allow: /
+
+Sitemap: https://zitan.online/sitemap.xml

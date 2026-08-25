@@ -1,0 +1,18 @@
+# 字谈 ZiTan — Face-to-face Communication Assistant
+
+> ZiTan (字谈) is a free, open-source web app for face-to-face conversation, built primarily for deaf, hard-of-hearing and speech-impaired people: one side types what they want to say and it appears as extra-large text cards; the other side simply speaks, and their words are transcribed to text in real time. It also serves fully hearing, speaking people — as a free Chinese↔English translator with read-aloud, for silent messaging in quiet places, and for any moment when speaking doesn't work. It runs entirely in the browser as a PWA — nothing to install — and offers fully on-device speech recognition (SenseVoice running in WASM), so audio and text never leave the device.
+
+Site: https://zitan.online/
+About page with FAQ (bilingual zh/en): https://zitan.online/about.html
+Source code (MIT): https://github.com/zuoguyoupan2023/ZiTan
+
+## Key facts
+
+- Purpose: assistive face-to-face communication; public-welfare project — free, no ads, no account required.
+- Primary users: deaf and hard-of-hearing people; speech-impaired people (voice loss, laryngeal surgery/tracheostomy, motor-speech disorders from ALS/Parkinson's/cerebral palsy, aphasia, selective mutism); people temporarily unable to speak (dental/oral surgery, intubation recovery).
+- Everyday (non-disability) uses: cross-language chat via built-in Chinese↔English translation with free read-aloud (travel, hosting foreign guests), language learning, silent messaging in libraries/cinemas/meetings, talking through glass at bank/pharmacy counters, communicating over noise, hoarse-throat moments.
+- Two roles on one screen: green side = the user who types in large text; blue side = the person whose speech gets transcribed.
+- Three ASR routes: native Web Speech API (zero download, online), fully on-device SenseVoice-Small via onnxruntime-web/WASM (offline, private, ~228MB model downloaded on demand), and optional cloud ASR.
+- Extra features: text-to-speech read-aloud, Chinese↔English translation, quick phrases, saved sentences, history, photo sharing, adjustable font size, high-contrast mode.
+- Tech shape: single-file HTML PWA + Service Worker; models cached persistently in IndexedDB.
+- Licenses: app code MIT; SenseVoice model Apache-2.0 (FunAudioLLM); onnxruntime-web MIT.

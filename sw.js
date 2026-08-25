@@ -1,5 +1,5 @@
 /* 字谈 离线缓存 Service Worker（页面联网时优先取最新，离线时用缓存） */
-const CACHE = 'zitan-v2';
+const CACHE = 'zitan-v3'; /* v3：新增 about.html 预缓存 */
 /* 激活清理时的保留白名单：
  *   zitan-asr —— 旧版模型 Cache API 缓存。若设备上还留有旧方案写入的缓存，绝不能删，
  *                删了就得重新下载 228MB 模型。
@@ -8,6 +8,7 @@ const CACHE = 'zitan-v2';
 const KEEP = [CACHE, 'zitan-asr'];
 const ASSETS = [
   './index.html',
+  './about.html',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/icon-192.png',

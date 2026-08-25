@@ -1,7 +1,7 @@
 {
-  "name": "字谈 · 听障沟通助手",
+  "name": "字谈 · 听障语障沟通助手",
   "short_name": "字谈",
-  "description": "本地大字笔谈，帮听障朋友与路人 / 志愿者快速沟通",
+  "description": "本地大字笔谈，帮听障、语障朋友与身边人快速沟通；也可用于中英互译和不方便开口的场景",
   "lang": "zh-CN",
   "dir": "ltr",
   "start_url": "./index.html",

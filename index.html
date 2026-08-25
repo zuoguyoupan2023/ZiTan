@@ -9,7 +9,54 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="字谈">
-<title>字谈</title>
+<title>字谈 ZiTan · 听障语障沟通助手 — 大字笔谈 · 语音转文字 · 免费中英互译朗读</title>
+<meta name="description" content="字谈（ZiTan）是一款免费开源的面对面沟通网页应用：为听障、语障及言语不便人士提供大字笔谈与志愿者语音实时转文字；健常人也能用它做跨语言交流（中英互译+免费朗读）、安静场所无声传话、隔着玻璃窗口沟通。可选设备端语音识别（SenseVoice），音频和文字不离开设备。无需安装，浏览器打开即用。">
+<meta name="keywords" content="听障沟通,语障,言语障碍,失语症,构音障碍,聋人,听力障碍,笔谈,语音转文字,语音识别,无障碍,字幕,翻译,中英互译,accessibility,deaf,speech impaired,aphasia,hard of hearing,speech to text,SenseVoice,PWA">
+<link rel="canonical" href="https://zitan.online/">
+<!-- Open Graph：分享到社交平台时的链接卡片 -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="字谈 ZiTan">
+<meta property="og:title" content="字谈 ZiTan · 听障语障沟通助手">
+<meta property="og:description" content="为听障、语障人士提供大字笔谈 + 语音实时转文字；也是免费的中英互译+朗读工具。可选设备端识别，内容不离开设备。浏览器打开即用。">
+<meta property="og:url" content="https://zitan.online/">
+<meta property="og:image" content="https://zitan.online/icons/icon-512.png">
+<meta property="og:image:alt" content="字谈 ZiTan 应用图标">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:locale:alternate" content="en_US">
+<!-- X / Twitter 卡片 -->
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="ZiTan 字谈 · Hearing Communication Assistant">
+<meta name="twitter:description" content="Deaf users type in extra-large text; volunteers speak and see live transcription. Fully on-device speech recognition option. Free & open source (MIT).">
+<meta name="twitter:image" content="https://zitan.online/icons/icon-512.png">
+<!-- 结构化数据：告诉搜索引擎和 AI 引擎「这是什么」 -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "字谈 ZiTan",
+  "alternateName": "ZiTan — Communication Assistant for Deaf, Speech-impaired & Cross-language Conversations",
+  "url": "https://zitan.online/",
+  "applicationCategory": "HealthApplication",
+  "operatingSystem": "Any (Web browser / PWA)",
+  "browserRequirements": "需要 JavaScript，支持主流现代浏览器 Chrome / Edge / Safari",
+  "description": "免费开源的面对面沟通助手：为听障、语障及言语不便人士提供大字笔谈与语音实时转文字；健常人也可用于中英互译+朗读的跨语言交流、安静场所无声传话等场景。可选设备端本地识别（SenseVoice），音频与文字不离开设备。",
+  "inLanguage": ["zh-CN", "en"],
+  "isAccessibleForFree": true,
+  "audience": { "@type": "Audience", "audienceType": "听障、语障及言语不便人士；需要跨语言或不便开口沟通的所有人" },
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "featureList": [
+    "大字笔谈（字号可调、高对比度模式）",
+    "志愿者语音实时转文字（原生 Web Speech / 设备端 SenseVoice / 云端三条路线）",
+    "文本朗读 TTS",
+    "中英互译",
+    "快捷用语、收藏、对话历史、图片相册",
+    "PWA 添加到主屏幕，支持离线使用"
+  ],
+  "license": "https://opensource.org/licenses/MIT",
+  "author": { "@type": "Organization", "name": "字谈 ZiTan", "url": "https://github.com/zuoguyoupan2023/ZiTan" },
+  "sameAs": "https://github.com/zuoguyoupan2023/ZiTan"
+}
+</script>
 <style>
   :root {
     --bg: #eef1f6;
@@ -210,7 +257,7 @@
     display: none; flex-direction: column;
   }
   #presenter.show { display: flex; }
-  .ptop { display: flex; align-items: center; justify-content: flex-end; padding: 14px 14px 0; }
+  .ptop { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 14px 14px 0; }
   #presenter .close {
     border: none; background: var(--bg); color: var(--ink);
     font-size: 14px; padding: 10px 12px; border-radius: 10px; cursor: pointer;
@@ -242,6 +289,24 @@
   }
   #presenter .pplay.playing svg { animation: zoom .6s ease-in-out infinite; }
   #presenter .hint { color: var(--muted); font-size: 15px; }
+
+  /* 032 小巧思一：横屏模式 —— 展示层整体旋转 90°，手机横过来正读，一行容纳更多字 */
+  #presenter.land {
+    width: 100dvh; height: 100dvw;
+    transform-origin: top left;
+    transform: rotate(-90deg) translateX(-100%);
+  }
+  /* 032 小巧思二：横向滚动（跑马灯）—— 仅横屏模式；所有消息排成一行，匀速向左移动，点一下暂停/继续 */
+  #presenter .pcenter { overflow: hidden; }
+  #presenter .pscroll { display: none; align-items: center; white-space: nowrap; will-change: transform; }
+  #presenter.scrolling .pscroll { display: flex; }
+  #presenter.scrolling .big { display: none; }
+  #presenter.scrolling .pnav, #presenter.scrolling .pfoot { visibility: hidden; }
+  #presenter .pscroll .sitem {
+    display: inline-block; white-space: nowrap;
+    font-size: calc(5vh * var(--fs)); line-height: 1.4; font-weight: 600;
+    padding-right: 14vw; /* 条与条之间的空档 */
+  }
 
   /* ===== 浮层 / 卡片 ===== */
   .overlay {
@@ -753,6 +818,8 @@
   <!-- 大字展示 -->
   <div id="presenter">
     <div class="ptop">
+      <button class="close" id="pOrient" data-i18n="land" data-i18n-title="land" title="横屏">横屏</button>
+      <button class="close" id="pScrollT" data-i18n="scrollOn" data-i18n-title="scrollOn" title="滚动">滚动</button>
       <button class="close" id="pClose">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
         <span data-i18n="exit">退出</span>
@@ -760,6 +827,7 @@
     </div>
     <div class="pcenter">
       <div class="big" id="pBig"></div>
+      <div class="pscroll" id="pScroll"><div id="pTrack"></div></div>
     </div>
     <div class="pnav">
       <button class="prevnext prev" id="pPrev" data-i18n-title="prev" title="上一条">
@@ -1175,6 +1243,7 @@
       micNative: '联网识别中（音频上传云端）…', micNativeFallback: '联网识别不可用，改用本地模型',
       micNoPermission: '麦克风权限被拒绝，请在浏览器设置里允许', micTimeout: '识别服务无响应（当前浏览器可能不支持原生识别）',
       exit: '退出', prev: '上一条', next: '下一条',
+      land: '横屏', port: '竖屏', scrollOn: '滚动', scrollOff: '固定',
       presets: '预设', voice: '语音', fill: '填入', sendDirect: '直接发',
       add: '添加', newPhrase: '输入新用语',
       presetHint: '黄边 = 填入输入框继续写；无黄边 = 点一下直接发。点文字可编辑，点标签可切换，× 删除。',
@@ -1358,6 +1427,7 @@
       micNative: 'Cloud recognition (audio to cloud)…', micNativeFallback: 'Cloud speech offline, using local model',
       micNoPermission: 'Microphone permission denied — allow it in browser settings', micTimeout: 'Recognition unresponsive (this browser may not support native speech)',
       exit: 'Exit', prev: 'Previous', next: 'Next',
+      land: 'Landscape', port: 'Portrait', scrollOn: 'Auto-scroll', scrollOff: 'Fixed',
       presets: 'Presets', voice: 'Voice', fill: 'Fill', sendDirect: 'Send',
       add: 'Add', newPhrase: 'New phrase',
       presetHint: 'Yellow = fill in box; plain = send now. Tap text to edit, tap the label to switch, × to delete.',
@@ -3064,9 +3134,12 @@
 
   /* ============ 大字展示 ============ */
   function openPresenter(i) {
+    cancelAnimationFrame(scrollRAF);
+    presenter.classList.remove('scrolling');
     stopPresenterPlay();
     state.viewing = i;
     presenter.classList.add('show');
+    setOrientBtn(); setScrollBtn();
     renderBig();
   }
   function renderBig() {
@@ -3078,6 +3151,7 @@
     pBig.style.fontSize = (n > 30 ? 4.5 : n > 16 ? 5.5 : 6.5) + 'vh';
   }
   function step(d) {
+    if (presenter.classList.contains('scrolling')) return; /* 滚动模式下禁用切条 */
     state.viewing = (state.viewing + d + state.messages.length) % state.messages.length;
     renderBig();
     stopPresenterPlay();
@@ -3095,6 +3169,93 @@
     if (btn.classList.contains('playing')) { stopPresenterPlay(); return; }
     if (speak(m.text, () => btn.classList.remove('playing'))) btn.classList.add('playing');
   }
+
+  /* —— 032 大字展示小巧思：横屏模式 & 滚动长卷 —— */
+  let scrollRAF = 0, scrollPaused = false;
+  function setOrientBtn() {
+    const b = $('pOrient');
+    if (!b) return;
+    const k = presenter.classList.contains('land') ? 'port' : 'land';
+    b.setAttribute('data-i18n', k);
+    b.setAttribute('data-i18n-title', k);
+    b.textContent = t(k); b.title = t(k);
+  }
+  function setScrollBtn() {
+    const b = $('pScrollT');
+    if (!b) return;
+    const k = presenter.classList.contains('scrolling') ? 'scrollOff' : 'scrollOn';
+    b.setAttribute('data-i18n', k);
+    b.setAttribute('data-i18n-title', k);
+    b.textContent = t(k); b.title = t(k);
+  }
+  function buildScroll() {
+    const tr = $('pTrack');
+    tr.textContent = '';
+    state.messages.forEach(m => {
+      const d = document.createElement('div');
+      d.className = 'sitem'; d.textContent = m.text;
+      tr.appendChild(d);
+    });
+  }
+  function startScroll() {
+    if (!state.messages.length) return;
+    stopPresenterPlay();
+    buildScroll();
+    const box = $('pScroll');
+    delete box.dataset.x;
+    box.style.transform = 'translateX(0)';
+    scrollPaused = false;
+    presenter.classList.add('scrolling');
+    setScrollBtn();
+    tickScroll();
+  }
+  function tickScroll() {
+    cancelAnimationFrame(scrollRAF);
+    const box = $('pScroll'), holder = box.parentElement;
+    const run = () => {
+      if (!presenter.classList.contains('scrolling')) return;
+      if (!scrollPaused) {
+        let x = parseFloat(box.dataset.x || '0');
+        x -= 0.5; /* 每帧约 0.5px ≈ 30px/s，向左匀速移动 */
+        if (-x > box.scrollWidth) x = holder.clientWidth; /* 全部移出后从右侧重新进入，循环 */
+        box.style.transform = 'translateX(' + x + 'px)';
+        box.dataset.x = x;
+      }
+      scrollRAF = requestAnimationFrame(run);
+    };
+    run();
+  }
+  function stopScroll() {
+    cancelAnimationFrame(scrollRAF);
+    presenter.classList.remove('scrolling');
+    delete $('pScroll').dataset.x;
+    setScrollBtn();
+    renderBig();
+  }
+  function closePresenter() {
+    cancelAnimationFrame(scrollRAF);
+    presenter.classList.remove('show', 'scrolling');
+    delete $('pScroll').dataset.x;
+    stopPresenterPlay();
+  }
+  $('pOrient').onclick = () => {
+    presenter.classList.toggle('land');
+    /* 滚动只存在于横屏：切回竖屏时自动退出滚动 */
+    if (!presenter.classList.contains('land') && presenter.classList.contains('scrolling')) stopScroll();
+    setOrientBtn();
+  };
+  $('pScrollT').onclick = () => {
+    if (presenter.classList.contains('scrolling')) { stopScroll(); return; }
+    presenter.classList.add('land'); /* 滚动只在横屏：自动进入横屏再开始滚动 */
+    setOrientBtn();
+    startScroll();
+  };
+  document.querySelector('#presenter .pcenter').addEventListener('click', () => {
+    if (!presenter.classList.contains('scrolling')) return;
+    scrollPaused = !scrollPaused;
+    toast(scrollPaused ? (state.uiLang === 'zh' ? '已暂停，点一下继续' : 'Paused — tap to resume')
+                       : (state.uiLang === 'zh' ? '继续滚动' : 'Scrolling'));
+  });
 
   /* ============ 工具 ============ */
   function now() {
@@ -4637,7 +4798,7 @@
       if (!state.messages.length) { toast(t('noMessages')); return; }
       openPresenter(state.messages.length - 1);
     };
-    $('pClose').onclick = () => { stopPresenterPlay(); presenter.classList.remove('show'); };
+    $('pClose').onclick = closePresenter;
     $('pPlay').onclick = playCurrent;
     $('pPrev').onclick = e => { e.stopPropagation(); step(-1); };
     $('pNext').onclick = e => { e.stopPropagation(); step(1); };
@@ -4645,7 +4806,7 @@
       if (!presenter.classList.contains('show')) return;
       if (e.key === 'ArrowLeft') step(-1);
       if (e.key === 'ArrowRight') step(1);
-      if (e.key === 'Escape') presenter.classList.remove('show');
+      if (e.key === 'Escape') closePresenter();
     });
     let startX = null;
     presenter.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
