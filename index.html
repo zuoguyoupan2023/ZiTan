@@ -290,13 +290,13 @@
   #presenter .pplay.playing svg { animation: zoom .6s ease-in-out infinite; }
   #presenter .hint { color: var(--muted); font-size: 15px; }
 
-  /* 032 小巧思一：横屏模式 —— 展示层整体旋转 90°，手机横过来正读，一行容纳更多字 */
+  /* 032 设计一：横屏模式 —— 展示层整体旋转 90°，手机横过来正读，一行容纳更多字 */
   #presenter.land {
     width: 100dvh; height: 100dvw;
     transform-origin: top left;
     transform: rotate(-90deg) translateX(-100%);
   }
-  /* 032 小巧思二：横向滚动（跑马灯）—— 仅横屏模式；所有消息排成一行，匀速向左移动，点一下暂停/继续 */
+  /* 032 设计二：横向滚动（跑马灯）—— 仅横屏模式；所有消息排成一行，匀速向左移动，点一下暂停/继续 */
   #presenter .pcenter { overflow: hidden; }
   #presenter .pscroll { display: none; align-items: center; white-space: nowrap; will-change: transform; }
   #presenter.scrolling .pscroll { display: flex; }
@@ -310,7 +310,7 @@
     pointer-events: none;
   }
   #presenter.scrolling .ptop > * { pointer-events: auto; } /* 悬浮层本身不挡点击，按钮仍可点 */
-  #presenter:not(.land) #pScrollT { display: none; } /* 滚动只在横屏：竖屏时直接隐藏按钮 */
+  /* 滚动按钮不再按横竖屏隐藏：竖屏时它是「横屏滚动」一键入口（见 setScrollBtn / pScrollT 点击逻辑） */
   #presenter .pscroll .sitem {
     display: inline-block; white-space: nowrap;
     font-size: var(--sfpx, 80px); /* 字号由 JS 按可视区高度动态算，保证完整显示不被遮挡 */
@@ -425,6 +425,40 @@
   #addType { flex: none; width: auto; border-radius: 10px; padding: 0 8px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); font-size: 13px; }
   #addBtn { width: 40px; border: none; border-radius: 10px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
   .card .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  /* 032 多场景文本 */
+  .pkgbtn { width: 100%; margin-top: 10px; padding: 11px; border: 1.5px dashed var(--line); border-radius: 12px; background: transparent; color: var(--ink); font-size: 14px; font-weight: 600; cursor: pointer; }
+  .pkgbtn:hover { border-color: var(--accent); color: var(--accent); }
+  #pkgList { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+  .pkgrow { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; background: var(--bg); }
+  .pkgrow .pkg-ic { font-size: 22px; }
+  .pkgrow .pkg-info { flex: 1; min-width: 0; }
+  .pkgrow .pkg-name { font-size: 15px; font-weight: 700; }
+  .pkgrow .pkg-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .pkgrow .pkg-ver { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 8px; background: var(--panel); color: var(--muted); white-space: nowrap; }
+  .pkgrow .pkg-ver.new { background: var(--accent); color: #fff; }
+  .pkgrow .pkg-act { flex: none; padding: 7px 12px; border: none; border-radius: 9px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .pkgrow .pkg-act.ghost { background: var(--panel); color: var(--ink); border: 1px solid var(--line); }
+  .pkgrow .pkg-act.danger { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+  #pkgList .pkg-empty { font-size: 13px; color: var(--muted); text-align: center; padding: 18px 0; }
+  #pkgList .pkg-err { font-size: 13px; color: #d33; text-align: center; padding: 12px 0; }
+  @keyframes pkgSpin { to { transform: rotate(360deg); } }
+  #pkgList .pkg-loading { font-size: 13px; color: var(--muted); text-align: center; padding: 18px 0; }
+  /* 032 分组显示：通用预设 + 预置文本标签页（自动换行），标签页内部开/关 */
+  .pkg-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+  .pkg-tabs button {
+    flex: none; padding: 7px 12px; border: 1.5px solid var(--line); border-radius: 10px;
+    background: var(--panel); color: var(--ink); font-size: 13px; font-weight: 600; cursor: pointer;
+    white-space: nowrap;
+  }
+  .pkg-tabs button.on { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+  body.hc .pkg-tabs button.on { background: var(--deaf); color: var(--deaf-ink); border-color: var(--deaf); }
+  .pkg-head { font-size: 13px; font-weight: 700; color: var(--muted); margin: 12px 0 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .pkg-head:first-child { margin-top: 4px; }
+  .pkg-head.toggle { margin-top: 10px; }
+  .pkg-head-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pkg-sw { flex: none; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--muted); cursor: pointer; }
+  .pkg-sw.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .proll.off { opacity: .45; }
   .credit { text-align: center; font-size: 12px; color: var(--muted); margin: 14px 0 0; }
   .credit a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
   .credit a:hover { opacity: .75; }
@@ -908,6 +942,8 @@
           <button id="tabDeaf" class="on" data-i18n="roleDeaf">听障朋友</button>
           <button id="tabVol" data-i18n="roleVol">志愿者 / 路人</button>
         </div>
+        <!-- 032 系列横向标签：通用预设 + 每个已装预置文本 -->
+        <div class="pkg-tabs" id="presetTabs"></div>
         <div id="presetList"></div>
         <div class="addrow">
           <input id="addText" type="text" placeholder="输入新用语" data-i18n-ph="newPhrase">
@@ -917,6 +953,20 @@
           </button>
         </div>
         <p class="hint" data-i18n="presetHint">黄边 = 填入输入框继续写；无黄边 = 点一下直接发。点标签可切换，× 删除。</p>
+        <!-- 032 多场景文本入口 -->
+        <button class="pkgbtn" id="pkgMarketBtn" data-i18n="pkgMarket">多场景文本</button>
+      </div>
+
+      <!-- 032 多场景文本浮层 -->
+      <div class="overlay" id="pkgMarketOverlay">
+        <div class="card">
+          <button class="x" id="pkgMarketX" title="关闭">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+          <h2 data-i18n="pkgMarketTitle">多场景文本</h2>
+          <div id="pkgList"></div>
+          <p class="hint" data-i18n="pkgMarketHint">导入后预置文本保存在本机，可离线使用。</p>
+        </div>
       </div>
 
       <!-- 语音（二级标签：朗读 / 语音识别） -->
@@ -1281,7 +1331,12 @@
       micNative: '联网识别中（音频上传云端）…', micNativeFallback: '联网识别不可用，改用本地模型',
       micNoPermission: '麦克风权限被拒绝，请在浏览器设置里允许', micTimeout: '识别服务无响应（当前浏览器可能不支持原生识别）',
       exit: '退出', prev: '上一条', next: '下一条',
-      land: '横屏', port: '竖屏', scrollOn: '滚动', scrollOff: '固定',
+      land: '横屏', port: '竖屏', scrollOn: '滚动', scrollOff: '固定', landScroll: '横屏滚动',
+      pkgMarket: '多场景文本', pkgMarketTitle: '多场景文本', pkgMarketHint: '导入后预置文本保存在本机，可离线使用。',
+      pkgNotInstalled: '未安装', pkgInstalled: '已安装', pkgUpdate: '可更新', pkgImport: '导入', pkgUpdateBtn: '更新', pkgUninstall: '卸载',
+      pkgEmpty: '暂无可用预置文本', pkgLoading: '正在加载…', pkgNetErr: '网络不可用，稍后再试', pkgImportOk: '导入成功', pkgUninstallOk: '已卸载',
+      pkgConfirmUninstall: '卸载该预置文本？已编辑过的条目会保留。',
+      pkgGroupGeneral: '通用预设', pkgOn: '开', pkgOff: '关',
       slow: '慢', mid: '中', fast: '快',
       presets: '预设', voice: '语音', fill: '填入', sendDirect: '直接发',
       add: '添加', newPhrase: '输入新用语',
@@ -1466,7 +1521,12 @@
       micNative: 'Cloud recognition (audio to cloud)…', micNativeFallback: 'Cloud speech offline, using local model',
       micNoPermission: 'Microphone permission denied — allow it in browser settings', micTimeout: 'Recognition unresponsive (this browser may not support native speech)',
       exit: 'Exit', prev: 'Previous', next: 'Next',
-      land: 'Landscape', port: 'Portrait', scrollOn: 'Auto-scroll', scrollOff: 'Fixed',
+      land: 'Landscape', port: 'Portrait', scrollOn: 'Auto-scroll', scrollOff: 'Fixed', landScroll: 'Rotate & scroll',
+      pkgMarket: 'Scenario Texts', pkgMarketTitle: 'Scenario Texts', pkgMarketHint: 'Imported preset texts are stored on this device and work offline.',
+      pkgNotInstalled: 'Not installed', pkgInstalled: 'Installed', pkgUpdate: 'Update available', pkgImport: 'Import', pkgUpdateBtn: 'Update', pkgUninstall: 'Remove',
+      pkgEmpty: 'No preset texts available', pkgLoading: 'Loading…', pkgNetErr: 'Network unavailable, try again later', pkgImportOk: 'Imported', pkgUninstallOk: 'Removed',
+      pkgConfirmUninstall: 'Remove this preset text? Edited items will be kept.',
+      pkgGroupGeneral: 'General', pkgOn: 'On', pkgOff: 'Off',
       slow: 'Slow', mid: 'Mid', fast: 'Fast',
       presets: 'Presets', voice: 'Voice', fill: 'Fill', sendDirect: 'Send',
       add: 'Add', newPhrase: 'New phrase',
@@ -1767,11 +1827,13 @@
     voiceLang: 'zh-CN',
     voiceURI: '',
     presetEdited: false,
+    installedPackages: [],   /* 032：已安装预置文本 [{id, version, name, icon, enabled}] */
     asrEngine: 'auto',        /* auto | browser | model | cloud */
     cloud: { vendor: '', apiKey: '', extra: '' },
     presets: cloneDefaults('zh')
   };
   let roleTab = 'deaf';
+  let presetTab = 'general'; /* 032：预设面板当前选中的系列标签（'general' 或预置文本 id） */
   let quickMore = false;  /* 快捷用语是否展开（默认最多显示 4 条） */
   let voices = [];
   let voicesKicked = false;  /* 是否已用静音占位触发过语音加载（安卓 getVoices 首次为空），避免反复触发造成闪烁 */
@@ -2264,10 +2326,17 @@
   }
 
   /* ============ 快捷用语 ============ */
+  /* 032：快捷栏只取「通用组 + 已启用预置文本组」的条目（通用在前，文本集按安装顺序） */
+  function activePresets(role) {
+    const { general, pkgs } = groupPresets(role);
+    let out = general.slice();
+    pkgs.forEach(({ pkg, items }) => { if (pkg.enabled) out = out.concat(items); });
+    return out;
+  }
   function renderQuick() {
     const box = $('quick');
     box.innerHTML = '';
-    const all = state.presets[state.identity];
+    const all = activePresets(state.identity);
     /* 预设最多占 3 格，第 4 格固定放「+N / 收起」，和预设等宽、一行 4 格 */
     all.slice(0, 3).forEach(p => box.appendChild(makeChip(p)));
     if (all.length > 3) {
@@ -2282,10 +2351,11 @@
   function makeChip(p) {
     const b = document.createElement('button');
     b.className = 'chip' + (p.k === 'fill' ? ' fill' : '');
-    b.textContent = p.t;
+    b.textContent = ptext(p);
     b.onclick = () => {
-      if (p.k === 'send') { doSend(p.t); }
-      else { $('text').value = p.t; $('text').focus(); }
+      const tx = ptext(p);
+      if (p.k === 'send') { doSend(tx); }
+      else { $('text').value = tx; $('text').focus(); }
     };
     return b;
   }
@@ -3123,51 +3193,125 @@
   }
 
   /* ============ 设置：预设管理 ============ */
+  /* 032 双语：按当前界面语言取条目文本（英文界面优先 en，缺失回退中文） */
+  function ptext(p) { return (state.uiLang === 'en' && p && p.en) ? p.en : (p ? p.t : ''); }
+  /* 032 双语：包名按界面语言 */
+  function pkgDisplayName(pkg) { return (state.uiLang === 'en' && pkg && pkg.nameEn) ? pkg.nameEn : (pkg ? pkg.name : ''); }
+  /* 032 分组：返回 { general: [...], pkgs: [{ pkg, items: [...] }, ...] }
+     无 _pkg 或已编辑接管（_ed）的条目归通用组；否则按 _pkg 归到对应已安装预置文本组 */
+  function groupPresets(role) {
+    const installed = state.installedPackages;
+    const byPkg = {};
+    const general = [];
+    state.presets[role].forEach(p => {
+      if (p._pkg !== undefined && installed.some(x => x.id === p._pkg)) {
+        (byPkg[p._pkg] = byPkg[p._pkg] || []).push(p);
+      } else {
+        general.push(p);
+      }
+    });
+    const pkgs = [];
+    installed.forEach(x => { if (byPkg[x.id]) pkgs.push({ pkg: x, items: byPkg[x.id] }); });
+    return { general, pkgs };
+  }
+  function makePresetRow(p) {
+    const row = document.createElement('div');
+    row.className = 'proll';
+    const sendMode = (p.k === 'send');
+    row.innerHTML = '<span class="ptext"></span>'
+      + '<button class="ptype">' + (sendMode ? t('sendDirect') : t('fill')) + '</button>'
+      + '<button class="pdel" title="×">' + ic('close', 14) + '</button>';
+    const ptextEl = row.querySelector('.ptext');
+    ptextEl.textContent = ptext(p);
+    /* 点击文本 → 内联编辑（编辑「当前界面语言」的字段：中文改 t，英文改 en），Enter/失焦保存，Esc 取消 */
+    ptextEl.onclick = () => {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'pedit';
+      input.value = ptext(p);
+      ptextEl.replaceWith(input);
+      input.focus(); input.select();
+      let done = false;
+      const commit = () => {
+        if (done) return; done = true;
+        const v = input.value.trim();
+        if (v && v !== ptext(p)) {
+          if (state.uiLang === 'en') { p.en = v; if (!p.t) p.t = v; }
+          else { p.t = v; }
+          /* 032 编辑即接管：改文字即脱离包归属，卸载不再动它 */
+          if (p._pkg !== undefined) { delete p._pkg; p._ed = true; }
+          state.presetEdited = true; save();
+        }
+        renderPresetList(); renderQuick();
+      };
+      const cancel = () => { if (done) return; done = true; renderPresetList(); };
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') commit();
+        else if (e.key === 'Escape') cancel();
+      });
+      input.addEventListener('blur', commit);
+    };
+    row.querySelector('.ptype').onclick = () => {
+      p.k = (p.k === 'send') ? 'fill' : 'send';
+      /* 032 编辑即接管：切换 k 同样脱离包归属 */
+      if (p._pkg !== undefined) { delete p._pkg; p._ed = true; }
+      state.presetEdited = true;
+      save(); renderPresetList(); renderQuick();
+    };
+    row.querySelector('.pdel').onclick = () => {
+      if (!confirm(t('confirmDelPreset'))) return;
+      const arr = state.presets[roleTab];
+      arr.splice(arr.indexOf(p), 1);
+      state.presetEdited = true;
+      save(); renderPresetList(); renderQuick();
+    };
+    return row;
+  }
   function renderPresetList() {
     const list = $('presetList');
+    const tabs = $('presetTabs');
+    const { general, pkgs } = groupPresets(roleTab);
+    /* 当前选中标签：'general' 或包 id；若该包已被卸载、或当前角色下无该包条目，则回退通用 */
+    if (presetTab !== 'general' && !pkgs.some(g => g.pkg.id === presetTab)) presetTab = 'general';
+    /* 渲染横向标签：通用预设（固定）+ 每个已装预置文本 */
+    tabs.innerHTML = '';
+    const mkTab = (label, id) => {
+      const b = document.createElement('button');
+      b.textContent = label;
+      if (id === presetTab) b.classList.add('on');
+      b.onclick = () => { presetTab = id; renderPresetList(); };
+      tabs.appendChild(b);
+    };
+    mkTab(t('pkgGroupGeneral'), 'general');
+    pkgs.forEach(({ pkg }) => mkTab((pkg.icon || '📦') + ' ' + pkgDisplayName(pkg), pkg.id));
+    /* 渲染当前标签内容 */
     list.innerHTML = '';
-    state.presets[roleTab].forEach((p, i) => {
-      const row = document.createElement('div');
-      row.className = 'proll';
-      const sendMode = (p.k === 'send');
-      row.innerHTML = '<span class="ptext"></span>'
-        + '<button class="ptype">' + (sendMode ? t('sendDirect') : t('fill')) + '</button>'
-        + '<button class="pdel" title="×">' + ic('close', 14) + '</button>';
-      const ptext = row.querySelector('.ptext');
-      ptext.textContent = p.t;
-      /* 点击文本 → 内联编辑，Enter/失焦保存，Esc 取消 */
-      ptext.onclick = () => {
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.className = 'pedit';
-        input.value = p.t;
-        ptext.replaceWith(input);
-        input.focus(); input.select();
-        let done = false;
-        const commit = () => {
-          if (done) return; done = true;
-          const v = input.value.trim();
-          if (v && v !== p.t) { p.t = v; state.presetEdited = true; save(); }
-          renderPresetList(); renderQuick();
-        };
-        const cancel = () => { if (done) return; done = true; renderPresetList(); };
-        input.addEventListener('keydown', e => {
-          if (e.key === 'Enter') commit();
-          else if (e.key === 'Escape') cancel();
-        });
-        input.addEventListener('blur', commit);
-      };
-      row.querySelector('.ptype').onclick = () => {
-        p.k = (p.k === 'send') ? 'fill' : 'send';
-        state.presetEdited = true;
-        save(); renderPresetList(); renderQuick();
-      };
-      row.querySelector('.pdel').onclick = () => {
-        if (!confirm(t('confirmDelPreset'))) return;
-        state.presets[roleTab].splice(i, 1);
-        state.presetEdited = true;
-        save(); renderPresetList(); renderQuick();
-      };
+    if (presetTab === 'general') {
+      general.forEach(p => list.appendChild(makePresetRow(p)));
+      return;
+    }
+    const cur = state.installedPackages.find(x => x.id === presetTab);
+    const items = (pkgs.find(g => g.pkg.id === presetTab) || { items: [] }).items;
+    /* 标签页内部开/关：启用 = 加入快捷栏；停用 = 灰显、不取入快捷栏 */
+    const head = document.createElement('div');
+    head.className = 'pkg-head toggle';
+    const label = document.createElement('span');
+    label.className = 'pkg-head-name';
+    label.textContent = (cur ? (cur.icon || '📦') + ' ' + pkgDisplayName(cur) + ' v' + cur.version : presetTab);
+    const sw = document.createElement('button');
+    sw.className = 'pkg-sw' + (cur && cur.enabled ? ' on' : '');
+    sw.textContent = (cur && cur.enabled) ? t('pkgOn') : t('pkgOff');
+    sw.onclick = () => {
+      cur.enabled = !cur.enabled;
+      state.presetEdited = true;
+      save(); renderPresetList(); renderQuick();
+    };
+    head.appendChild(label);
+    head.appendChild(sw);
+    list.appendChild(head);
+    items.forEach(p => {
+      const row = makePresetRow(p);
+      if (cur && !cur.enabled) row.classList.add('off');
       list.appendChild(row);
     });
   }
@@ -3210,7 +3354,7 @@
     if (speak(m.text, () => btn.classList.remove('playing'))) btn.classList.add('playing');
   }
 
-  /* —— 032 大字展示小巧思：横屏模式 & 滚动长卷 —— */
+  /* —— 032 大字展示设计：横屏模式 & 滚动长卷 —— */
   let scrollRAF = 0, scrollPaused = false;
   function setOrientBtn() {
     const b = $('pOrient');
@@ -3223,7 +3367,12 @@
   function setScrollBtn() {
     const b = $('pScrollT');
     if (!b) return;
-    const k = presenter.classList.contains('scrolling') ? 'scrollOff' : 'scrollOn';
+    let k;
+    if (!presenter.classList.contains('land')) {
+      k = 'landScroll'; /* 竖屏：按钮变「横屏滚动」一键入口 */
+    } else {
+      k = presenter.classList.contains('scrolling') ? 'scrollOff' : 'scrollOn';
+    }
     b.setAttribute('data-i18n', k);
     b.setAttribute('data-i18n-title', k);
     b.textContent = t(k); b.title = t(k);
@@ -3287,12 +3436,20 @@
   }
   $('pOrient').onclick = () => {
     presenter.classList.toggle('land');
-    /* 滚动只存在于横屏：切回竖屏时自动退出滚动（按钮本身在竖屏已隐藏，此为保险） */
+    /* 滚动只存在于横屏：切回竖屏时自动退出滚动 */
     if (!presenter.classList.contains('land') && presenter.classList.contains('scrolling')) stopScroll();
     setOrientBtn();
+    setScrollBtn();
   };
   $('pScrollT').onclick = () => {
-    presenter.classList.contains('scrolling') ? stopScroll() : startScroll();
+    if (!presenter.classList.contains('land')) {
+      /* 竖屏：「横屏滚动」一键入口 —— 先转横屏，再开始滚动 */
+      presenter.classList.add('land');
+      setOrientBtn();
+      startScroll();
+    } else {
+      presenter.classList.contains('scrolling') ? stopScroll() : startScroll();
+    }
   };
   /* —— 滚动偏好：字号 / 速度。存独立 localStorage 键，重开页面自动恢复 —— */
   let scrollPxPerFrame = 0.5, scrollFs = 1, scrollSpd = 'mid';
@@ -3309,7 +3466,7 @@
   function applyScrollFontSize() {
     const holder = document.querySelector('#presenter .pcenter');
     const raw = holder.clientHeight;
-    const px = Math.max(24, Math.round((raw || 360) * 0.8 * scrollFs));
+    const px = Math.max(24, Math.round((raw || 360) * 0.6 * scrollFs));
     presenter.style.setProperty('--sfpx', px + 'px');
   }
   function savePresenterPrefs() {
@@ -3399,10 +3556,17 @@
         if (s.presetEdited) state.presetEdited = true;
         if (s.identity === 'deaf' || s.identity === 'vol') state.identity = s.identity;
         if (state.presetEdited && s.presets && s.presets.deaf && s.presets.vol) {
-          const norm = list => list.map(p => (typeof p === 'string') ? { t: p, k: 'fill' } : { t: p.t, k: (p.k === 'send' ? 'send' : 'fill') });
+          /* 032：保留 _pkg/_ed/en 字段（预置文本来源标记、编辑即接管、英文文本），不被 norm 剥掉 */
+          const norm = list => list.map(p => (typeof p === 'string') ? { t: p, k: 'fill' } : { t: p.t, en: (typeof p.en === 'string' ? p.en : ''), k: (p.k === 'send' ? 'send' : 'fill'), ...(p._pkg !== undefined ? { _pkg: p._pkg } : {}), ...(p._ed ? { _ed: true } : {}) });
           state.presets = { deaf: norm(s.presets.deaf), vol: norm(s.presets.vol) };
         } else {
           state.presets = cloneDefaults(state.uiLang);
+        }
+        if (Array.isArray(s.installedPackages)) {
+          /* 032：installedPackages 必须显式读，否则刷新后丢失、更新检测失效 */
+          state.installedPackages = s.installedPackages
+            .filter(p => p && typeof p.id === 'string' && Number.isInteger(p.version))
+            .map(p => ({ id: p.id, version: p.version, name: p.name || p.id, nameEn: p.nameEn || '', icon: p.icon || '📦', enabled: p.enabled !== false }));
         }
       } else seed();
     } catch (e) { seed(); }
@@ -4601,6 +4765,106 @@
     $('sTabGeneral').onclick= () => showSettingsPane('general');
     $('sTabData').onclick   = () => showSettingsPane('data');
     $('sTabHelp').onclick   = () => showSettingsPane('help');
+
+    /* —— 032 多场景文本 —— */
+    let pkgLoaded = false;
+    function renderPkgMarket(force) {
+      const list = $('pkgList');
+      if (!force && pkgLoaded) return;
+      pkgLoaded = false;
+      list.innerHTML = '<div class="pkg-loading">' + t('pkgLoading') + '</div>';
+      fetch('/packages/index.json', { cache: 'no-store' })
+        .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+        .then(manifest => {
+          pkgLoaded = true;
+          const items = (manifest && manifest.packages) || [];
+          if (!items.length) { list.innerHTML = '<div class="pkg-empty">' + t('pkgEmpty') + '</div>'; return; }
+          list.innerHTML = '';
+          items.forEach(item => list.appendChild(pkgRow(item)));
+        })
+        .catch(() => { list.innerHTML = '<div class="pkg-err">' + t('pkgNetErr') + '</div>'; });
+    }
+    function pkgRow(item) {
+      const local = state.installedPackages.find(p => p.id === item.id);
+      const row = document.createElement('div');
+      row.className = 'pkgrow';
+      let verTxt, verCls = '', btnTxt, btnCls = '', btnAct;
+      if (!local) {
+        verTxt = t('pkgNotInstalled'); btnTxt = t('pkgImport'); btnCls = ''; btnAct = 'install';
+      } else if (item.version > local.version) {
+        verTxt = t('pkgUpdate'); verCls = ' new'; btnTxt = t('pkgUpdateBtn'); btnCls = ''; btnAct = 'update';
+      } else {
+        verTxt = t('pkgInstalled') + ' v' + local.version;
+        btnTxt = t('pkgUninstall'); btnCls = ' danger'; btnAct = 'uninstall';
+      }
+      const meta = (item.count ? item.count + ' · ' : '') + (state.uiLang === 'en' ? (item.descEn || item.desc || '') : (item.desc || ''));
+      row.innerHTML = '<span class="pkg-ic"></span>'
+        + '<div class="pkg-info"><div class="pkg-name"></div><div class="pkg-meta"></div></div>'
+        + '<span class="pkg-ver' + verCls + '"></span>'
+        + '<button class="pkg-act' + btnCls + '"></button>';
+      row.querySelector('.pkg-ic').textContent = item.icon || '📦';
+      row.querySelector('.pkg-name').textContent = (state.uiLang === 'en' && item.nameEn) ? item.nameEn : item.name;
+      row.querySelector('.pkg-meta').textContent = meta;
+      row.querySelector('.pkg-ver').textContent = verTxt;
+      const btn = row.querySelector('.pkg-act');
+      btn.textContent = btnTxt;
+      btn.onclick = () => {
+        if (btnAct === 'install') installPackage(item);
+        else if (btnAct === 'update') {
+          if (!confirm(t('pkgConfirmUninstall'))) return; /* 更新会替换旧版本条目（保留已编辑的） */
+          removePkgItems(item.id, true);
+          installPackage(item, true);
+        } else if (btnAct === 'uninstall') {
+          if (!confirm(t('pkgConfirmUninstall'))) return;
+          removePkgItems(item.id, true);
+          state.installedPackages = state.installedPackages.filter(p => p.id !== item.id);
+          state.presetEdited = true;
+          save();
+          toast(t('pkgUninstallOk'));
+          renderPresetList(); renderQuick(); renderPkgMarket(true);
+        }
+      };
+      return row;
+    }
+    function installPackage(item, isUpdate) {
+      fetch(item.url)
+        .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+        .then(pkg => {
+          if (!pkg || !pkg.roles) throw new Error();
+          ['deaf', 'vol'].forEach(role => {
+            const list = pkg.roles[role] || [];
+            const target = state.presets[role];
+            list.forEach(p => {
+              const t2 = String(p.t || '').trim();
+              if (!t2) return;
+              const e2 = String(p.en || '').trim();
+              const k = (p.k === 'send') ? 'send' : 'fill';
+              if (target.some(x => String(x.t || '').trim() === t2)) return; /* 重复文本跳过（按中文） */
+              target.push({ t: t2, en: e2, k: k, _pkg: item.id, _ed: false });
+            });
+          });
+          const inst = state.installedPackages.filter(x => x.id !== item.id);
+          inst.push({ id: item.id, version: item.version, name: item.name || item.id, nameEn: item.nameEn || '', icon: item.icon || '📦', enabled: true });
+          state.installedPackages = inst;
+          state.presetEdited = true; /* 关键：不置位则刷新后被 cloneDefaults 覆盖 */
+          save();
+          toast(t('pkgImportOk'));
+          renderPresetList(); renderQuick(); renderPkgMarket(true);
+        })
+        .catch(() => toast(t('pkgNetErr')));
+    }
+    function removePkgItems(id, keepEdited) {
+      ['deaf', 'vol'].forEach(role => {
+        state.presets[role] = state.presets[role].filter(p => {
+          if (p._pkg !== id) return true;
+          if (keepEdited && p._ed === true) return true; /* 编辑即接管：保留用户改动 */
+          return false;
+        });
+      });
+    }
+    $('pkgMarketBtn').onclick = () => { $('pkgMarketOverlay').classList.add('show'); renderPkgMarket(true); };
+    $('pkgMarketX').onclick = () => $('pkgMarketOverlay').classList.remove('show');
+    $('pkgMarketOverlay').addEventListener('click', e => { if (e.target === $('pkgMarketOverlay')) $('pkgMarketOverlay').classList.remove('show'); });
 
     /* 020 消息增强事件 */
     /* 加号：选择图片来源 */

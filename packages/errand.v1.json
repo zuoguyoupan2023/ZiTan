@@ -1,0 +1,39 @@
+{
+  "id": "errand",
+  "name": "办事大厅",
+  "nameEn": "Errands & Services",
+  "desc": "银行、政务大厅、车站、邮局办事的常用句",
+  "descEn": "Common phrases for the bank, government hall, station and post office",
+  "icon": "🏛️",
+  "version": 1,
+  "author": "ZiTan 社区 / ZiTan Community",
+  "license": "MIT",
+  "updated": "2026-08-26",
+  "roles": {
+    "deaf": [
+      { "t": "您好，我听不见，请打字或者看手机", "en": "Hi, I'm deaf — please type or look at my phone", "k": "send" },
+      { "t": "请问办理这个业务要排哪个队", "en": "Which queue is for this service?", "k": "send" },
+      { "t": "请把要准备的材料写给我", "en": "Please write down what documents I need", "k": "send" },
+      { "t": "我要办一张银行卡", "en": "I'd like to open a bank card", "k": "send" },
+      { "t": "我想存钱 / 取钱", "en": "I'd like to deposit / withdraw money", "k": "send" },
+      { "t": "请问社保卡在哪里办", "en": "Where do I get my social security card?", "k": "send" },
+      { "t": "我要办理这项业务（指手机屏幕）", "en": "I'd like to do this (point at phone)", "k": "send" },
+      { "t": "请问身份证丢了怎么补办", "en": "How do I replace a lost ID card?", "k": "send" },
+      { "t": "请问候车厅在几楼", "en": "Which floor is the waiting hall?", "k": "send" },
+      { "t": "这趟车几点发车", "en": "When does this train/bus leave?", "k": "send" },
+      { "t": "我要寄一个快递，怎么填单", "en": "I'd like to mail a parcel — how do I fill the form?", "k": "send" },
+      { "t": "请问营业时间到几点", "en": "What time do you close?", "k": "send" },
+      { "t": "谢谢，麻烦您了", "en": "Thank you for your help", "k": "send" }
+    ],
+    "vol": [
+      { "t": "您好，请先取号排队", "en": "Hello, please take a number first", "k": "send" },
+      { "t": "请出示身份证", "en": "Please show your ID", "k": "send" },
+      { "t": "这项业务需要填写这张表", "en": "This service requires filling out this form", "k": "send" },
+      { "t": "请在这里签名", "en": "Please sign here", "k": "send" },
+      { "t": "办理时间大约需要十分钟", "en": "It takes about ten minutes", "k": "send" },
+      { "t": "窗口在左手边第三个", "en": "The window is third on the left", "k": "send" },
+      { "t": "材料齐了，请稍等", "en": "Your documents are ready, one moment", "k": "send" },
+      { "t": "办好了，这是您的回执", "en": "It's done — here is your receipt", "k": "send" }
+    ]
+  }
+}

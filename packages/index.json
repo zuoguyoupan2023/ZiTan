@@ -1,0 +1,60 @@
+{
+  "updatedAt": "2026-08-25",
+  "packages": [
+    {
+      "id": "dining",
+      "name": "餐饮购物",
+      "nameEn": "Dining & Shopping",
+      "desc": "餐厅点餐、外带、买单和便利店购物的常用句",
+      "descEn": "Useful phrases for ordering food, takeaway, paying, and convenience-store shopping",
+      "icon": "🍜",
+      "version": 1,
+      "count": 25,
+      "url": "/packages/dining.v1.json"
+    },
+    {
+      "id": "driving",
+      "name": "驾校学车",
+      "nameEn": "Driving School",
+      "desc": "学车练车时和教练沟通的常用句，起步、靠边、变道、考试要点",
+      "descEn": "Common phrases for talking with a driving instructor — starting, parking, lane changes, exam points",
+      "icon": "🚗",
+      "version": 1,
+      "count": 22,
+      "url": "/packages/driving.v1.json"
+    },
+    {
+      "id": "errand",
+      "name": "办事大厅",
+      "nameEn": "Errands & Services",
+      "desc": "银行、政务大厅、车站、邮局办事的常用句",
+      "descEn": "Common phrases for the bank, government hall, station and post office",
+      "icon": "🏛️",
+      "version": 1,
+      "count": 21,
+      "url": "/packages/errand.v1.json"
+    },
+    {
+      "id": "medical",
+      "name": "就医场景文本",
+      "nameEn": "Hospital Visit",
+      "desc": "挂号、描述症状、见医生、缴费取药的常用句",
+      "descEn": "Common phrases for registration, symptoms, doctor visits, payment and pharmacy",
+      "icon": "🏥",
+      "version": 1,
+      "count": 33,
+      "url": "/packages/medical.v1.json"
+    },
+    {
+      "id": "work",
+      "name": "职场工作",
+      "nameEn": "Workplace",
+      "desc": "面试、报到入职、开会、请假、协作沟通的常用句",
+      "descEn": "Common phrases for interviews, onboarding, meetings, leave requests and teamwork",
+      "icon": "💼",
+      "version": 1,
+      "count": 20,
+      "url": "/packages/work.v1.json"
+    }
+  ]
+}

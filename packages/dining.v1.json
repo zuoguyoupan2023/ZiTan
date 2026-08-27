@@ -1,0 +1,43 @@
+{
+  "id": "dining",
+  "name": "餐饮购物",
+  "nameEn": "Dining & Shopping",
+  "desc": "餐厅点餐、外带、买单和便利店购物的常用句",
+  "descEn": "Useful phrases for ordering food, takeaway, paying, and convenience-store shopping",
+  "icon": "🍜",
+  "version": 1,
+  "author": "ZiTan 社区 / ZiTan Community",
+  "license": "MIT",
+  "updated": "2026-08-26",
+  "roles": {
+    "deaf": [
+      { "t": "我听不见，请看我手机屏幕", "en": "I'm deaf — please look at my phone", "k": "send" },
+      { "t": "请给我菜单", "en": "May I have a menu, please?", "k": "send" },
+      { "t": "有什么招牌菜推荐吗", "en": "What do you recommend?", "k": "send" },
+      { "t": "这个菜辣吗", "en": "Is this dish spicy?", "k": "send" },
+      { "t": "我不要香菜和葱，请写单子上", "en": "No cilantro or scallions, please note it", "k": "send" },
+      { "t": "我要点这个，请看手机", "en": "I'd like to order this — please look at my phone", "k": "send" },
+      { "t": "请再加一杯水", "en": "One more glass of water, please", "k": "send" },
+      { "t": "买单，谢谢", "en": "The bill, please", "k": "send" },
+      { "t": "可以打包吗", "en": "Can I get this to go?", "k": "send" },
+      { "t": "请问洗手间在哪里", "en": "Where is the restroom?", "k": "send" },
+      { "t": "这个多少钱", "en": "How much is this?", "k": "send" },
+      { "t": "我要这个尺码，请指给我看", "en": "I'd like this size — please point it out", "k": "send" },
+      { "t": "可以试穿吗", "en": "May I try it on?", "k": "send" },
+      { "t": "请开张发票", "en": "A receipt, please", "k": "send" },
+      { "t": "谢谢，再见", "en": "Thank you, bye", "k": "send" }
+    ],
+    "vol": [
+      { "t": "欢迎光临，请慢慢看", "en": "Welcome, take your time", "k": "send" },
+      { "t": "这是菜单，请看看", "en": "Here is the menu", "k": "send" },
+      { "t": "这个是我们家的招牌，很多人点", "en": "This is our signature dish, very popular", "k": "send" },
+      { "t": "请问需要什么口味", "en": "What flavor would you like?", "k": "send" },
+      { "t": "一共 25 元，请看我手机", "en": "That'll be 25 — please look at my phone", "k": "send" },
+      { "t": "收您 30 元，找您 5 元", "en": "That's 30 paid, 5 change", "k": "send" },
+      { "t": "这边请坐", "en": "Please have a seat over here", "k": "send" },
+      { "t": "请稍等，马上就好", "en": "One moment, it's on its way", "k": "send" },
+      { "t": "您点的菜已经上齐了", "en": "All your dishes are served", "k": "send" },
+      { "t": "欢迎下次光临", "en": "Come again", "k": "send" }
+    ]
+  }
+}

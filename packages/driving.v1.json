@@ -1,0 +1,40 @@
+{
+  "id": "driving",
+  "name": "驾校学车",
+  "nameEn": "Driving School",
+  "desc": "学车练车时和教练沟通的常用句，起步、靠边、变道、考试要点",
+  "descEn": "Common phrases for talking with a driving instructor — starting, parking, lane changes, exam points",
+  "icon": "🚗",
+  "version": 1,
+  "author": "ZiTan 社区 / ZiTan Community",
+  "license": "MIT",
+  "updated": "2026-08-26",
+  "roles": {
+    "deaf": [
+      { "t": "我听不见，请看我手机屏幕", "en": "I'm deaf — please look at my phone", "k": "send" },
+      { "t": "请面对我说话，我可以看口型", "en": "Please face me, I can read lips", "k": "send" },
+      { "t": "教练，请写下来，我回家再练", "en": "Coach, please write it down so I can practice at home", "k": "send" },
+      { "t": "我已经准备好了，可以开始", "en": "I'm ready, we can start", "k": "send" },
+      { "t": "这个动作我还没学会，能再教一次吗", "en": "I haven't got this yet — can you teach me again?", "k": "send" },
+      { "t": "请慢一点，我反应不过来", "en": "Slower please, I need time to react", "k": "send" },
+      { "t": "起步要做什么，请告诉我", "en": "What should I do to start moving?", "k": "send" },
+      { "t": "靠边停车，我要注意什么", "en": "What should I watch when pulling over?", "k": "send" },
+      { "t": "变道前要看什么，请指给我看", "en": "What do I check before changing lanes? Show me", "k": "send" },
+      { "t": "倒车入库我总是压线，问题在哪", "en": "I keep crossing the line when reversing — what's wrong?", "k": "send" },
+      { "t": "考试要注意哪些点，请写下来", "en": "Please write down the key exam points", "k": "send" },
+      { "t": "谢谢教练", "en": "Thank you, coach", "k": "send" }
+    ],
+    "vol": [
+      { "t": "别紧张，慢慢来", "en": "Don't be nervous, take it easy", "k": "send" },
+      { "t": "先系好安全带", "en": "Fasten your seatbelt first", "k": "send" },
+      { "t": "起步前看左右后视镜", "en": "Check both mirrors before moving off", "k": "send" },
+      { "t": "打左转向灯，准备变道", "en": "Signal left, get ready to change lanes", "k": "send" },
+      { "t": "看到前面那辆车吗，保持距离", "en": "See that car ahead? Keep your distance", "k": "send" },
+      { "t": "慢一点，这里要减速", "en": "Slow down here", "k": "send" },
+      { "t": "先踩刹车，再挂挡", "en": "Brake first, then change gear", "k": "send" },
+      { "t": "方向回正，慢慢松离合", "en": "Straighten the wheel, release the clutch slowly", "k": "send" },
+      { "t": "停在这里，拉手刹", "en": "Stop here and apply the handbrake", "k": "send" },
+      { "t": "这个动作做得很标准", "en": "That move is perfect", "k": "send" }
+    ]
+  }
+}

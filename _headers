@@ -19,3 +19,9 @@
 /sensevoice/ort/*
   Cache-Control: public, max-age=31536000, immutable
 
+# 032 语包：清单每次重新校验（保证列表新鲜）；包文件带版本名，短缓存即可
+/packages/index.json
+  Cache-Control: no-cache
+/packages/*.json
+  Cache-Control: public, max-age=3600
+

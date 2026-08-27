@@ -1,0 +1,38 @@
+{
+  "id": "work",
+  "name": "职场工作",
+  "nameEn": "Workplace",
+  "desc": "面试、报到入职、开会、请假、协作沟通的常用句",
+  "descEn": "Common phrases for interviews, onboarding, meetings, leave requests and teamwork",
+  "icon": "💼",
+  "version": 1,
+  "author": "ZiTan 社区 / ZiTan Community",
+  "license": "MIT",
+  "updated": "2026-08-26",
+  "roles": {
+    "deaf": [
+      { "t": "您好，我是听障人士，请打字或者看手机", "en": "Hi, I'm deaf — please type or look at my phone", "k": "send" },
+      { "t": "请把要说的话打给我看", "en": "Please type what you want to say", "k": "send" },
+      { "t": "我可以胜任这份工作，请放心", "en": "I can do this job well, rest assured", "k": "send" },
+      { "t": "请问上班时间和休息日怎么安排", "en": "What are the working hours and days off?", "k": "send" },
+      { "t": "请问这个任务什么时候要完成", "en": "When is this task due?", "k": "send" },
+      { "t": "我没听清，请再说一遍或者打出来", "en": "I didn't catch that — please repeat or type it", "k": "send" },
+      { "t": "请把会议重点发文字给我", "en": "Please send me the meeting notes in text", "k": "send" },
+      { "t": "我想请假一天，可以吗", "en": "May I take a day off?", "k": "send" },
+      { "t": "请问洗手间在哪里", "en": "Where is the restroom?", "k": "send" },
+      { "t": "这个报表怎么做，请指给我看", "en": "How do I make this report? Please show me", "k": "send" },
+      { "t": "我用文字和你交流，可以吗", "en": "Is it OK if we communicate in writing?", "k": "send" },
+      { "t": "谢谢你的耐心帮助", "en": "Thank you for your patience", "k": "send" }
+    ],
+    "vol": [
+      { "t": "别紧张，我们慢慢来", "en": "Don't worry, take your time", "k": "send" },
+      { "t": "我打字和您沟通", "en": "I'll type to you", "k": "send" },
+      { "t": "这个岗位工作时间是朝九晚六", "en": "This role works 9 to 6", "k": "send" },
+      { "t": "任务截止到下周五", "en": "The task is due next Friday", "k": "send" },
+      { "t": "会议纪要稍后发你文字版", "en": "Meeting notes will be sent to you later", "k": "send" },
+      { "t": "请假需要提前一天提交", "en": "Leave requests should be submitted one day ahead", "k": "send" },
+      { "t": "需要帮助随时叫我", "en": "Ask me anytime if you need help", "k": "send" },
+      { "t": "做得很好，继续保持", "en": "Great job, keep it up", "k": "send" }
+    ]
+  }
+}

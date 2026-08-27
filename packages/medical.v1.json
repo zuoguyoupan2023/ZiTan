@@ -1,0 +1,51 @@
+{
+  "id": "medical",
+  "name": "就医场景文本",
+  "nameEn": "Hospital Visit",
+  "desc": "挂号、描述症状、见医生、缴费取药的常用句",
+  "descEn": "Common phrases for registration, symptoms, doctor visits, payment and pharmacy",
+  "icon": "🏥",
+  "version": 1,
+  "author": "ZiTan 社区 / ZiTan Community",
+  "license": "MIT",
+  "updated": "2026-08-26",
+  "roles": {
+    "deaf": [
+      { "t": "我听不见，请打字或者看我的手机屏幕", "en": "I'm deaf — please type or look at my phone", "k": "send" },
+      { "t": "请面对我慢慢说，我可以看口型", "en": "Please face me and speak slowly, I can read lips", "k": "send" },
+      { "t": "我想挂号，请问挂哪个科", "en": "I'd like to register. Which department?", "k": "send" },
+      { "t": "请问挂号在哪里排队", "en": "Where do I queue for registration?", "k": "send" },
+      { "t": "我没有医保卡，用自费可以吗", "en": "I don't have insurance — can I pay myself?", "k": "send" },
+      { "t": "这里不舒服，请看我指的位置", "en": "It hurts here — please look where I point", "k": "fill" },
+      { "t": "从三天前开始不舒服", "en": "It started three days ago", "k": "send" },
+      { "t": "有点发烧，量过体温", "en": "I have a slight fever, I measured it", "k": "send" },
+      { "t": "疼，程度大概是中等", "en": "The pain is moderate", "k": "send" },
+      { "t": "吃过这个药，请看我手机", "en": "I took this medicine — please look at my phone", "k": "send" },
+      { "t": "我对这个药过敏", "en": "I'm allergic to this medicine", "k": "send" },
+      { "t": "我做过什么检查，请看我手机里的报告", "en": "I had these tests done — look at my phone", "k": "send" },
+      { "t": "请问去哪里抽血", "en": "Where do I get my blood drawn?", "k": "send" },
+      { "t": "检查结果多久能出来", "en": "How long until the results come out?", "k": "send" },
+      { "t": "报告在哪里取", "en": "Where do I pick up the report?", "k": "send" },
+      { "t": "请问这个药怎么吃", "en": "How should I take this medicine?", "k": "send" },
+      { "t": "一天几次，一次几粒，请写下来", "en": "How many times a day? Please write it down", "k": "send" },
+      { "t": "请问在哪里缴费", "en": "Where do I pay?", "k": "send" },
+      { "t": "请问取药在哪里", "en": "Where is the pharmacy?", "k": "send" },
+      { "t": "请帮我约下一次复诊", "en": "Please book my follow-up appointment", "k": "send" },
+      { "t": "我还要注意什么，请写下来", "en": "What else should I watch? Please write it down", "k": "send" },
+      { "t": "我听不清，请再写一遍", "en": "I can't hear — please write it again", "k": "send" },
+      { "t": "谢谢医生", "en": "Thank you, doctor", "k": "send" }
+    ],
+    "vol": [
+      { "t": "别着急，我们慢慢来", "en": "Don't worry, take your time", "k": "send" },
+      { "t": "我是志愿者，来帮您沟通的", "en": "I'm a volunteer here to help you communicate", "k": "send" },
+      { "t": "请您打字或者用手机告诉我", "en": "Please type or use your phone to tell me", "k": "send" },
+      { "t": "医生说：", "en": "The doctor says:", "k": "fill" },
+      { "t": "护士说：", "en": "The nurse says:", "k": "fill" },
+      { "t": "您哪里不舒服，请指给我看", "en": "Where do you feel unwell? Please show me", "k": "send" },
+      { "t": "这个问题我去问一下医生", "en": "Let me ask the doctor about that", "k": "send" },
+      { "t": "缴费在一楼窗口，我带您去", "en": "Payment is on the first floor, I'll take you", "k": "send" },
+      { "t": "药房在三楼，我带您去", "en": "The pharmacy is on the third floor, follow me", "k": "send" },
+      { "t": "结果出来我再告诉您，请先坐一下", "en": "Have a seat — I'll tell you when results are ready", "k": "send" }
+    ]
+  }
+}
