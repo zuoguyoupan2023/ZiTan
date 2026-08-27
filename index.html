@@ -1004,7 +1004,7 @@
         <div class="sec-title" data-i18n="asrEngine">识别引擎</div>
         <div id="asrEngineDesc" class="engine-legend" data-i18n="asrLegend">按当前设备/地区自动给出可用识别方式</div>
         <!-- 028 诊断锚点：每次改版手动更新 build 号；页面上看不到它=浏览器拿的是旧缓存 -->
-        <div style="font-size:11px;opacity:.55;margin-top:2px;user-select:none;">UI build 028-9</div>
+        <div style="font-size:11px;opacity:.55;margin-top:2px;user-select:none;">UI build 028-10</div>
         <div id="asrEngineList"></div>
         <!-- 028：识别语言从朗读页移入此处（云端识别上传语言；切换会重置朗读音色为自动挑选） -->
         <div class="vc-lang-row" style="margin-top:10px;">
@@ -4601,7 +4601,17 @@
       if (text) sendAsrMessage(text, recording);
       else if (!silentEmpty) toast(t('micNoSpeech'));   /* silentEmpty：云端已弹具体错误，不再用“没听清”覆盖 */
     };
-    const stopMic = () => { NativeAsr.stop(); SenseVoiceAsr.stop(); stopBrowserRecording(); micBtn.classList.remove('rec'); };
+    /* 022 手动关麦 = 优雅结束本轮（不再 abort 丢弃）：当前引擎注册收尾回调，
+       与静音自动结束走同一条收尾路径（嘀一声 → 吐结果 / 上传录音识别），
+       识别不出文本时由 finishMic 明确提示「没听清」，不再静默。 */
+    let manualStopHandler = null;
+    const stopMic = () => {
+      playRecEndBeep();                       // 嘀一声，统一收尾提示音
+      micBtn.classList.remove('rec');
+      micBtn.disabled = true;                 // 收尾/识别期间禁点，防止与新录音并发
+      if (manualStopHandler) manualStopHandler();
+      else { NativeAsr.stop(); SenseVoiceAsr.stop(); stopBrowserRecording(); micBtn.disabled = false; }  // 兜底：无活动引擎直接放弃并复位
+    };
     /* 对话界面：模型加载/下载进度浮层 */
     const openModelProgress = () => { $('modelProg').hidden = false; $('mpFill').style.width = '0%'; $('mpPct').textContent = ''; };
     const closeModelProgress = () => { $('modelProg').hidden = true; };
@@ -4616,7 +4626,12 @@
       asrCurrentEngine = 'model';
       openModelProgress();
       SenseVoiceAsr.ensureLoaded((p) => { onModelProgress(p); if (typeof p === 'string') toast(p); })
-        .then(() => { closeModelProgress(); micBtn.classList.add('rec'); toast(t('micListening') || '请说话'); SenseVoiceAsr.start(finish); })
+        .then(() => {
+          closeModelProgress(); micBtn.classList.add('rec'); toast(t('micListening') || '请说话');
+          /* 手动关麦：SenseVoice 无「吐半截」接口，直接停并明确提示没听清（引擎当前全局隐藏，此路径实际不可达） */
+          manualStopHandler = () => { SenseVoiceAsr.stop(); finish(null, null); };
+          SenseVoiceAsr.start(finish);
+        })
         .catch((e) => { closeModelProgress(); micBtn.classList.remove('rec'); micBtn.disabled = false; toast(t('micFail') + (e.message || e)); });
     };
     const startBrowser = (finish) => {
@@ -4638,12 +4653,21 @@
         toast(t('micNativeFallback'));
         startLocal(finish);
       };
+      /* 022 收尾：优雅停止原生识别（让 Safari/Chrome 把已说的内容吐成最终结果）。
+         静音自动结束与手动关麦共用；无结果时 onend 会报 end-no-result → wrapFinish(null) → 明确提示「没听清」 */
+      const nativeStop = () => {
+        if (active !== 'native') return;
+        if (typeof NativeAsr !== 'undefined' && NativeAsr.gracefulStop) {
+          NativeAsr.gracefulStop();
+          /* 保险：个别浏览器 stop 后既不吐 onresult 也不触发 onend（Safari 已知坑），2s 后强制复位避免按钮卡死 */
+          setTimeout(() => { if (active === 'native') wrapFinish(null); }, 2000);
+        } else wrapFinish(null);
+      };
+      manualStopHandler = nativeStop;   // 手动关麦 = 静音收尾同路径
       beginBrowserRecording(() => {
-        /* 022 静音自动结束：嘀一声 + 优雅停止原生识别（让 Safari 把最终结果吐出来） */
         if (active !== 'native') return;
         playRecEndBeep();
-        if (typeof NativeAsr !== 'undefined' && NativeAsr.gracefulStop) NativeAsr.gracefulStop();
-        else wrapFinish(null);
+        nativeStop();
       }).then(recorder => {
         activeBrowserRecorder = recorder;
         if (active !== 'native') return;
@@ -4669,12 +4693,13 @@
       toast(t('micListening') || '请说话');
       /* 024 仅「字谈官方云端」限 20s：15s 起红光倒计时；自带 Key 的厂商不限时 */
       const limits = isOfficialCloud() ? { maxMs: 20000, warnMs: 15000 } : null;
-      beginBrowserRecording(() => {
-        /* 022 静音自动结束（或 024 到达 30s 上限）：嘀一声 → 停录 → 上传云端识别 */
+      /* 022 收尾：嘀一声 → 停录 → 上传云端识别。静音自动结束、时长上限、手动关麦共用；
+         active='recognizing' 期间禁点，防止识别中再开新一轮 */
+      const cloudStop = () => {
         if (active !== 'cloud') return;
         active = 'recognizing';
-        playRecEndBeep();
         micBtn.classList.remove('rec');
+        micBtn.disabled = true;
         stopBrowserRecording().then(rec => {
           if (!rec || !rec.blob) { finish(null, null); return; }
           toast(t('asrCloudRunning'));
@@ -4682,6 +4707,12 @@
             .then(text => finish(text, rec))
             .catch(err => { finish(null, rec, true); toast((err && err.noPrefix ? '' : t('cloudFail')) + (err.message || err)); });
         });
+      };
+      manualStopHandler = cloudStop;   // 手动关麦 = 静音收尾同路径
+      beginBrowserRecording(() => {
+        if (active !== 'cloud') return;
+        playRecEndBeep();
+        cloudStop();
       }, limits).then(recorder => {
         activeBrowserRecorder = recorder;
         if (!recorder) {
