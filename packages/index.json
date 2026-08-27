@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-25",
+  "updatedAt": "2026-08-27",
   "packages": [
     {
       "id": "dining",
@@ -8,9 +8,9 @@
       "desc": "餐厅点餐、外带、买单和便利店购物的常用句",
       "descEn": "Useful phrases for ordering food, takeaway, paying, and convenience-store shopping",
       "icon": "🍜",
-      "version": 1,
-      "count": 25,
-      "url": "/packages/dining.v1.json"
+      "version": 2,
+      "count": 26,
+      "url": "/packages/dining.v2.json"
     },
     {
       "id": "driving",

@@ -426,8 +426,16 @@
   #addBtn { width: 40px; border: none; border-radius: 10px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
   .card .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
   /* 032 多场景文本 */
+  .pkg-section { font-size: 12px; font-weight: 700; color: var(--muted); margin: 12px 0 6px; }
   .pkgbtn { width: 100%; margin-top: 10px; padding: 11px; border: 1.5px dashed var(--line); border-radius: 12px; background: transparent; color: var(--ink); font-size: 14px; font-weight: 600; cursor: pointer; }
   .pkgbtn:hover { border-color: var(--accent); color: var(--accent); }
+  #myPkgList { display: flex; flex-direction: column; gap: 8px; }
+  #newJsonInput { width: 100%; box-sizing: border-box; padding: 10px; border: 1.5px solid var(--line); border-radius: 10px; font-size: 13px; font-family: ui-monospace, Menlo, Consolas, monospace; background: var(--bg); color: var(--ink); outline: none; }
+  #newItemList { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .new-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--bg); font-size: 14px; }
+  .new-item .ni-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .new-item .ni-k { flex: none; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 7px; background: var(--panel); color: var(--muted); }
+  .new-item .ni-x { flex: none; border: none; background: none; color: var(--muted); font-size: 16px; cursor: pointer; padding: 2px 6px; }
   #pkgList { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
   .pkgrow { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; background: var(--bg); }
   .pkgrow .pkg-ic { font-size: 22px; }
@@ -458,6 +466,8 @@
   .pkg-head-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pkg-sw { flex: none; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--muted); cursor: pointer; }
   .pkg-sw.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .pkg-del { flex: none; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; }
+  .pkg-del:active { border-color: var(--danger); color: var(--danger); }
   .proll.off { opacity: .45; }
   .credit { text-align: center; font-size: 12px; color: var(--muted); margin: 14px 0 0; }
   .credit a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
@@ -942,6 +952,8 @@
           <button id="tabDeaf" class="on" data-i18n="roleDeaf">听障朋友</button>
           <button id="tabVol" data-i18n="roleVol">志愿者 / 路人</button>
         </div>
+        <!-- 032 多场景文本入口（置顶：场景管理是预设的入口） -->
+        <button class="pkgbtn" id="pkgMarketBtn" data-i18n="pkgMarket">多场景文本</button>
         <!-- 032 系列横向标签：通用预设 + 每个已装预置文本 -->
         <div class="pkg-tabs" id="presetTabs"></div>
         <div id="presetList"></div>
@@ -953,8 +965,6 @@
           </button>
         </div>
         <p class="hint" data-i18n="presetHint">黄边 = 填入输入框继续写；无黄边 = 点一下直接发。点标签可切换，× 删除。</p>
-        <!-- 032 多场景文本入口 -->
-        <button class="pkgbtn" id="pkgMarketBtn" data-i18n="pkgMarket">多场景文本</button>
       </div>
 
       <!-- 032 多场景文本浮层 -->
@@ -964,8 +974,53 @@
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
           </button>
           <h2 data-i18n="pkgMarketTitle">多场景文本</h2>
+          <!-- 032b 我的场景（用户自建，本地保存） -->
+          <div class="pkg-section" data-i18n="pkgMyTitle">我的场景</div>
+          <div id="myPkgList"></div>
+          <button class="pkgbtn" id="pkgNewBtn" data-i18n="pkgNew">＋ 新建我的场景</button>
+          <!-- 官方场景库 -->
+          <div class="pkg-section" data-i18n="pkgLibraryTitle">官方场景库</div>
           <div id="pkgList"></div>
           <p class="hint" data-i18n="pkgMarketHint">导入后预置文本保存在本机，可离线使用。</p>
+        </div>
+      </div>
+
+      <!-- 032b 新建我的场景浮层 -->
+      <div class="overlay" id="pkgNewOverlay">
+        <div class="card">
+          <button class="x" id="pkgNewX" title="关闭">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+          <h2 data-i18n="pkgNewTitle">新建我的场景</h2>
+          <div class="tabs3" id="newRoleTabs">
+            <button id="newRoleDeaf" class="on" data-i18n="roleDeaf">听障朋友</button>
+            <button id="newRoleVol" data-i18n="roleVol">志愿者 / 路人</button>
+          </div>
+          <div class="asr-cloud-row"><label class="role-lbl" data-i18n="pkgNewName">场景名称</label><input id="newPkgName" type="text" data-i18n-ph="pkgNewNamePh"></div>
+          <div class="asr-cloud-row"><label class="role-lbl" data-i18n="pkgNewIcon">图标</label><input id="newPkgIcon" type="text" maxlength="4" data-i18n-ph="pkgNewIconPh"></div>
+          <div class="tabs3" id="newModeTabs">
+            <button id="newModeAdd" class="on" data-i18n="pkgNewModeAdd">逐条添加</button>
+            <button id="newModeJson" data-i18n="pkgNewModeJson">粘贴 JSON</button>
+          </div>
+          <!-- 逐条添加模式 -->
+          <div id="newAddWrap">
+            <div class="addrow">
+              <input id="newItemText" type="text" data-i18n-ph="pkgNewItemPh">
+              <select id="newItemType"><option value="fill" data-i18n="fill">填入</option><option value="send" data-i18n="sendDirect">直接发</option></select>
+              <button id="newItemAdd" data-i18n-title="add" title="添加">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
+            </div>
+            <div id="newItemList"></div>
+            <p class="hint" data-i18n="pkgNewEnHint">中文必填；英文可留空，英文界面下会显示中文。</p>
+          </div>
+          <!-- 粘贴 JSON 模式 -->
+          <div id="newJsonWrap" hidden>
+            <textarea id="newJsonInput" rows="6" spellcheck="false" data-i18n-ph="pkgNewJsonPh"></textarea>
+            <p class="hint" data-i18n="pkgNewJsonHint">JSON 格式：[{"t":"你好","en":"Hello","k":"send"}] —— t 中文必填，en 英文选填，k 填 "send" 或 "fill"（不填默认 fill）。</p>
+            <button class="pkgbtn" id="newJsonImport" data-i18n="pkgNewJsonImport">解析并加入列表</button>
+          </div>
+          <button class="done" id="newPkgSave" data-i18n="pkgNewSave">保存场景</button>
         </div>
       </div>
 
@@ -1004,7 +1059,7 @@
         <div class="sec-title" data-i18n="asrEngine">识别引擎</div>
         <div id="asrEngineDesc" class="engine-legend" data-i18n="asrLegend">按当前设备/地区自动给出可用识别方式</div>
         <!-- 028 诊断锚点：每次改版手动更新 build 号；页面上看不到它=浏览器拿的是旧缓存 -->
-        <div style="font-size:11px;opacity:.55;margin-top:2px;user-select:none;">UI build 028-10</div>
+        <div style="font-size:11px;opacity:.55;margin-top:2px;user-select:none;">UI build 028-11</div>
         <div id="asrEngineList"></div>
         <!-- 028：识别语言从朗读页移入此处（云端识别上传语言；切换会重置朗读音色为自动挑选） -->
         <div class="vc-lang-row" style="margin-top:10px;">
@@ -1333,6 +1388,15 @@
       exit: '退出', prev: '上一条', next: '下一条',
       land: '横屏', port: '竖屏', scrollOn: '滚动', scrollOff: '固定', landScroll: '横屏滚动',
       pkgMarket: '多场景文本', pkgMarketTitle: '多场景文本', pkgMarketHint: '导入后预置文本保存在本机，可离线使用。',
+      pkgMyTitle: '我的场景', pkgLibraryTitle: '官方场景库', pkgNew: '＋ 新建我的场景',
+      pkgNewTitle: '新建我的场景', pkgNewName: '场景名称', pkgNewNamePh: '如：问路 / 医院复诊', pkgNewIcon: '图标', pkgNewIconPh: '选填，如 🗺️',
+      pkgNewModeAdd: '逐条添加', pkgNewModeJson: '粘贴 JSON', pkgNewItemPh: '输入文本',
+      pkgNewEnHint: '中文必填；英文可留空，英文界面下会显示中文。',
+      pkgNewJsonPh: '[{"t":"你好","en":"Hello","k":"send"}]', pkgNewJsonHint: 'JSON 格式：[{"t":"你好","en":"Hello","k":"send"}] —— t 中文必填，en 英文选填，k 填 "send" 或 "fill"（不填默认 fill）。',
+      pkgNewJsonImport: '解析并加入列表', pkgNewSave: '保存场景',
+      pkgNewNameNeed: '请先填写场景名称', pkgNewItemNeed: '请至少添加一条文本', pkgNewJsonBad: 'JSON 解析失败，请检查格式', pkgNewOk: '场景已创建',
+      pkgDelScene: '删除这个场景？已编辑过的条目会保留为通用预设。', pkgDelSceneOk: '场景已删除', pkgEmptyScene: '还没有我的场景，点上方按钮创建一个',
+      pkgDel: '删除', pkgMyScene: '我的场景', pkgNewJsonGot: '条已加入列表',
       pkgNotInstalled: '未安装', pkgInstalled: '已安装', pkgUpdate: '可更新', pkgImport: '导入', pkgUpdateBtn: '更新', pkgUninstall: '卸载',
       pkgEmpty: '暂无可用预置文本', pkgLoading: '正在加载…', pkgNetErr: '网络不可用，稍后再试', pkgImportOk: '导入成功', pkgUninstallOk: '已卸载',
       pkgConfirmUninstall: '卸载该预置文本？已编辑过的条目会保留。',
@@ -1523,6 +1587,15 @@
       exit: 'Exit', prev: 'Previous', next: 'Next',
       land: 'Landscape', port: 'Portrait', scrollOn: 'Auto-scroll', scrollOff: 'Fixed', landScroll: 'Rotate & scroll',
       pkgMarket: 'Scenario Texts', pkgMarketTitle: 'Scenario Texts', pkgMarketHint: 'Imported preset texts are stored on this device and work offline.',
+      pkgMyTitle: 'My Scenes', pkgLibraryTitle: 'Official Library', pkgNew: '＋ New Custom Scene',
+      pkgNewTitle: 'New Custom Scene', pkgNewName: 'Scene name', pkgNewNamePh: 'e.g. Asking directions', pkgNewIcon: 'Icon', pkgNewIconPh: 'optional, e.g. 🗺️',
+      pkgNewModeAdd: 'Add one by one', pkgNewModeJson: 'Paste JSON', pkgNewItemPh: 'Enter text',
+      pkgNewEnHint: 'Chinese is required; English is optional and falls back to Chinese on English UI.',
+      pkgNewJsonPh: '[{"t":"你好","en":"Hello","k":"send"}]', pkgNewJsonHint: 'JSON format: [{"t":"你好","en":"Hello","k":"send"}] — t (Chinese) required, en optional, k "send" or "fill" (default fill).',
+      pkgNewJsonImport: 'Parse & add to list', pkgNewSave: 'Save Scene',
+      pkgNewNameNeed: 'Please enter a scene name first', pkgNewItemNeed: 'Add at least one text first', pkgNewJsonBad: 'JSON parse failed — check the format', pkgNewOk: 'Scene created',
+      pkgDelScene: 'Delete this scene? Edited items are kept as general presets.', pkgDelSceneOk: 'Scene deleted', pkgEmptyScene: 'No custom scenes yet — tap the button above to create one',
+      pkgDel: 'Delete', pkgMyScene: 'my scene', pkgNewJsonGot: ' items added',
       pkgNotInstalled: 'Not installed', pkgInstalled: 'Installed', pkgUpdate: 'Update available', pkgImport: 'Import', pkgUpdateBtn: 'Update', pkgUninstall: 'Remove',
       pkgEmpty: 'No preset texts available', pkgLoading: 'Loading…', pkgNetErr: 'Network unavailable, try again later', pkgImportOk: 'Imported', pkgUninstallOk: 'Removed',
       pkgConfirmUninstall: 'Remove this preset text? Edited items will be kept.',
@@ -3297,7 +3370,8 @@
     head.className = 'pkg-head toggle';
     const label = document.createElement('span');
     label.className = 'pkg-head-name';
-    label.textContent = (cur ? (cur.icon || '📦') + ' ' + pkgDisplayName(cur) + ' v' + cur.version : presetTab);
+    /* 032b 自定义场景无版本概念，不显示 v；官方包显示 v+版本 */
+    label.textContent = (cur ? (cur.icon || '📦') + ' ' + pkgDisplayName(cur) + (cur.custom ? '' : ' v' + cur.version) : presetTab);
     const sw = document.createElement('button');
     sw.className = 'pkg-sw' + (cur && cur.enabled ? ' on' : '');
     sw.textContent = (cur && cur.enabled) ? t('pkgOn') : t('pkgOff');
@@ -3308,6 +3382,23 @@
     };
     head.appendChild(label);
     head.appendChild(sw);
+    /* 032b 自定义场景：头部加「删除场景」按钮（删除未编辑条目 + 移除包记录） */
+    if (cur && cur.custom) {
+      const del = document.createElement('button');
+      del.className = 'pkg-del';
+      del.textContent = t('pkgDel');
+      del.onclick = () => {
+        if (!confirm(t('pkgDelScene'))) return;
+        removePkgItems(cur.id, true);   /* 编辑即接管：保留用户改动过的条目 */
+        state.installedPackages = state.installedPackages.filter(x => x.id !== cur.id);
+        state.presetEdited = true;
+        save();
+        toast(t('pkgDelSceneOk'));
+        presetTab = 'general';
+        renderPresetList(); renderQuick(); renderMyScenes();
+      };
+      head.appendChild(del);
+    }
     list.appendChild(head);
     items.forEach(p => {
       const row = makePresetRow(p);
@@ -3564,9 +3655,10 @@
         }
         if (Array.isArray(s.installedPackages)) {
           /* 032：installedPackages 必须显式读，否则刷新后丢失、更新检测失效 */
+          /* 032b：保留 custom 标记（用户自建场景），否则刷新后「我的场景」列表丢失管理入口 */
           state.installedPackages = s.installedPackages
             .filter(p => p && typeof p.id === 'string' && Number.isInteger(p.version))
-            .map(p => ({ id: p.id, version: p.version, name: p.name || p.id, nameEn: p.nameEn || '', icon: p.icon || '📦', enabled: p.enabled !== false }));
+            .map(p => ({ id: p.id, version: p.version, name: p.name || p.id, nameEn: p.nameEn || '', icon: p.icon || '📦', enabled: p.enabled !== false, ...(p.custom ? { custom: true } : {}) }));
         }
       } else seed();
     } catch (e) { seed(); }
@@ -4893,7 +4985,147 @@
         });
       });
     }
-    $('pkgMarketBtn').onclick = () => { $('pkgMarketOverlay').classList.add('show'); renderPkgMarket(true); };
+    /* —— 032b 我的场景（用户自建场景包，本地保存，与官方包同等的分组/启停/快捷栏） —— */
+    let newSceneRole = 'deaf';        // 新建浮层当前角色
+    let newSceneItems = [];           // 新建浮层已添加条目 [{t, en, k}]
+
+    function renderMyScenes() {
+      const box = $('myPkgList');
+      box.innerHTML = '';
+      const mine = state.installedPackages.filter(x => x.custom);
+      if (!mine.length) {
+        const p = document.createElement('p');
+        p.className = 'hint';
+        p.textContent = t('pkgEmptyScene');
+        box.appendChild(p);
+        return;
+      }
+      mine.forEach(x => {
+        const cnt = ['deaf', 'vol'].reduce((n, role) => n + state.presets[role].filter(p => p._pkg === x.id && p._ed !== true).length, 0);
+        const row = document.createElement('div');
+        row.className = 'pkgrow';
+        row.innerHTML = '<span class="pkg-ic"></span>'
+          + '<div class="pkg-info"><div class="pkg-name"></div><div class="pkg-meta"></div></div>'
+          + '<button class="pkg-sw' + (x.enabled ? ' on' : '') + '"></button>'
+          + '<button class="pkg-act danger"></button>';
+        row.querySelector('.pkg-ic').textContent = x.icon || '📁';
+        row.querySelector('.pkg-name').textContent = pkgDisplayName(x);
+        row.querySelector('.pkg-meta').textContent = cnt + ' · ' + t('pkgMyScene');
+        const sw = row.querySelector('.pkg-sw');
+        sw.textContent = x.enabled ? t('pkgOn') : t('pkgOff');
+        sw.onclick = () => {
+          x.enabled = !x.enabled;
+          state.presetEdited = true;
+          save(); renderMyScenes(); renderPresetList(); renderQuick();
+        };
+        const del = row.querySelector('.pkg-act');
+        del.textContent = t('pkgDel');
+        del.onclick = () => {
+          if (!confirm(t('pkgDelScene'))) return;
+          removePkgItems(x.id, true);   /* 编辑即接管：保留用户改动过的条目 */
+          state.installedPackages = state.installedPackages.filter(y => y.id !== x.id);
+          state.presetEdited = true;
+          save();
+          toast(t('pkgDelSceneOk'));
+          if (presetTab === x.id) presetTab = 'general';
+          renderMyScenes(); renderPresetList(); renderQuick();
+        };
+        box.appendChild(row);
+      });
+    }
+
+    /* 新建场景浮层 */
+    const openNewScene = () => {
+      newSceneRole = roleTab === 'vol' ? 'vol' : 'deaf';
+      newSceneItems = [];
+      $('newPkgName').value = '';
+      $('newPkgIcon').value = '';
+      $('newItemText').value = '';
+      $('newJsonInput').value = '';
+      $('newRoleDeaf').classList.toggle('on', newSceneRole === 'deaf');
+      $('newRoleVol').classList.toggle('on', newSceneRole === 'vol');
+      setNewSceneMode('add');
+      renderNewItems();
+      $('pkgNewOverlay').classList.add('show');
+      setTimeout(() => $('newPkgName').focus(), 150);
+    };
+    const closeNewScene = () => $('pkgNewOverlay').classList.remove('show');
+    const setNewSceneMode = (mode) => {
+      $('newModeAdd').classList.toggle('on', mode === 'add');
+      $('newModeJson').classList.toggle('on', mode === 'json');
+      $('newAddWrap').hidden = mode !== 'add';
+      $('newJsonWrap').hidden = mode !== 'json';
+    };
+    const renderNewItems = () => {
+      const box = $('newItemList');
+      box.innerHTML = '';
+      newSceneItems.forEach((it, i) => {
+        const row = document.createElement('div');
+        row.className = 'new-item';
+        row.innerHTML = '<span class="ni-t"></span><span class="ni-k"></span><button class="ni-x">×</button>';
+        row.querySelector('.ni-t').textContent = it.t + (it.en ? '  ·  ' + it.en : '');
+        row.querySelector('.ni-k').textContent = it.k === 'send' ? t('sendDirect') : t('fill');
+        row.querySelector('.ni-x').onclick = () => { newSceneItems.splice(i, 1); renderNewItems(); };
+        box.appendChild(row);
+      });
+    };
+    const addNewItem = (t2, en, k) => {
+      const s = String(t2 || '').trim();
+      if (!s) return;
+      newSceneItems.push({ t: s, en: String(en || '').trim(), k: (k === 'send' ? 'send' : 'fill') });
+    };
+
+    $('pkgNewBtn').onclick = openNewScene;
+    $('pkgNewX').onclick = closeNewScene;
+    $('pkgNewOverlay').addEventListener('click', e => { if (e.target === $('pkgNewOverlay')) closeNewScene(); });
+    $('newRoleDeaf').onclick = () => { newSceneRole = 'deaf'; $('newRoleDeaf').classList.add('on'); $('newRoleVol').classList.remove('on'); };
+    $('newRoleVol').onclick = () => { newSceneRole = 'vol'; $('newRoleVol').classList.add('on'); $('newRoleDeaf').classList.remove('on'); };
+    $('newModeAdd').onclick = () => setNewSceneMode('add');
+    $('newModeJson').onclick = () => setNewSceneMode('json');
+    $('newItemAdd').onclick = () => {
+      addNewItem($('newItemText').value, '', $('newItemType').value);
+      $('newItemText').value = '';
+      $('newItemText').focus();
+      renderNewItems();
+    };
+    $('newItemText').addEventListener('keydown', e => { if (e.key === 'Enter') { $('newItemAdd').click(); } });
+    $('newJsonImport').onclick = () => {
+      let arr;
+      try { arr = JSON.parse($('newJsonInput').value); } catch (e) { toast(t('pkgNewJsonBad')); return; }
+      if (!Array.isArray(arr)) { toast(t('pkgNewJsonBad')); return; }
+      let ok = 0;
+      arr.forEach(x => {
+        if (x && typeof x === 'object' && typeof x.t === 'string' && x.t.trim()) {
+          addNewItem(x.t, x.en, x.k);
+          ok++;
+        }
+      });
+      if (ok) { $('newJsonInput').value = ''; renderNewItems(); toast(ok + t('pkgNewJsonGot')); }
+      else toast(t('pkgNewJsonBad'));
+    };
+    $('newPkgSave').onclick = () => {
+      const name = String($('newPkgName').value || '').trim();
+      if (!name) { toast(t('pkgNewNameNeed')); return; }
+      if (!newSceneItems.length) { toast(t('pkgNewItemNeed')); return; }
+      const id = 'my-' + Date.now().toString(36);
+      const icon = String($('newPkgIcon').value || '').trim();
+      let added = 0;
+      newSceneItems.forEach(it => {
+        const target = state.presets[newSceneRole];
+        if (target.some(x => String(x.t || '').trim() === it.t)) return; /* 重复文本跳过 */
+        target.push({ t: it.t, en: it.en, k: it.k, _pkg: id, _ed: false });
+        added++;
+      });
+      if (!added) { toast(t('pkgNewItemNeed')); return; }
+      state.installedPackages.push({ id: id, version: 1, name: name, nameEn: name, icon: icon || '📁', enabled: true, custom: true });
+      state.presetEdited = true;
+      save();
+      toast(t('pkgNewOk'));
+      closeNewScene();
+      renderMyScenes(); renderPresetList(); renderQuick();
+    };
+
+    $('pkgMarketBtn').onclick = () => { $('pkgMarketOverlay').classList.add('show'); renderPkgMarket(true); renderMyScenes(); };
     $('pkgMarketX').onclick = () => $('pkgMarketOverlay').classList.remove('show');
     $('pkgMarketOverlay').addEventListener('click', e => { if (e.target === $('pkgMarketOverlay')) $('pkgMarketOverlay').classList.remove('show'); });
 

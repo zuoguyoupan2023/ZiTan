@@ -5,7 +5,7 @@
   "desc": "餐厅点餐、外带、买单和便利店购物的常用句",
   "descEn": "Useful phrases for ordering food, takeaway, paying, and convenience-store shopping",
   "icon": "🍜",
-  "version": 1,
+  "version": 2,
   "author": "ZiTan 社区 / ZiTan Community",
   "license": "MIT",
   "updated": "2026-08-26",
@@ -13,6 +13,7 @@
     "deaf": [
       { "t": "我听不见，请看我手机屏幕", "en": "I'm deaf — please look at my phone", "k": "send" },
       { "t": "请给我菜单", "en": "May I have a menu, please?", "k": "send" },
+      { "t": "请问这家店好吃吗？", "en": "Is the food good here?", "k": "send" },
       { "t": "有什么招牌菜推荐吗", "en": "What do you recommend?", "k": "send" },
       { "t": "这个菜辣吗", "en": "Is this dish spicy?", "k": "send" },
       { "t": "我不要香菜和葱，请写单子上", "en": "No cilantro or scallions, please note it", "k": "send" },
